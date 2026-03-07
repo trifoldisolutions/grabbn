@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grabbn - Link Grabber by Whimish Tools</title>
+    <link rel="stylesheet" href="./tailwind/output.css">
+</head>
+
+<body class="bg-gray-50 min-h-screen font-sans text-[0.875rem] overflow-x-hidden">
+
+    <!-- Email verification / suspension banner (hidden by default) -->
+    <div id="verificationBanner" class="hidden w-full border-b px-4 py-3 text-sm">
+        <div class="max-w-[500px] mx-auto flex items-center gap-x-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="shrink-0 w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <div class="flex-1 min-w-0">
+                <p id="verificationBannerTitle" class="font-semibold leading-tight"></p>
+                <p id="verificationBannerMsg" class="text-xs mt-0.5 opacity-80"></p>
+            </div>
+            <a href="/login.html" id="verificationBannerBtn" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-md border transition-colors">
+                Verify Email
+            </a>
+        </div>
+    </div>
+
+    <div class="max-w-[500px] mx-auto py-4 px-3 sm:px-0 flex flex-col gap-y-4 h-screen">
+
+        <!-- Header -->
+        <div class="text-center flex flex-col">
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Grabbn • Link Grabber</h1>
+            <p class="text-gray-500 text-xs sm:text-sm">Enter a URL below to extract all anchor tags.</p>
+        </div>
+
+        <!-- User Hub Section -->
+        <section id="userHubSection" class="flex h-auto w-full justify-center items-center gap-x-1">
+            <!-- Clickable Hub Trigger -->
+            <button id="userHubBtn" class="flex flex-row items-center gap-x-2 px-3 py-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                <!-- Loading state -->
+                <span id="userHubLoading" class="text-woodsmoke-950 font-bold text-sm">Loading user's infos...</span>
+                <!-- Loaded state (hidden until ready) -->
+                <div id="userHubLoaded" class="hidden flex-row items-center gap-x-2">
+                    <!-- Profile thumbnail (authenticated users) -->
+                    <div id="userHubAvatar" class="hidden w-7 h-7 rounded-full bg-orchid-500 items-center justify-center text-white text-xs font-bold uppercase shrink-0"></div>
+                    <!-- User info stack -->
+                    <div id="userHubInfo" class="flex flex-col items-start leading-tight">
+                        <span id="userHubName" class="text-woodsmoke-950 font-bold text-sm"></span>
+                        <span id="userHubEmail" class="text-gray-500 text-xs"></span>
+                    </div>
+                </div>
+            </button>
+            <!-- Direct sign-in shortcut (anonymous users only) -->
+            <a id="hubLoginBtn" href="/login.html" class="hidden h-12 w-auto px-5 items-center justify-center rounded transition-colors text-orchid-600 font-bold" title="Sign in / Sign up">
+                <span>Log In/Sign Up</span>
+            </a>
+        </section>
+
+        <!-- Input Section -->
+        <div class="">
+            <div class="flex flex-col gap-2">
+                <div id="urlInputContainer" class="flex flex-row items-center gap-x-1 sm:gap-x-2 rounded-md border border-orchid-300 h-12 w-full px-1">
+                    <div class="h-8 w-auto">
+                        <button id="roleSwitchBtn" class="h-full w-auto aspect-square flex items-center justify-center" data-role="web-scraping">
+                            <span class="">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4q1.683 0 3.147.623q1.465.623 2.555 1.714q.548.548.985 1.186t.748 1.362q.35.825.496 1.71q.146.884.108 1.765q0 .213-.162.36t-.375.145q-.208 0-.345-.143q-.138-.143-.118-.356q.038-.443.016-.875q-.022-.433-.13-.856h-3.661q.044.442.063.865t0 .865q0 .214-.156.357q-.155.144-.369.144t-.344-.144t-.131-.356q0-.443-.012-.866t-.057-.865h-4.51q-.044.442-.057.865t-.012.865q0 .214-.131.357q-.13.144-.344.144t-.37-.144t-.155-.356q-.02-.443 0-.866t.063-.865H5.1q-.088.442-.12.865t.006.865q.02.214-.127.357q-.147.144-.336.144q-.213 0-.375-.144q-.161-.143-.161-.356q-.039-.881.107-1.769t.497-1.712q.311-.723.748-1.362t.984-1.186q1.09-1.09 2.543-1.714Q10.317 4 12 4M5.392 9.635h3.46q.258-1.614.76-2.707q.501-1.093 1.255-1.793q-1.892.257-3.367 1.468T5.392 9.635m4.496 0h4.224q-.212-1.248-.722-2.398T12 5.192q-.88.914-1.384 2.054q-.502 1.14-.727 2.389m5.265 0h3.479q-.633-1.84-2.15-3.042q-1.516-1.2-3.427-1.458q.792.73 1.316 1.847t.782 2.653M12 20q-.213 0-.357-.143T11.5 19.5q0-1.211-.961-2.23T8.21 16.25H3.5q-.213 0-.357-.143T3 15.75t.143-.357t.357-.143h4.712q1.219 0 2.228.612q1.008.611 1.56 1.657q.552-1.046 1.56-1.657q1.01-.612 2.21-.612h4.73q.214 0 .357.143t.143.357t-.143.357t-.357.143h-4.73q-1.366 0-2.318 1.02q-.952 1.018-.952 2.23q0 .214-.143.357T12 20"/></svg>
+                            </span>
+                            <span class="hidden">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24"><path fill="currentColor" d="M3.616 19.77q-.672 0-1.144-.473Q2 18.825 2 18.154V7.577q0-.213.143-.357t.357-.143t.357.143t.143.357v10.577q0 .269.173.442t.443.173H18.5q.214 0 .357.144t.143.356t-.143.357t-.357.143zm3-3q-.672 0-1.144-.473Q5 15.825 5 15.154V4.616q0-.672.472-1.144T6.616 3h4.29q.323 0 .628.13q.305.132.522.349L13.577 5h6.808q.67 0 1.143.472q.472.472.472 1.144v8.538q0 .671-.472 1.143t-1.144.472zm0-1h13.769q.269 0 .442-.174q.173-.173.173-.442V6.616q0-.27-.173-.443T20.385 6h-7.21l-2-2h-4.56q-.269 0-.442.173T6 4.616v10.538q0 .269.173.442t.443.173m-.616 0V4z"/></svg>
+                            </span>
+                        </button>
+                    </div>
+                    <input type="url" id="urlInput" placeholder="https://example.com" class="flex-1 text-woodsmoke-950 placeholder:text-woodsmoke-600 transition outline-none ml-1 text-sm">
+                    <div>
+                        <button id="clearURLInputBtn" class="flex aspect-square items-center justify-center invisible pointer-events-none" aria-label="Clear URL" title="Clear URL">
+                            <span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24"><path fill="currentColor" d="m12 12.727l-3.592 3.592q-.16.16-.354.15T7.7 16.3t-.16-.364q0-.203.16-.363L11.273 12L7.681 8.433q-.16-.16-.15-.364t.169-.363t.364-.16q.203 0 .363.16L12 11.298l3.567-3.592q.16-.16.354-.16t.354.16q.166.165.166.366t-.166.36L12.702 12l3.592 3.592q.16.16.16.354t-.16.354q-.165.166-.366.166t-.36-.166z"/></svg>
+                            </span>
+                        </button>
+                    </div>
+                    <div id="linksBucketsDropdownWrapper" class="w-auto h-10 rounded-md relative">
+                        <div id="linksBucketsDropdownBtnContainer" class="h-full">
+                            <button id="linksBucketsDropdownBtn" class="flex items-center justify-center gap-x-1 sm:gap-x-2 h-full w-auto px-2 sm:px-3 bg-orchid-200 rounded-sm text-sm">
+                                <span id="linksSelectedBucketName" class="font-medium truncate max-w-20 sm:max-w-30">Singletons</span>
+                                <span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="m11.565 13.873l-2.677-2.677q-.055-.055-.093-.129q-.037-.073-.037-.157q0-.168.11-.289q.112-.121.294-.121h5.677q.181 0 .292.124t.111.288q0 .042-.13.284l-2.677 2.677q-.093.093-.2.143t-.235.05t-.235-.05t-.2-.143"/></svg>
+                                </span>
+                            </button>
+                        </div>
+                        <div id="linksBucketsDropdownContainer" class="absolute z-50 right-0 top-11 p-1 rounded-md w-[220px] sm:w-[250px] h-auto bg-white shadow-md flex-col gap-y-2 hidden">
+                            <div id="singletonsBucketOption" class="linksBucketsDropdownOptionContainer flex flex-row gap-x-2">
+                                <div class="w-full">
+                                    <button class="h-8 w-fit px-1 flex items-center gap-x-1">
+                                        <span class="dropdownOptionUncheckedIcon hidden">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M5.616 20q-.691 0-1.153-.462T4 18.384V5.616q0-.691.463-1.153T5.616 4h12.769q.69 0 1.153.463T20 5.616v12.769q0 .69-.462 1.153T18.384 20zm0-1h12.769q.23 0 .423-.192t.192-.424V5.616q0-.231-.192-.424T18.384 5H5.616q-.231 0-.424.192T5 5.616v12.769q0 .23.192.423t.423.192"/></svg>
+                                        </span>
+                                        <span class="dropdownOptionCheckedIcon">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="m10.6 15.508l6.396-6.396l-.707-.708l-5.689 5.688l-2.85-2.85l-.708.708zM5.616 20q-.691 0-1.153-.462T4 18.384V5.616q0-.691.463-1.153T5.616 4h12.769q.69 0 1.153.463T20 5.616v12.769q0 .69-.462 1.153T18.384 20z"/></svg>
+                                        </span>
+                                        <span class="linksBucketsDropdownOptionName font-medium truncate max-w-32 sm:max-w-40">Singletons</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="linksCreateNewBucketWrapper" class="w-full h-auto mt-2">
+                                <div id="linksCreateNewBucketBtnContainer" class="text-nowrap">
+                                    <button id="linksCreateNewBucketBtn" class="h-10 w-full px-3 flex flex-row items-center justify-center bg-silver-100 rounded-md text-xs sm:text-sm">
+                                        <span class="font-semibold capitalize">Create New Link Bucket</span>
+                                    </button>
+                                </div>
+                                <div id="linksNewBucketCreationContainer" class="hidden flex flex-row justify-between gap-x-1">
+                                    <div class="h-10 w-auto flex-1 bg-silver-100 rounded-sm">
+                                        <input type="text" placeholder="name your bucket ..." class="h-full w-full outline-none px-2 text-sm">
+                                    </div>
+                                    <div id="linksNewBucketCreationBtnContainer">
+                                        <button id="linksNewBucketCreationBtn" class="h-10 w-10 flex flex-row justify-center items-center text-orchid-600 rounded-md">
+                                            <span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24"><path fill="currentColor" d="M12 20q-.213 0-.357-.144T11.5 19.5v-7h-7q-.213 0-.356-.144T4 11.999t.144-.356t.356-.143h7v-7q0-.213.144-.356T12.001 4t.356.144t.143.356v7h7q.213 0 .356.144t.144.357t-.144.356t-.356.143h-7v7q0 .213-.144.356t-.357.144"/></svg>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-row gap-2">
+                    <button id="extractBtn" class="bg-orchid-700 text-white font-semibold h-12 flex-1 rounded-md flex flex-row items-center justify-center gap-x-2 opacity-50 cursor-not-allowed pointer-events-none" aria-disabled="true">
+                        <span id="extractBtnSpinner" class="hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24"><circle cx="4" cy="12" r="3" fill="currentColor"><animate id="SVG9IgbRbsl" attributeName="r" begin="0;SVGFUNpCWdG.end-0.25s" dur="0.75s" values="3;.2;3"/></circle><circle cx="12" cy="12" r="3" fill="currentColor"><animate attributeName="r" begin="SVG9IgbRbsl.end-0.6s" dur="0.75s" values="3;.2;3"/></circle><circle cx="20" cy="12" r="3" fill="currentColor"><animate id="SVGFUNpCWdG" attributeName="r" begin="SVG9IgbRbsl.end-0.45s" dur="0.75s" values="3;.2;3"/></circle></svg>
+                        </span>
+                        <span id="extractBtnText" class="font-semibold">Extract Links</span>
+                    </button>
+
+                    <!-- Stop button
+                    <button id="stopBtn" class="bg-red-500 hover:bg-red-600 text-white font-semibold h-12 w-12 aspect-square rounded-md transition duration-200 ease-in-out flex items-center justify-center"
+                        disabled>
+                        <span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M7 15.385v-6.77q0-.666.475-1.14T8.615 7h6.77q.666 0 1.14.475T17 8.615v6.77q0 .666-.475 1.14t-1.14.475h-6.77q-.666 0-1.14-.475T7 15.386"/></svg>
+                        </span>
+                    </button> -->
+                </div>
+            </div>
+
+
+            <!-- Scraping Status -->
+            <div id="scrapingStatusContainer" class="hidden flex items-center justify-center mt-1 gap-x-1">
+                <span id="scrapingStatusText" class="text-xs text-gray-600 font-medium">
+                    Loading...
+                </span>
+                <a href="/topup.html" class="text-xs text-orchid-700 font-medium underline">Increase rates limit</a>
+            </div>
+
+        </div>
+
+        <!-- Empty Results Section -->
+         <div id="emptyResultsContainer" class="overflow-hidden flex-1 flex items-center justify-center">
+            <span class="text-woodsmoke-400 italic text-sm">No link collections to display.</span>
+         </div>
+
+        <!-- Results Section -->
+        <div id="resultContainer" class="overflow-hidden hidden flex-1 relative">
+            <div id="resultContainerHeader" class="h-auto py-2 flex flex-col gap-2">
+                <!-- Row 1: Title + Badge (left) and Filter Dropdown (right) -->
+                <div class="flex flex-row items-center justify-between">
+                    <div class="flex flex-row gap-x-2 items-center">
+                        <h2 class="font-bold text-woodsmoke-950 text-sm sm:text-base">Extracted Links</h2>
+                        <span id="countBadge" class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">0 found</span>
+                    </div>
+
+                    <!-- Filter Dropdown -->
+                    <div id="filterDropdownWrapper" class="relative">
+                        <button id="filterDropdownBtn" class="flex items-center gap-x-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium">
+                            <span id="filterSelectedName">All Buckets</span>
+                            <span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="m11.565 13.873l-2.677-2.677q-.055-.055-.093-.129q-.037-.073-.037-.157q0-.168.11-.289q.112-.121.294-.121h5.677q.181 0 .292.124t.111.288q0 .042-.13.284l-2.677 2.677q-.093.093-.2.143t-.235.05t-.235-.05t-.2-.143"/></svg>
+                            </span>
+                        </button>
+                        <div id="filterDropdownContainer" class="absolute z-50 right-0 top-8 p-1 rounded-md w-[180px] sm:w-[200px] bg-white shadow-md flex-col gap-y-1 hidden">
+                            <!-- Filter options will be dynamically inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2: View Switches (left) and Copy/Reset Buttons (right) -->
+                <div class="flex flex-row items-center justify-between">
+                    <!-- Display Switches -->
+                    <div id="displaySwitchesWrapper">
+                        <div id="displaySwitchBtnContainer" class="flex flex-row gap-x-1 bg-gray-100 rounded-md p-1">
+                            <button id="listViewBtn" class="h-7 w-7 flex items-center justify-center rounded bg-white" title="List View">
+                                <span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M8.5 18q-.213 0-.356-.144T8 17.499t.144-.356T8.5 17h11q.213 0 .356.144t.144.357t-.144.356T19.5 18zm0-5q-.213 0-.356-.144T8 12.499t.144-.356T8.5 12h11q.213 0 .356.144t.144.357t-.144.356T19.5 13zm0-5q-.213 0-.356-.144T8 7.499t.144-.356T8.5 7h11q.213 0 .356.144t.144.357t-.144.356T19.5 8zM5.5 18q-.413 0-.707-.293T4.5 17t.293-.707T5.5 16t.707.293T6.5 17t-.293.707T5.5 18m0-5q-.413 0-.707-.293T4.5 12t.293-.707T5.5 11t.707.293T6.5 12t-.293.707T5.5 13m0-5q-.413 0-.707-.293T4.5 7t.293-.707T5.5 6t.707.293T6.5 7t-.293.707T5.5 8"/></svg>
+                                </span>
+                            </button>
+                            <button id="cardViewBtn" class="h-7 w-7 flex items-center justify-center rounded" title="Card View">
+                                <span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M5.615 20q-.69 0-1.152-.462T4 18.384V5.616q0-.691.463-1.153T5.615 4h3.77q.69 0 1.152.463T11 5.616v12.769q0 .69-.463 1.153T9.385 20zm8.615 0q-.69 0-1.153-.462T12.616 18.384V5.616q0-.691.462-1.153T14.23 4h3.77q.69 0 1.152.463T19.616 5.616v12.769q0 .69-.462 1.153T18.001 20zM5.615 19h3.77q.269 0 .442-.173t.173-.443V5.616q0-.269-.173-.442T9.385 5h-3.77q-.269 0-.442.173T5 5.615v12.77q0 .269.173.442t.442.173m8.616 0h3.77q.269 0 .442-.173t.173-.443V5.616q0-.269-.173-.442T18.001 5h-3.77q-.269 0-.442.173t-.173.442v12.77q0 .269.173.442t.442.173M5 19V5zm8.616 0V5z"/></svg>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-row gap-x-3 items-center">
+                        <button id="copy-links-btn" class="h-9 w-9 flex items-center justify-center hover:bg-gray-100 rounded transition-colors" title="Copy links">
+                            <span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M9.116 17q-.691 0-1.153-.462T7.5 15.385V4.615q0-.69.463-1.153T9.116 3h7.769q.69 0 1.153.462t.462 1.153v10.77q0 .69-.462 1.152T16.884 17zm0-1h7.769q.23 0 .423-.192t.192-.423V4.615q0-.23-.192-.423T16.884 4H9.116q-.231 0-.424.192t-.192.423v10.77q0 .23.192.423t.423.192m-3 4q-.69 0-1.153-.462T4.5 18.385V7.115q0-.213.143-.356T5 6.616t.357.143t.143.357v11.269q0 .23.192.423t.423.192h8.27q.213 0 .356.143t.143.357t-.143.357t-.357.143zM8.5 16V4z"/></svg>
+                            </span>
+                        </button>
+                        <button id="reset-list-btn" class="h-9 w-9 flex items-center justify-center hover:bg-gray-100 rounded transition-colors" title="Reset list">
+                            <span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M12.077 19q-2.931 0-4.966-2.033q-2.034-2.034-2.034-4.964t2.034-4.966T12.077 5q1.783 0 3.339.847q1.555.847 2.507 2.365V5.5q0-.213.144-.356T18.424 5t.356.144t.143.356v3.923q0 .343-.232.576t-.576.232h-3.923q-.212 0-.356-.144t-.144-.357t.144-.356t.356-.143h3.2q-.78-1.496-2.197-2.364Q13.78 6 12.077 6q-2.5 0-4.25 1.75T6.077 12t1.75 4.25t4.25 1.75q1.787 0 3.271-.968q1.485-.969 2.202-2.573q.085-.196.274-.275q.19-.08.388-.013q.211.067.28.275t-.015.404q-.833 1.885-2.56 3.017T12.077 19"/></svg>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List View Container -->
+            <ul id="linkList" class="divide-y divide-gray-200 overflow-y-auto h-full">
+                <!-- Links will be injected here -->
+            </ul>
+            
+            <!-- Card View Container -->
+            <div id="cardView" class="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto h-full hidden items-start content-start pb-[8vh]">
+                <!-- Cards will be injected here -->
+            </div>
+
+            <!-- Card View Loading Overlay -->
+            <div id="cardViewLoadingOverlay" class="absolute inset-0 z-50 bg-white hidden flex-col items-center justify-center gap-y-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="text-orchid-500" fill="currentColor"><circle cx="4" cy="12" r="3"><animate id="SVGBktLoadA" attributeName="r" begin="0;SVGBktLoadC.end-0.25s" dur="0.75s" values="3;.2;3"/></circle><circle cx="12" cy="12" r="3"><animate attributeName="r" begin="SVGBktLoadA.end-0.6s" dur="0.75s" values="3;.2;3"/></circle><circle cx="20" cy="12" r="3"><animate id="SVGBktLoadC" attributeName="r" begin="SVGBktLoadA.end-0.45s" dur="0.75s" values="3;.2;3"/></circle></svg>
+                <span class="text-sm text-silver-400 font-medium">Loading buckets...</span>
+            </div>
+        </div>
+
+        <!-- Lookup Results Section -->
+        <div id="lookUpResultsContainer" class="overflow-hidden hidden flex-1">
+            <div id="lookUpResultsHeader" class="h-auto py-2 flex flex-col gap-2">
+                <!-- Row 1: Title + Badge (left) and Clear button (right) -->
+                <div class="flex flex-row items-center justify-between">
+                    <div class="flex flex-row gap-x-2 items-center">
+                        <button id="closeLookUpResultsBtn" class="h-9 w-9 flex items-center justify-center hover:bg-gray-100 rounded transition-colors" title="Close page">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M6.4 19L5 17.6l5.6-5.6L5 6.4L6.4 5l5.6 5.6L17.6 5L19 6.4L13.4 12l5.6 5.6l-1.4 1.4l-5.6-5.6z"/></svg>
+                        </button>
+                        <h2 class="font-bold text-woodsmoke-950 text-sm sm:text-base">Lookup Results</h2>
+                        <span id="lookUpCountBadge" class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">0 found</span>
+                    </div>
+                    <div class="flex flex-row gap-x-1 items-center">
+                        <button id="clearLookUpResultsBtn" class="h-9 w-9 flex items-center justify-center hover:bg-gray-100 rounded transition-colors" title="Clear results">
+                            <span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M12.077 19q-2.931 0-4.966-2.033q-2.034-2.034-2.034-4.964t2.034-4.966T12.077 5q1.783 0 3.339.847q1.555.847 2.507 2.365V5.5q0-.213.144-.356T18.424 5t.356.144t.143.356v3.923q0 .343-.232.576t-.576.232h-3.923q-.212 0-.356-.144t-.144-.357t.144-.356t.356-.143h3.2q-.78-1.496-2.197-2.364Q13.78 6 12.077 6q-2.5 0-4.25 1.75T6.077 12t1.75 4.25t4.25 1.75q1.787 0 3.271-.968q1.485-.969 2.202-2.573q.085-.196.274-.275q.19-.08.388-.013q.211.067.28.275t-.015.404q-.833 1.885-2.56 3.017T12.077 19"/></svg>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lookup Card View Container -->
+            <div id="lookUpCardView" class="grid grid-cols-1 sm:grid-cols-2 gap-2 overflow-y-auto h-full items-start content-start pb-[8vh]">
+                <!-- Lookup result cards will be injected here -->
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-2 sm:px-0">
+            <ul class="flex flex-row gap-x-3 sm:gap-x-4 text-xs sm:text-sm flex-wrap">
+                <li>
+                    <a class="underline hover:text-orchid-600" href="">Donate</a>
+                </li>
+                <li>
+                    <a class="underline hover:text-orchid-600" href="">Advertise</a>
+                </li>
+                <li>
+                    <a class="underline hover:text-orchid-600" href="">Report Issue</a>
+                </li>
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- Notification Badge -->
+    <section id="notificationBadgeWrapper" class="bg-white border-2 shadow-md rounded-md fixed z-50 bottom-6 left-1/2 px-4 sm:px-5 py-2 flex flex-row gap-x-3 sm:gap-x-4 items-center origin-center -translate-x-1/2 max-w-[90%] sm:max-w-[400px] mx-3 hidden">
+        <p id="notificationText" class="text-sm font-medium flex-1">This will be a notification alert</p>
+        <!-- Stop button appears here during processing -->
+        <div id="stopBtnContainer">
+            <button id="stopBtn" class="bg-red-500 hover:bg-red-600 text-white font-semibold h-9 w-9 rounded-md transition duration-200 ease-in-out flex items-center justify-center hidden" title="Stop scraping">
+                <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M7 15.385v-6.77q0-.666.475-1.14T8.615 7h6.77q.666 0 1.14.475T17 8.615v6.77q0 .666-.475 1.14t-1.14.475h-6.77q-.666 0-1.14-.475T7 15.386"/></svg>
+                </span>
+            </button>
+        </div>
+        <div id="closeNotifBadgeBtnContainer">
+            <button id="closeNotifBadgeBtn" class="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center hover:bg-gray-100 rounded transition-colors flex-shrink-0">
+                <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24"><path fill="currentColor" d="m12 12.727l-3.592 3.592q-.16.16-.354.15T7.7 16.3t-.16-.364q0-.203.16-.363L11.273 12L7.681 8.433q-.16-.16-.15-.364t.169-.363t.364-.16q.203 0 .363.16L12 11.298l3.567-3.592q.16-.16.354-.16t.354.16q.166.165.166.366t-.166.36L12.702 12l3.592 3.592q.16.16.16.354t-.16.354q-.165.166-.366.166t-.36-.166z"/></svg>
+                </span>
+            </button>
+        </div>
+    </section>
+
+    <!-- Bucket Links Popup -->
+    <section id="seeLinksWrapper" class="fixed w-screen h-screen bg-[rgba(0,0,0,0.6)] top-0 left-0 z-50 hidden flex items-center justify-center p-3 sm:p-4">
+        <div id="bucketLinksPopup" class="bg-white rounded-lg shadow-xl max-w-[480px] w-full max-h-[85vh] sm:max-h-[80vh] flex flex-col">
+            <!-- Popup Header -->
+            <div class="px-5 py-3">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 id="popupBucketName" class="text-3xl font-bold text-woodsmoke-950 truncate pr-2">Bucket Links</h2>
+                    <button id="closePopupBtn" class="h-10 w-10 sm:h-8 sm:w-8 flex items-center justify-center hover:bg-gray-100 rounded transition-colors flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                            <path fill="currentColor" d="m12 12.727l-3.592 3.592q-.16.16-.354.15T7.7 16.3t-.16-.364q0-.203.16-.363L11.273 12L7.681 8.433q-.16-.16-.15-.364t.169-.363t.364-.16q.203 0 .363.16L12 11.298l3.567-3.592q.16-.16.354-.16t.354.16q.166.165.166.366t-.166.36L12.702 12l3.592 3.592q.16.16.16.354t-.16.354q-.165.166-.366.166t-.36-.166z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Metadata section (link count + metadata populated by JS) -->
+                <div id="popupBucketMetadata" class=""></div>
+            </div>
+
+            <!-- Visibility + Paywall / Monetization toggles -->
+            <div class="px-5 pb-3 flex flex-col gap-y-2 w-full">
+                <div class="flex flex-row gap-x-2 items-center">
+                    <div id="bucketVisibilityBtnContainer">
+                        <button id="bucketVisibilityBtn" class="h-9 w-auto px-3 rounded-md flex items-center justify-center gap-x-1 font-medium bg-gray-100 text-gray-600 text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><path fill="currentColor" d="M17 9V7A5 5 0 0 0 7 7v2a3 3 0 0 0-3 3v7a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-7a3 3 0 0 0-3-3M9 7a3 3 0 0 1 6 0v2H9Zm9 12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1Z"/></svg>
+                            <span>Private</span>
+                        </button>
+                    </div>
+                    <div id="bucketPaywallBtnContainer" class="hidden flex-1 flex-row gap-x-2 items-center">
+                        <div class="w-auto flex-1 flex items-center h-9 border border-gray-300 rounded-md focus-within:ring-1 focus-within:ring-orchid-400">
+                            <input id="bucketPriceInput" type="number" min="0" step="1" placeholder="0"
+                                class="h-full w-auto flex-1 pl-2 pr-1 text-sm outline-none border-none bg-transparent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                            <span id="bucketPriceCurrencyToggle" title="Click to switch currency" class="p-2 text-sm font-medium text-orchid-500 select-none cursor-pointer hover:text-orchid-700 transition-colors">CRD</span>
+                        </div>
+                        <button id="bucketPaywallSaveBtn" class="h-9 px-3 rounded-sm bg-orchid-600 text-white text-sm font-medium hover:bg-orchid-700 transition-colors flex items-center justify-center">
+                            <span class="text-nowrap">Set Paywall</span>
+                        </button>
+                    </div>
+                </div>
+                <p id="bucketPriceDollarHint" class="hidden text-xs text-gray-400 leading-none"></p>
+            </div>
+
+            <!-- Add Link Form -->
+            <div id="addLinkFormContainer" class="px-5 py-3 flex flex-col gap-y-4">
+                <div class="flex flex-row items-center justify-between">
+                    <h3 class="font-semibold text-woodsmoke-950 text-lg leading-6">Add new entries or <br> search for existing ones:</h3>
+                    <div id="lookupAddLinkSwitchBtnContainer" class="relative flex flex-row items-center bg-orchid-100 rounded-full p-0.5 h-10 w-20 shrink-0 cursor-pointer">
+                        <span id="switchIndicator" class="absolute top-0.5 left-0.5 h-9 w-10 bg-white rounded-full shadow-sm transition-all duration-200 ease-in-out"></span>
+                        <button type="button" id="addLinkModeBtn" class="relative z-10 h-9 w-10 flex items-center justify-center rounded-full text-orchid-700 transition-colors duration-200" title="Add link">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M17.077 16.077h-2.448q-.194 0-.335-.144q-.14-.143-.14-.356q0-.194.144-.347q.143-.153.356-.153h2.423v-2.423q0-.213.144-.356q.144-.144.357-.144t.356.144t.143.356v2.423H20.5q.213 0 .356.144q.144.144.144.357t-.144.356t-.356.143h-2.423V18.5q0 .213-.144.356t-.357.144t-.356-.144t-.143-.356zm-6.961 0H7.077q-1.692 0-2.884-1.192T3 12t1.193-2.885t2.884-1.193h3.039q.194 0 .347.153t.153.357t-.153.347t-.347.143H7.075q-1.267 0-2.171.904T4 12t.904 2.173t2.17.904h3.042q.194 0 .347.153t.153.356t-.153.348t-.347.143M9 12.5q-.213 0-.356-.144t-.144-.357t.144-.356T9 11.5h6q.213 0 .356.144t.144.357t-.144.356T15 12.5zm12-.5h-1q0-1.27-.904-2.173q-.904-.904-2.17-.904H13.86q-.194 0-.335-.144t-.14-.356q0-.194.143-.347q.144-.153.357-.153h3.038q1.692 0 2.885 1.193T21 12"/></svg>
+                        </button>
+                        <button type="button" id="lookupModeBtn" class="relative z-10 h-9 w-10 flex items-center justify-center rounded-full text-orchid-400 transition-colors duration-200" title="Lookup link">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24"><path fill="currentColor" d="M11.402 19.994q-1.575-.011-2.93-.26q-1.355-.248-2.353-.67t-1.558-.997T4 16.807q0 .685.56 1.26q.561.575 1.56.997q.997.422 2.352.67t2.93.26m-.461-5.105q-.73-.037-1.528-.13t-1.58-.275t-1.506-.445q-.723-.264-1.327-.61q.604.346 1.327.61q.723.263 1.506.445t1.58.275t1.527.13M12 8.885q2.123 0 4.318-.609t2.624-1.328q-.41-.725-2.57-1.336T12 5q-2.16 0-4.357.609q-2.197.608-2.624 1.339q.414.725 2.584 1.33q2.17.607 4.397.607m-8 7.923V7q0-.575.674-1.117t1.793-.958t2.565-.67T12 4q1.504 0 2.949.255t2.565.68t1.802.957T20 7q0 .517-.722 1.03q-.722.514-1.87.93q-1.149.415-2.574.67q-1.426.254-2.834.254q-2.086 0-3.934-.423Q6.217 9.04 5 8.275v3.987q1.004.698 2.563 1.113t3.378.514q.213.011.35.157q.138.146.138.36q0 .208-.14.35q-.141.144-.349.133q-1.463-.068-3.107-.405T5 13.429V17q.492.806 2.137 1.328q1.644.522 4.27.638q.214.011.352.163t.137.365t-.14.36t-.354.14q-1.575-.011-2.93-.26q-1.355-.248-2.353-.67t-1.559-.997t-.56-1.26M16.577 20q-1.413 0-2.418-1.005t-1.005-2.418t1.005-2.418t2.418-1.005t2.418 1.005T20 16.577q0 .554-.159 1.087q-.158.532-.503.967l2.308 2.308q.14.14.15.344t-.15.363t-.354.15t-.354-.15l-2.307-2.288q-.454.286-.977.464T16.577 20m1.717-1.706q.706-.706.706-1.717t-.706-1.718q-.706-.705-1.717-.705t-1.718.706q-.705.706-.705 1.717t.705 1.717t1.718.706t1.717-.706"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <form id="addLinkForm" class="flex flex-col gap-y-2">
+                    <div id="addLinksFormInputsContainer" class="flex flex-row items-center justify-center gap-x-1 w-full h-auto">
+                        <div class="relative flex-1 min-w-0">
+                            <input type="text" id="addLinkLabel" placeholder="entry's title ..." class="h-11 w-full pl-3 pr-8 text-sm placeholder:text-woodsmoke-600 rounded-sm outline-none bg-silver-100">
+                            <button type="button" id="clearAddLinkLabel" class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 items-center justify-center text-silver-950 rounded-full hover:bg-gray-200 transition-colors hidden" aria-label="Clear label">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="m12 12.727l-3.592 3.592q-.16.16-.354.15T7.7 16.3t-.16-.364q0-.203.16-.363L11.273 12L7.681 8.433q-.16-.16-.15-.364t.169-.363t.364-.16q.203 0 .363.16L12 11.298l3.567-3.592q.16-.16.354-.16t.354.16q.166.165.166.366t-.166.36L12.702 12l3.592 3.592q.16.16.16.354t-.16.354q-.165.166-.366.166t-.36-.166z"/></svg>
+                            </button>
+                        </div>
+                        <div class="relative flex-2 min-w-0">
+                            <input type="url" id="addLinkUrl" placeholder="https://..." class="h-11 w-full pl-3 pr-8 text-sm placeholder:text-woodsmoke-600 rounded-sm outline-none bg-silver-100">
+                            <button type="button" id="clearAddLinkUrl" class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 items-center justify-center text-silver-950 hover:text-gray-600 rounded-full hover:bg-gray-200 transition-colors hidden" aria-label="Clear URL">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="m12 12.727l-3.592 3.592q-.16.16-.354.15T7.7 16.3t-.16-.364q0-.203.16-.363L11.273 12L7.681 8.433q-.16-.16-.15-.364t.169-.363t.364-.16q.203 0 .363.16L12 11.298l3.567-3.592q.16-.16.354-.16t.354.16q.166.165.166.366t-.166.36L12.702 12l3.592 3.592q.16.16.16.354t-.16.354q-.165.166-.366.166t-.36-.166z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="addLinkBtnContainer" class="w-full h-auto">
+                        <button type="submit" id="addLinkBtn" disabled class="h-10 w-full flex items-center justify-center border border-orchid-800 rounded-sm bg-orchid-50 text-orchid-800 font-semibold shrink-0  disabled:opacity-40 disabled:cursor-not-allowed transition-opacity" aria-disabled="true">
+                            <span>Add New Entry</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Lookup Results Banner -->
+            <div id="lookupResultsBanner" class="px-5 py-2 bg-amber-50 border-y border-amber-200 items-center justify-between hidden">
+                <span id="lookupResultsText" class="text-sm text-amber-700 font-medium">Showing 0 results</span>
+                <button id="clearLookupBtn" type="button" class="text-sm text-amber-600 hover:text-amber-800 font-medium underline">Clear</button>
+            </div>
+
+            <!-- Bulk select row: hidden by default, shown on long-press of any link number -->
+            <div id="bulkSelectRow" class="hidden items-center justify-between px-5 py-2 border-b border-gray-200">
+                <button id="selectAllBtn" class="h-8 w-8 flex items-center justify-center rounded hover:bg-gray-100 transition-colors text-gray-400" title="Select all">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm0-2h14V5H5z"/></svg>
+                </button>
+                <div id="bulkActions" class="hidden items-center gap-1">
+                    <button id="bulkMonetizeBtn" class="h-8 px-2 rounded flex items-center justify-center gap-1 text-xs font-semibold bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white">
+                        <span class="font-bold">$</span>
+                        <span id="bulkMonetizeBtnLabel">Make Free</span>
+                    </button>
+                    <button id="bulkCopyBtn" class="h-8 px-2 rounded flex items-center justify-center text-xs font-semibold bg-white border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white">
+                        Copy
+                    </button>
+                    <button id="bulkDeleteBtn" class="h-8 px-2 rounded flex items-center justify-center text-xs font-semibold bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-50">
+                        Delete
+                    </button>
+                </div>
+                <button id="bulkSelectCloseBtn" class="h-8 w-8 flex items-center justify-center rounded hover:bg-gray-100 transition-colors text-gray-400" title="Exit selection">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="m12 12.727l-3.592 3.592q-.16.16-.354.15T7.7 16.3t-.16-.364q0-.203.16-.363L11.273 12L7.681 8.433q-.16-.16-.15-.364t.169-.363t.364-.16q.203 0 .363.16L12 11.298l3.567-3.592q.16-.16.354-.16t.354.16q.166.165.166.366t-.166.36L12.702 12l3.592 3.592q.16.16.16.354t-.16.354q-.165.166-.366.166t-.36-.166z"/></svg>
+                </button>
+            </div>
+
+            <!-- Popup Content -->
+            <div class="flex-1 overflow-y-auto p-3 sm:p-4">
+
+                <ul id="popupLinksList" class="divide-y divide-gray-200">
+                    <!-- Links will be injected here -->
+                </ul>
+            </div>
+            
+            <!-- Popup Footer -->
+            <div class="p-3 sm:p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+                <div id="bucketFooterPrice" class="flex flex-col justify-center">
+                    <span id="bucketFooterPriceText" class="text-sm font-bold text-woodsmoke-950 leading-none"></span>
+                    <span id="bucketFooterPriceDollar" class="text-xs text-gray-400 leading-none mt-0.5"></span>
+                </div>
+                <div class="flex flex-row gap-x-2">
+                    <div id="bucketShareBtnContainer">
+                        <button id="bucketShareBtn" class="h-10 w-auto px-3 rounded-md flex items-center justify-center font-medium bg-orchid-50 text-orchid-600">
+                            <span>Share Bucket</span>
+                        </button>
+                    </div>
+                    <div id="bucketCopyAllBtnContainer">
+                        <button id="bucketCopyAllBtn" class="h-10 w-auto px-3 rounded-md flex items-center justify-center font-medium bg-orchid-50 text-orchid-600">
+                            <span>Copy All Links</span>
+                        </button>
+                    </div>
+                    <div id="bucketDeleteBtnContainer">
+                        <button id="bucketDeleteBtn" class="h-10 w-auto px-3 rounded-md flex items-center justify-center font-medium bg-red-50 text-red-600">
+                            <span>Delete Bucket</span>
+                        </button>
+                    </div>
+                    <div id="bucketReportBtnContainer" class="hidden">
+                        <button id="bucketReportBtn" class="h-10 w-auto px-3 rounded-md flex items-center justify-center gap-x-1 font-medium bg-red-50 text-red-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M5 21V4h9l.4 2H20v10h-7l-.4-2H6v7z"/></svg>
+                            <span>Report</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+
+    <!-- Report Bucket Modal -->
+    <section id="reportModalWrapper" class="fixed w-screen h-screen bg-[rgba(0,0,0,0.6)] top-0 left-0 z-50 hidden flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full flex flex-col p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-woodsmoke-950">Report Bucket</h2>
+                <button id="closeReportModalBtn" class="h-8 w-8 flex items-center justify-center hover:bg-gray-100 rounded transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="m12 12.727l-3.592 3.592q-.16.16-.354.15T7.7 16.3t-.16-.364q0-.203.16-.363L11.273 12L7.681 8.433q-.16-.16-.15-.364t.169-.363t.364-.16q.203 0 .363.16L12 11.298l3.567-3.592q.16-.16.354-.16t.354.16q.166.165.166.366t-.166.36L12.702 12l3.592 3.592q.16.16.16.354t-.16.354q-.165.166-.366.166t-.36-.166z"/></svg>
+                </button>
+            </div>
+            <form id="reportForm" class="flex flex-col gap-y-3">
+                <input type="hidden" id="reportBucketId" value="">
+                <div id="reportPreview" class="flex flex-row gap-x-3 items-center p-2 bg-silver-50 rounded-md border border-gray-200">
+                    <div id="reportPreviewThumbnail" class="w-auto h-14 aspect-[1.7778] shrink-0 rounded bg-silver-100 overflow-hidden flex items-center justify-center">
+                        <span class="text-silver-400 text-xs">No img</span>
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                        <span id="reportPreviewName" class="text-sm font-semibold text-gray-900 truncate"></span>
+                        <span id="reportPreviewCurator" class="text-xs text-gray-500 truncate"></span>
+                        <span id="reportPreviewCount" class="text-xs text-gray-400"></span>
+                    </div>
+                </div>
+                <fieldset class="flex flex-col gap-y-2">
+                    <legend class="text-sm font-medium text-gray-700 mb-1">Why are you reporting this bucket?</legend>
+                    <label class="flex items-center gap-x-2 cursor-pointer text-sm">
+                        <input type="radio" name="reportReason" value="spam" class="accent-red-600" required>
+                        Spam / misleading content
+                    </label>
+                    <label class="flex items-center gap-x-2 cursor-pointer text-sm">
+                        <input type="radio" name="reportReason" value="malicious" class="accent-red-600">
+                        Malicious links (phishing, malware)
+                    </label>
+                    <label class="flex items-center gap-x-2 cursor-pointer text-sm">
+                        <input type="radio" name="reportReason" value="inappropriate" class="accent-red-600">
+                        Inappropriate / offensive content
+                    </label>
+                    <label class="flex items-center gap-x-2 cursor-pointer text-sm">
+                        <input type="radio" name="reportReason" value="copyright" class="accent-red-600">
+                        Copyright violation
+                    </label>
+                    <label class="flex items-center gap-x-2 cursor-pointer text-sm">
+                        <input type="radio" name="reportReason" value="other" class="accent-red-600">
+                        Other
+                    </label>
+                </fieldset>
+                <textarea id="reportDetail" class="hidden w-full h-20 border border-gray-200 rounded-md p-2 text-sm resize-none outline-none focus:border-gray-400 transition-colors" placeholder="Any additional details (optional)" maxlength="500"></textarea>
+                <button type="submit" id="reportSubmitBtn" class="h-10 w-full bg-red-600 text-white font-medium rounded-md text-sm transition-colors opacity-50 cursor-not-allowed" disabled>Submit Report</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- User Hub Modal -->
+    <section id="userHubModalWrapper" class="fixed w-screen h-screen bg-[rgba(0,0,0,0.6)] top-0 left-0 z-50 hidden items-center justify-center p-3 sm:p-4">
+        <div id="userHubModal" class="bg-white rounded-lg shadow-xl max-w-sm w-full flex flex-col">
+            <!-- Header -->
+            <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between gap-x-3">
+                <div class="flex items-center gap-x-3 min-w-0">
+                    <div id="modalUserAvatar" class="hidden w-11 h-11 rounded-full bg-orchid-500 items-center justify-center text-white text-base font-bold uppercase shrink-0"></div>
+                    <div class="flex flex-col min-w-0">
+                        <span id="modalUserName" class="font-bold text-woodsmoke-950 text-sm truncate"></span>
+                        <span id="modalUserEmail" class="text-gray-400 text-xs truncate"></span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-x-1 shrink-0">
+                    <!-- Anonymous: links to login/signup pages -->
+                    <div id="modalAnonActions" class="flex items-center gap-x-1">
+                        <a id="loginLink" href="/login.html" class="h-9 w-auto px-4 flex items-center justify-center bg-orchid-100 rounded transition-colors text-orchid-600 font-bold text-sm" title="Log in">
+                            Log In
+                        </a>
+                        <a href="/signup.html" class="h-9 w-auto px-4 flex items-center justify-center bg-orchid-600 hover:bg-orchid-700 rounded transition-colors text-white font-bold text-sm" title="Sign up">
+                            Sign Up
+                        </a>
+                    </div>
+                    <!-- Authenticated: log out -->
+                    <div id="modalAuthActions" class="hidden items-center">
+                        <button id="logoutLink" class="h-8 w-8 flex items-center justify-center hover:bg-red-50 rounded transition-colors text-red-500" title="Log out">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24"><path fill="currentColor" d="M5.616 20q-.691 0-1.153-.462T4 18.384V5.616q0-.691.463-1.153T5.616 4h5.903q.214 0 .357.143t.143.357t-.143.357t-.357.143H5.616q-.231 0-.424.192T5 5.616v12.769q0 .23.192.423t.423.192h5.904q.214 0 .357.143t.143.357t-.143.357t-.357.143zm12.444-7.5H9.692q-.213 0-.356-.143T9.192 12t.143-.357t.357-.143h8.368l-1.971-1.971q-.141-.14-.15-.338q-.01-.199.15-.364q.159-.165.353-.168q.195-.003.36.162l2.614 2.613q.242.243.242.566t-.243.566l-2.613 2.613q-.146.146-.347.153t-.366-.159q-.16-.165-.157-.357t.162-.35z"/></svg>
+                        </button>
+                    </div>
+                    <button id="closeUserHubModalBtn" class="h-8 w-8 flex items-center justify-center hover:bg-gray-100 rounded transition-colors shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="m12 12.727l-3.592 3.592q-.16.16-.354.15T7.7 16.3t-.16-.364q0-.203.16-.363L11.273 12L7.681 8.433q-.16-.16-.15-.364t.169-.363t.364-.16q.203 0 .363.16L12 11.298l3.567-3.592q.16-.16.354-.16t.354.16q.166.165.166.366t-.166.36L12.702 12l3.592 3.592q.16.16.16.354t-.16.354q-.165.166-.366.166t-.36-.166z"/></svg>
+                    </button>
+                </div>
+            </div>
+            <!-- Suspension / verification notice (authenticated, unverified users only) -->
+            <div id="modalSuspensionNotice" class="hidden px-4 py-3 border-b flex-col gap-y-1 text-sm">
+                <div class="flex items-center gap-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="shrink-0 w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    <p id="modalSuspensionTitle" class="font-semibold leading-tight"></p>
+                </div>
+                <p id="modalSuspensionMsg" class="text-xs opacity-80 ml-6"></p>
+                <a href="/login.html" class="ml-6 mt-0.5 text-xs font-semibold underline">Verify Email →</a>
+            </div>
+            <!-- Credits (authenticated users only) -->
+            <div id="modalCreditsSection" class="hidden px-5 py-1.5 border-b border-gray-200 items-center justify-between gap-x-3">
+                <div class="flex items-center gap-x-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" class="text-orchid-500 shrink-0"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87c1.96 0 2.4-.98 2.4-1.59c0-.83-.44-1.61-2.67-2.14c-2.48-.6-4.18-1.62-4.18-3.67c0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87c-1.5 0-2.4.68-2.4 1.64c0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16"/></svg>
+                    <div class="flex flex-col leading-tight">
+                        <div class="flex items-center gap-x-1">
+                            <span id="modalCreditsAmount" class="font-bold text-woodsmoke-950 text-sm">0</span>
+                            <span class="text-gray-500 text-sm">credits</span>
+                        </div>
+                        <span id="modalCreditsDollarHint" class="text-gray-400 text-xs">≈ $0.00</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-x-2">
+                    <button id="modalTopupBtn" class="h-9 w-9 flex items-center justify-center bg-silver-100 hover:bg-silver-200 rounded text-woodsmoke-700 transition-colors" title="Add credits">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M11.5 12.5H6v-1h5.5V6h1v5.5H18v1h-5.5V18h-1z"/></svg>
+                    </button>
+                    <button id="modalCashOutBtn" class="h-9 w-auto px-3 flex items-center justify-center bg-orchid-50 hover:bg-orchid-100 text-orchid-700 text-xs font-semibold rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed" title="Cash out" disabled>
+                        Cash out
+                    </button>
+                </div>
+            </div>
+            <!-- Delete account (authenticated users only) -->
+            <div id="modalDeleteWrapper" class="hidden p-3 flex-col gap-y-1">
+                <button id="deleteAccountLink" class="w-full h-12 flex items-center justify-center rounded-md text-sm text-red-600 hover:bg-red-50 font-semibold transition-colors">Delete Account</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Add Credits Modal -->
+    <section id="addCreditsModal" class="fixed w-screen h-screen bg-[rgba(0,0,0,0.6)] top-0 left-0 z-50 hidden items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full flex flex-col">
+            <!-- Header -->
+            <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">Credits</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Balance: <strong><span id="creditsModalBalance">0</span> credits</strong></p>
+                </div>
+                <button id="closeCreditsModalBtn" class="h-8 w-8 flex items-center justify-center hover:bg-gray-100 rounded transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="m12 12.727l-3.592 3.592q-.16.16-.354.15T7.7 16.3t-.16-.364q0-.203.16-.363L11.273 12L7.681 8.433q-.16-.16-.15-.364t.169-.363t.364-.16q.203 0 .363.16L12 11.298l3.567-3.592q.16-.16.354-.16t.354.16q.166.165.166.366t-.166.36L12.702 12l3.592 3.592q.16.16.16.354t-.16.354q-.165.166-.366.166t-.36-.166z"/></svg>
+                </button>
+            </div>
+            <!-- Tab bar -->
+            <div class="flex border-b border-gray-200">
+                <button id="creditsTabAdd" class="credits-tab flex-1 h-10 w-auto flex items-center justify-center text-sm font-medium text-orchid-600 border-b-2 border-orchid-600 transition-colors">Add Credits</button>
+                <button id="creditsTabHistory" class="credits-tab flex-1 h-10 w-auto flex items-center justify-center text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 transition-colors">History</button>
+            </div>
+            <!-- Add Credits panel -->
+            <div id="creditsAddPanel" class="p-5 flex flex-col gap-y-3">
+                <p class="text-sm text-gray-600">100 credits = $1.00. Use credits to unlock paywalled buckets.</p>
+                <div class="grid grid-cols-2 gap-3" id="creditsPackageGrid">
+                    <!-- 200 credits -->
+                    <button class="credits-package-btn flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-lg hover:border-orchid-400 hover:bg-orchid-50 transition-colors" data-credits="200">
+                        <span class="text-2xl font-bold text-orchid-700">200</span>
+                        <span class="text-xs text-gray-500 mt-0.5">credits</span>
+                        <span class="text-sm font-semibold text-gray-700 mt-1">$2.00</span>
+                    </button>
+                    <!-- 500 credits -->
+                    <button class="credits-package-btn flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-lg hover:border-orchid-400 hover:bg-orchid-50 transition-colors" data-credits="500">
+                        <span class="text-2xl font-bold text-orchid-700">500</span>
+                        <span class="text-xs text-gray-500 mt-0.5">credits</span>
+                        <span class="text-sm font-semibold text-gray-700 mt-1">$5.00</span>
+                    </button>
+                    <!-- 1000 credits -->
+                    <button class="credits-package-btn flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-lg hover:border-orchid-400 hover:bg-orchid-50 transition-colors" data-credits="1000">
+                        <span class="text-2xl font-bold text-orchid-700">1,000</span>
+                        <span class="text-xs text-gray-500 mt-0.5">credits</span>
+                        <span class="text-sm font-semibold text-gray-700 mt-1">$10.00</span>
+                    </button>
+                    <!-- 5000 credits -->
+                    <button class="credits-package-btn flex flex-col items-center justify-center p-4 border-2 border-gray-200 rounded-lg hover:border-orchid-400 hover:bg-orchid-50 transition-colors" data-credits="5000">
+                        <span class="text-2xl font-bold text-orchid-700">5,000</span>
+                        <span class="text-xs text-gray-500 mt-0.5">credits</span>
+                        <span class="text-sm font-semibold text-gray-700 mt-1">$50.00</span>
+                    </button>
+                </div>
+                <!-- Custom amount -->
+                <div class="border-t border-gray-100 pt-3 flex flex-col gap-y-2">
+                    <div class="flex gap-x-2">
+                        <div class="flex flex-1 border border-gray-200 rounded-lg overflow-hidden focus-within:border-orchid-400 transition-colors">
+                            <input type="number" id="customCreditsInput" min="1" step="1" placeholder="0"
+                                class="flex-1 min-w-0 px-3 py-2 text-sm text-gray-800 outline-none" />
+                            <button id="customCreditsModeToggle"
+                                class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-600 border-l border-gray-200 transition-colors whitespace-nowrap">CRD</button>
+                        </div>
+                        <button id="customCreditsBtn"
+                            class="px-4 py-2 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Buy</button>
+                    </div>
+                    <p id="customCreditsHint" class="hidden text-xs text-gray-400"></p>
+                </div>
+                <p id="creditsModalError" class="hidden text-xs text-red-600 text-center"></p>
+            </div>
+            <!-- History panel -->
+            <div id="creditsHistoryPanel" class="hidden flex-col">
+                <div id="creditsHistoryList" class="divide-y divide-gray-100 max-h-72 overflow-y-auto"></div>
+                <div id="creditsHistoryEmpty" class="hidden p-6 text-center text-sm text-gray-400">No transactions yet.</div>
+                <div id="creditsHistoryLoading" class="p-6 text-center text-sm text-gray-400">Loading...</div>
+                <div id="creditsHistoryPager" class="hidden px-5 py-3 border-t border-gray-100 flex items-center justify-between">
+                    <button id="creditsHistoryPrev" class="text-xs text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">← Prev</button>
+                    <span id="creditsHistoryPageLabel" class="text-xs text-gray-400"></span>
+                    <button id="creditsHistoryNext" class="text-xs text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">Next →</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script type="module" src="./scripts/app.js"></script>
+
+</body>
+
+</html>

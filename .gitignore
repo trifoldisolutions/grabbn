@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Environment variables — NEVER commit these
+.env
+.env.*
+
+# Local dev artifacts
+txt/
+nul
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude context
+.claude/
+
+# Design assets (not used in production)
+public/assets/ui inspo/
+
+# Logs
+*.log
+npm-debug.log*

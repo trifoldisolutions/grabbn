@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+    --color-orchid-50: #fdf6fd;
+    --color-orchid-100: #faecfb;
+    --color-orchid-200: #f3d8f6;
+    --color-orchid-300: #ecbaed;
+    --color-orchid-400: #e090e2;
+    --color-orchid-500: #d06bd2;
+    --color-orchid-600: #b346b3;
+    --color-orchid-700: #943792;
+    --color-orchid-800: #792f76;
+    --color-orchid-900: #642b61;
+    --color-orchid-950: #40123d;
+
+    --color-woodsmoke-50: #f6f6f6;
+    --color-woodsmoke-100: #e7e7e7;
+    --color-woodsmoke-200: #d1d1d1;
+    --color-woodsmoke-300: #b0b0b0;
+    --color-woodsmoke-400: #888888;
+    --color-woodsmoke-500: #6d6d6d;
+    --color-woodsmoke-600: #5d5d5d;
+    --color-woodsmoke-700: #4f4f4f;
+    --color-woodsmoke-800: #454545;
+    --color-woodsmoke-900: #3d3d3d;
+    --color-woodsmoke-950: #191919;
+
+    --color-silver-50: #f8f8f8;
+    --color-silver-100: #efefef;
+    --color-silver-200: #dcdcdc;
+    --color-silver-300: #bdbdbd;
+    --color-silver-400: #989898;
+    --color-silver-500: #7c7c7c;
+    --color-silver-600: #656565;
+    --color-silver-700: #525252;
+    --color-silver-800: #464646;
+    --color-silver-900: #3d3d3d;
+    --color-silver-950: #292929;
+}
+
+@layer base {
+    button {
+        cursor: pointer;
+        display: flex;
+    }
+
+    button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+}
+
+#cardView::-webkit-scrollbar{
+    display: none;
+}

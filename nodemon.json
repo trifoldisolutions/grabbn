@@ -1,0 +1,21 @@
+{
+    "watch": [
+        "serve.js",
+        "server/**/*"
+    ],
+    "ext": "js,json",
+    "ignore": [
+        "node_modules/**/*",
+        "public/**/*",
+        "txt/**/*",
+        ".git/**/*"
+    ],
+    "delay": 1000,
+    "execMap": {
+        "js": "node"
+    },
+    "env": {
+        "NODE_ENV": "development"
+    },
+    "verbose": true
+}
