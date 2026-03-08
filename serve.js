@@ -5,6 +5,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 import User from './server/models/user.js';
 import Bucket from './server/models/bucket.js';
 import Report from './server/models/report.js';
@@ -946,7 +948,84 @@ app.delete('/api/links', requireAuth, requireVerification, async (req, res) => {
     }
 });
 
-// /scrape endpoint removed — link parsing handled client-side via bookmarklet
+// Scrape endpoint — fetches a URL and extracts video links with durations
+app.get('/scrape', requireAuth, requireVerification, async (req, res) => {
+    const { url } = req.query;
+
+    if (!url) {
+        return res.status(400).json({ error: 'URL is required' });
+    }
+
+    try {
+        const { data } = await axios.get(url, {
+            headers: {
+                'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
+
+        const $ = cheerio.load(data);
+        const linksMap = new Map();
+
+        // Detect maximum page number from any ?page=XX links
+        let maxPage = 1;
+        $('a').each((i, el) => {
+            const href = $(el).attr('href');
+            if (!href) return;
+            const match = href.match(/page=(\d+)/i);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (!Number.isNaN(num) && num > maxPage) maxPage = num;
+            }
+        });
+
+        // Extract all relevant video links + durations
+        $('a').each((i, el) => {
+            const href = $(el).attr('href');
+            const text = $(el).text().trim();
+
+            if (!href) return;
+
+            try {
+                if (href.includes('viewkey=') && !href.includes('pkey=')) {
+                    const absoluteUrl = new URL(href, url).href;
+
+                    const container = $(el).closest('li, .thumb, .video, .phimage, .item, div');
+                    const durationVar =
+                        container.find('var.duration[data-title="Video Duration"]').first() ||
+                        $(el).find('var.duration[data-title="Video Duration"]').first();
+
+                    const durationText =
+                        (durationVar && durationVar.text() && durationVar.text().trim()) || '';
+
+                    const minutes = parseDuration(durationText);
+                    if (minutes !== null && minutes < 19) return;
+
+                    const existing = linksMap.get(absoluteUrl);
+                    const linkObj = {
+                        href: absoluteUrl,
+                        text: text || '(No Text)',
+                        duration: durationText || null
+                    };
+
+                    if (!existing || text.length > existing.text.length) {
+                        linksMap.set(absoluteUrl, linkObj);
+                    }
+                }
+            } catch (err) {
+                // Silently ignore errors for individual anchors
+            }
+        });
+
+        const links = Array.from(linksMap.values());
+        res.json({ links, count: links.length, maxPage });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({
+            error: 'Failed to scrape the URL. It might differ by site security.'
+        });
+    }
+});
 
 // Start the server
 connectMongo()
