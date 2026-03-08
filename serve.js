@@ -27,7 +27,48 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// ---------------------------------------------------------------------------
+// Popup-session — registered BEFORE the global CORS middleware so we can
+// allow any origin (bookmarklet runs on arbitrary third-party sites).
+// No credentials: the token provides short-lived access to link data only.
+// ---------------------------------------------------------------------------
+const popupSessions = new Map();
+
+app.options('/api/popup-session', cors({ origin: '*' }));
+
+app.post('/api/popup-session',
+    cors({ origin: '*', methods: ['POST', 'OPTIONS'] }),
+    express.json({ limit: '2mb' }),
+    (req, res) => {
+        const { links, sourceUrl } = req.body;
+        if (!Array.isArray(links)) {
+            return res.status(400).json({ error: 'links is required' });
+        }
+        const token =
+            Math.random().toString(36).slice(2, 10) +
+            Math.random().toString(36).slice(2, 10);
+        popupSessions.set(token, {
+            links: links.slice(0, 1000),
+            sourceUrl: String(sourceUrl || '').slice(0, 2000),
+            createdAt: Date.now()
+        });
+        setTimeout(() => popupSessions.delete(token), 600_000); // 10-min TTL
+        res.json({ token });
+    }
+);
+
+app.get('/api/popup-session', (req, res) => {
+    const token = String(req.query.token || '');
+    if (!token) return res.status(400).json({ error: 'token required' });
+    const session = popupSessions.get(token);
+    if (!session) return res.status(404).json({ error: 'Session not found or expired' });
+    popupSessions.delete(token); // one-time use
+    res.json(session);
+});
+
+// ---------------------------------------------------------------------------
+// Global CORS for all other routes (restricted origins in production)
+// ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production'
     ? ['https://grabbn.com', 'https://www.grabbn.com', 'https://app.grabbn.com']
     : true;

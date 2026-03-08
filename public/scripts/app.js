@@ -670,7 +670,9 @@ function setupBookmarkletModal() {
     if (!btn || !modal) return;
 
     const origin = window.location.origin;
-    const code = `javascript:(function(){var links=[];var seen=new Set();document.querySelectorAll('a[href]').forEach(function(a){var h=a.href;if(!h||h.startsWith('javascript:')||h.startsWith('mailto:')||h.startsWith('#')||seen.has(h))return;seen.add(h);var t=(a.textContent||a.title||a.getAttribute('aria-label')||'').trim().replace(/\\s+/g,' ');if(t.length>2)links.push({href:h,text:t.slice(0,120)});});var src=window.location.href;var popup=window.open('${origin}/popup.html','grabbn-popup','width=420,height=650,scrollbars=yes,resizable=yes');if(!popup){alert('Grabbn: allow popups for this bookmarklet to work.');return;}window.addEventListener('message',function handler(e){if(e.source===popup&&e.data==='grabbn-ready'){popup.postMessage({type:'grabbn-links',links:links,sourceUrl:src},'${origin}');window.removeEventListener('message',handler);}});})();`;
+    // The bookmarklet POSTs collected links to a temp server session, then opens
+    // the popup with the session token — no postMessage/window.opener needed.
+    const code = `javascript:(function(){var links=[];var seen=new Set();document.querySelectorAll('a[href]').forEach(function(a){var h=a.href;if(!h||h.startsWith('javascript:')||h.startsWith('mailto:')||h.startsWith('#')||seen.has(h))return;seen.add(h);var t=(a.textContent||a.title||a.getAttribute('aria-label')||'').trim().replace(/\\s+/g,' ');if(t.length>2)links.push({href:h,text:t.slice(0,120)});});fetch('${origin}/api/popup-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({links:links,sourceUrl:window.location.href})}).then(function(r){return r.json();}).then(function(d){if(d.token)window.open('${origin}/popup.html?session='+d.token,'grabbn-popup','width=420,height=650,scrollbars=yes,resizable=yes');else alert('Grabbn: server error.');}).catch(function(){alert('Grabbn: could not connect. Check your internet connection.');});})();`;
 
     btn.addEventListener('click', () => {
         if (linkEl) linkEl.href = code;

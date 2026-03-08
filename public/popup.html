@@ -27,7 +27,7 @@
             </svg>
         </div>
         <div class="flex-1 min-w-0">
-            <p class="text-xs font-semibold text-gray-900 text-clamp" id="sourceHost">Waiting for page…</p>
+            <p class="text-xs font-semibold text-gray-900 text-clamp" id="sourceHost">Loading…</p>
             <p class="text-[10px] text-gray-400 text-clamp" id="sourcePathDisplay"></p>
         </div>
         <button id="filterToggleBtn" title="Search" class="shrink-0 text-gray-400 hover:text-orchid-600 p-1 rounded transition-colors">
@@ -52,7 +52,7 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"/>
         </svg>
-        <p class="text-xs">Opening page…</p>
+        <p class="text-xs">Fetching links…</p>
     </div>
 
     <!-- Auth prompt -->
@@ -239,46 +239,60 @@
             } catch {}
         }
 
-        // --- Message listener (receives links from the bookmarklet opener) ---
+        // --- Load session from URL token ---
 
-        window.addEventListener('message', async (e) => {
-            if (!e.data || e.data.type !== 'grabbn-links') return;
-
-            const { links, sourceUrl: src } = e.data;
-            sourceUrl = src;
-
-            // Update header
-            try {
-                const u = new URL(src);
-                sourceHostEl.textContent = u.hostname;
-                sourcePathEl.textContent = (u.pathname + (u.search || '')).slice(0, 80);
-                sourcePathEl.title = src;
-            } catch {
-                sourceHostEl.textContent = src.slice(0, 60);
-            }
-
-            showStatus(`Collected ${links.length} link${links.length !== 1 ? 's' : ''} from page`, 'text-blue-600 bg-blue-50');
-
-            const authed = await checkAuth();
-            if (!authed) {
-                setView('auth');
-                hideStatus();
-                return;
-            }
-
-            await loadBuckets();
-
-            if (links.length === 0) {
+        async function loadSession() {
+            const token = new URLSearchParams(window.location.search).get('session');
+            if (!token) {
+                sourceHostEl.textContent = 'No session';
                 setView('empty');
-                hideStatus();
                 return;
             }
 
-            allLinks = links;
-            setView('list');
-            hideStatus();
-            renderLinks();
-        });
+            try {
+                const res = await fetch(`/api/popup-session?token=${encodeURIComponent(token)}`, { credentials: 'include' });
+                if (!res.ok) {
+                    sourceHostEl.textContent = 'Session expired';
+                    setView('empty');
+                    return;
+                }
+
+                const { links, sourceUrl: src } = await res.json();
+                sourceUrl = src;
+
+                try {
+                    const u = new URL(src);
+                    sourceHostEl.textContent = u.hostname;
+                    sourcePathEl.textContent = (u.pathname + (u.search || '')).slice(0, 80);
+                    sourcePathEl.title = src;
+                } catch {
+                    sourceHostEl.textContent = String(src).slice(0, 60);
+                }
+
+                const authed = await checkAuth();
+                if (!authed) {
+                    setView('auth');
+                    return;
+                }
+
+                await loadBuckets();
+
+                if (!links || links.length === 0) {
+                    setView('empty');
+                    return;
+                }
+
+                allLinks = links;
+                setView('list');
+                renderLinks();
+
+            } catch {
+                sourceHostEl.textContent = 'Error loading links';
+                setView('empty');
+            }
+        }
+
+        loadSession();
 
         // --- Save ---
 
@@ -358,10 +372,6 @@
 
         bucketSelect.addEventListener('change', updateFooterCounts);
 
-        // --- Signal opener that popup is ready ---
-        if (window.opener) {
-            window.opener.postMessage('grabbn-ready', '*');
-        }
     </script>
 </body>
 
