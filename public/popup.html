@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grabbn</title>
+    <link rel="stylesheet" href="/tailwind/output.css">
+    <style>
+        html, body { height: 100%; overflow: hidden; }
+        .link-row { cursor: pointer; transition: background 0.08s; }
+        .link-row:hover { background: #f9fafb; }
+        .link-row.selected { background: #fdf6fd; }
+        .links-scroll { overflow-y: auto; flex: 1; }
+        .text-clamp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .text-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
+</head>
+
+<body class="bg-white font-sans text-[0.875rem] flex flex-col" style="height:100vh">
+
+    <!-- Header -->
+    <div class="flex items-center gap-2 px-3 py-2.5 border-b bg-white shrink-0">
+        <div class="shrink-0 text-orchid-600" style="width:18px;height:18px">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+            </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-xs font-semibold text-gray-900 text-clamp" id="sourceHost">Waiting for page…</p>
+            <p class="text-[10px] text-gray-400 text-clamp" id="sourcePathDisplay"></p>
+        </div>
+        <button id="filterToggleBtn" title="Search" class="shrink-0 text-gray-400 hover:text-orchid-600 p-1 rounded transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Search bar (hidden by default) -->
+    <div id="searchBar" class="hidden px-3 py-2 border-b bg-gray-50 shrink-0">
+        <input id="searchInput" type="text" placeholder="Filter links…"
+            class="w-full text-xs rounded-md border border-gray-200 px-2.5 py-1.5 outline-none focus:border-orchid-400 bg-white">
+    </div>
+
+    <!-- Status bar -->
+    <div id="statusBar" class="hidden px-3 py-1.5 text-[11px] font-medium border-b shrink-0"></div>
+
+    <!-- Loading state (initial) -->
+    <div id="loadingState" class="flex-1 flex flex-col items-center justify-center gap-2 text-gray-400">
+        <svg class="animate-spin w-5 h-5 text-orchid-400" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"/>
+        </svg>
+        <p class="text-xs">Opening page…</p>
+    </div>
+
+    <!-- Auth prompt -->
+    <div id="authPrompt" class="hidden flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+        <div class="w-10 h-10 rounded-full bg-orchid-50 flex items-center justify-center text-orchid-500">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+            </svg>
+        </div>
+        <div>
+            <p class="text-sm font-semibold text-gray-800">Sign in to save links</p>
+            <p class="text-xs text-gray-400 mt-0.5">Create a free account to save links from any page into your buckets.</p>
+        </div>
+        <a href="/login.html" target="_blank"
+            class="px-4 py-2 rounded-lg bg-orchid-600 text-white text-xs font-semibold hover:bg-orchid-700 transition-colors">
+            Sign in / Sign up
+        </a>
+    </div>
+
+    <!-- Empty state -->
+    <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center gap-2 px-4 text-center">
+        <p class="text-sm font-medium text-gray-500">No links found</p>
+        <p class="text-xs text-gray-400">This page didn't return any links.</p>
+    </div>
+
+    <!-- Links list -->
+    <div id="linksList" class="hidden links-scroll divide-y divide-gray-50"></div>
+
+    <!-- Footer -->
+    <div id="footer" class="hidden border-t bg-white shrink-0 px-3 py-2.5 flex flex-col gap-y-2">
+        <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+                <span class="text-[11px] text-gray-500 shrink-0" id="selectedCount">0 selected</span>
+                <button id="selectAllBtn" class="text-[11px] text-orchid-600 hover:text-orchid-700 shrink-0 font-medium">All</button>
+                <button id="selectNoneBtn" class="text-[11px] text-gray-400 hover:text-gray-600 shrink-0">None</button>
+            </div>
+            <select id="bucketSelect"
+                class="text-xs border border-gray-200 rounded-md px-2 py-1 outline-none focus:border-orchid-400 bg-white shrink-0 max-w-[130px]">
+                <option value="">Choose bucket…</option>
+            </select>
+            <button id="saveBtn" disabled
+                class="px-3 py-1.5 rounded-lg bg-orchid-600 text-white text-xs font-semibold hover:bg-orchid-700 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
+                Save
+            </button>
+        </div>
+        <div id="saveStatus" class="hidden text-[11px]"></div>
+    </div>
+
+    <script>
+        const API = '';  // same origin
+
+        // Elements
+        const loadingState  = document.getElementById('loadingState');
+        const authPrompt    = document.getElementById('authPrompt');
+        const emptyState    = document.getElementById('emptyState');
+        const linksList     = document.getElementById('linksList');
+        const footer        = document.getElementById('footer');
+        const statusBar     = document.getElementById('statusBar');
+        const searchBar     = document.getElementById('searchBar');
+        const searchInput   = document.getElementById('searchInput');
+        const bucketSelect  = document.getElementById('bucketSelect');
+        const saveBtn       = document.getElementById('saveBtn');
+        const selectedCount = document.getElementById('selectedCount');
+        const saveStatus    = document.getElementById('saveStatus');
+        const sourceHostEl  = document.getElementById('sourceHost');
+        const sourcePathEl  = document.getElementById('sourcePathDisplay');
+
+        // State
+        let allLinks     = [];
+        let selectedUrls = new Set();
+        let sourceUrl    = '';
+        let filterText   = '';
+
+        // --- Helpers ---
+
+        function escHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function showStatus(msg, colorClass) {
+            statusBar.textContent = msg;
+            statusBar.className = `px-3 py-1.5 text-[11px] font-medium border-b shrink-0 ${colorClass}`;
+            statusBar.classList.remove('hidden');
+        }
+
+        function hideStatus() {
+            statusBar.classList.add('hidden');
+        }
+
+        function setView(view) {
+            // view: 'loading' | 'auth' | 'empty' | 'list'
+            loadingState.classList.toggle('hidden', view !== 'loading');
+            authPrompt.classList.toggle('hidden',   view !== 'auth');
+            emptyState.classList.toggle('hidden',   view !== 'empty');
+            linksList.classList.toggle('hidden',    view !== 'list');
+            footer.classList.toggle('hidden',       view !== 'list');
+        }
+
+        function getFiltered() {
+            if (!filterText) return allLinks;
+            const q = filterText.toLowerCase();
+            return allLinks.filter(l =>
+                l.text.toLowerCase().includes(q) || l.href.toLowerCase().includes(q)
+            );
+        }
+
+        function updateFooterCounts() {
+            selectedCount.textContent = `${selectedUrls.size} selected`;
+            saveBtn.disabled = selectedUrls.size === 0 || !bucketSelect.value;
+        }
+
+        function renderLinks() {
+            const filtered = getFiltered();
+            linksList.innerHTML = '';
+
+            if (filtered.length === 0) {
+                linksList.innerHTML = '<p class="text-xs text-gray-400 text-center py-8">No matches for that filter.</p>';
+                updateFooterCounts();
+                return;
+            }
+
+            const frag = document.createDocumentFragment();
+
+            filtered.forEach(link => {
+                const row = document.createElement('label');
+                row.className = `link-row flex items-start gap-2.5 px-3 py-2.5 ${selectedUrls.has(link.href) ? 'selected' : ''}`;
+                row.innerHTML = `
+                    <input type="checkbox" data-href="${escHtml(link.href)}"
+                        class="mt-0.5 shrink-0 w-3.5 h-3.5 rounded accent-orchid-600 cursor-pointer"
+                        ${selectedUrls.has(link.href) ? 'checked' : ''}>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-medium text-gray-800 text-clamp">${escHtml(link.text)}</p>
+                        <p class="text-[10px] text-gray-400 text-clamp">${escHtml(link.href)}</p>
+                    </div>
+                `;
+
+                const cb = row.querySelector('input[type=checkbox]');
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        selectedUrls.add(link.href);
+                        row.classList.add('selected');
+                    } else {
+                        selectedUrls.delete(link.href);
+                        row.classList.remove('selected');
+                    }
+                    updateFooterCounts();
+                });
+
+                frag.appendChild(row);
+            });
+
+            linksList.appendChild(frag);
+            updateFooterCounts();
+        }
+
+        // --- Auth & data fetching ---
+
+        async function checkAuth() {
+            try {
+                const res = await fetch(`${API}/api/buckets`, { credentials: 'include' });
+                return res.ok;
+            } catch {
+                return false;
+            }
+        }
+
+        async function loadBuckets() {
+            try {
+                const res = await fetch(`${API}/api/buckets`, { credentials: 'include' });
+                if (!res.ok) return;
+                const names = await res.json();
+                names.forEach(name => {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    bucketSelect.appendChild(opt);
+                });
+                // If user has buckets, pre-select the first
+                if (names.length > 0) bucketSelect.value = names[0];
+            } catch {}
+        }
+
+        // --- Message listener (receives links from the bookmarklet opener) ---
+
+        window.addEventListener('message', async (e) => {
+            if (!e.data || e.data.type !== 'grabbn-links') return;
+
+            const { links, sourceUrl: src } = e.data;
+            sourceUrl = src;
+
+            // Update header
+            try {
+                const u = new URL(src);
+                sourceHostEl.textContent = u.hostname;
+                sourcePathEl.textContent = (u.pathname + (u.search || '')).slice(0, 80);
+                sourcePathEl.title = src;
+            } catch {
+                sourceHostEl.textContent = src.slice(0, 60);
+            }
+
+            showStatus(`Collected ${links.length} link${links.length !== 1 ? 's' : ''} from page`, 'text-blue-600 bg-blue-50');
+
+            const authed = await checkAuth();
+            if (!authed) {
+                setView('auth');
+                hideStatus();
+                return;
+            }
+
+            await loadBuckets();
+
+            if (links.length === 0) {
+                setView('empty');
+                hideStatus();
+                return;
+            }
+
+            allLinks = links;
+            setView('list');
+            hideStatus();
+            renderLinks();
+        });
+
+        // --- Save ---
+
+        saveBtn.addEventListener('click', async () => {
+            const bucket = bucketSelect.value;
+            if (!bucket || selectedUrls.size === 0) return;
+
+            const linksToSave = allLinks
+                .filter(l => selectedUrls.has(l.href))
+                .map(l => ({ href: l.href, text: l.text, sourceUrl }));
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving…';
+            saveStatus.classList.add('hidden');
+
+            try {
+                const res = await fetch(`${API}/api/links`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ links: linksToSave, buckets: [bucket] })
+                });
+
+                if (res.ok) {
+                    const n = linksToSave.length;
+                    saveStatus.textContent = `✓ ${n} link${n !== 1 ? 's' : ''} saved to "${bucket}"`;
+                    saveStatus.className = 'text-[11px] text-green-600';
+                    saveStatus.classList.remove('hidden');
+                    selectedUrls.clear();
+                    renderLinks();
+                    setTimeout(() => saveStatus.classList.add('hidden'), 3000);
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    saveStatus.textContent = err.error || 'Failed to save links.';
+                    saveStatus.className = 'text-[11px] text-red-500';
+                    saveStatus.classList.remove('hidden');
+                }
+            } catch {
+                saveStatus.textContent = 'Network error. Please try again.';
+                saveStatus.className = 'text-[11px] text-red-500';
+                saveStatus.classList.remove('hidden');
+            }
+
+            saveBtn.textContent = 'Save';
+            updateFooterCounts();
+        });
+
+        // --- Filter / search ---
+
+        document.getElementById('filterToggleBtn').addEventListener('click', () => {
+            const hidden = searchBar.classList.toggle('hidden');
+            if (!hidden) {
+                searchInput.focus();
+            } else {
+                searchInput.value = '';
+                filterText = '';
+                renderLinks();
+            }
+        });
+
+        searchInput.addEventListener('input', () => {
+            filterText = searchInput.value.trim();
+            renderLinks();
+        });
+
+        // --- Select all / none ---
+
+        document.getElementById('selectAllBtn').addEventListener('click', () => {
+            getFiltered().forEach(l => selectedUrls.add(l.href));
+            renderLinks();
+        });
+
+        document.getElementById('selectNoneBtn').addEventListener('click', () => {
+            selectedUrls.clear();
+            renderLinks();
+        });
+
+        bucketSelect.addEventListener('change', updateFooterCounts);
+
+        // --- Signal opener that popup is ready ---
+        if (window.opener) {
+            window.opener.postMessage('grabbn-ready', '*');
+        }
+    </script>
+</body>
+
+</html>

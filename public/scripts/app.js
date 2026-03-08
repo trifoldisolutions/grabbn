@@ -669,7 +669,8 @@ function setupBookmarkletModal() {
 
     if (!btn || !modal) return;
 
-    const code = `javascript:(function(){window.open('${window.location.origin}/app.html?url='+encodeURIComponent(window.location.href),'_blank');})();`;
+    const origin = window.location.origin;
+    const code = `javascript:(function(){var links=[];var seen=new Set();document.querySelectorAll('a[href]').forEach(function(a){var h=a.href;if(!h||h.startsWith('javascript:')||h.startsWith('mailto:')||h.startsWith('#')||seen.has(h))return;seen.add(h);var t=(a.textContent||a.title||a.getAttribute('aria-label')||'').trim().replace(/\\s+/g,' ');if(t.length>2)links.push({href:h,text:t.slice(0,120)});});var src=window.location.href;var popup=window.open('${origin}/popup.html','grabbn-popup','width=420,height=650,scrollbars=yes,resizable=yes');if(!popup){alert('Grabbn: allow popups for this bookmarklet to work.');return;}window.addEventListener('message',function handler(e){if(e.source===popup&&e.data==='grabbn-ready'){popup.postMessage({type:'grabbn-links',links:links,sourceUrl:src},'${origin}');window.removeEventListener('message',handler);}});})();`;
 
     btn.addEventListener('click', () => {
         if (linkEl) linkEl.href = code;
@@ -726,14 +727,6 @@ async function init() {
     initUrlInput(() => {
         updateExtractButtonLookState();
     });
-
-    // Pre-fill URL input if arriving from bookmarklet
-    const bookmarkletUrl = urlParams.get('url');
-    if (bookmarkletUrl) {
-        setUrlValue(bookmarkletUrl);
-        history.replaceState(null, '', window.location.pathname);
-        updateExtractButtonLookState();
-    }
 
     initRoleSwitch((role) => {
         applyRoleUI(role);
