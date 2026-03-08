@@ -25,9 +25,10 @@ import {
     hideStopButton,
     showLookUpResults,
     hideLookUpResults,
-    updateContainers
+    updateContainers,
+    copyToClipboard
 } from './utils/helpers.js';
-import { initUrlInput, getUrlValue, initRoleSwitch, getCurrentRole } from './components/urlInput.js';
+import { initUrlInput, getUrlValue, setUrlValue, initRoleSwitch, getCurrentRole } from './components/urlInput.js';
 import {
     initBucketDropdown,
     getSelectedBuckets,
@@ -657,6 +658,40 @@ function handleStop() {
     showNotification('Stop requested. Finishing current page...', 'warning', 0, false);
 }
 
+// Bookmarklet modal
+function setupBookmarkletModal() {
+    const btn = document.getElementById('getBookmarkletBtn');
+    const modal = document.getElementById('bookmarkletModal');
+    const closeBtn = document.getElementById('closeBookmarkletModal');
+    const linkEl = document.getElementById('bookmarkletLink');
+    const codeEl = document.getElementById('bookmarkletCode');
+    const copyBtn = document.getElementById('copyBookmarkletBtn');
+
+    if (!btn || !modal) return;
+
+    const code = `javascript:(function(){window.open('${window.location.origin}/app.html?url='+encodeURIComponent(window.location.href),'_blank');})();`;
+
+    btn.addEventListener('click', () => {
+        if (linkEl) linkEl.href = code;
+        if (codeEl) codeEl.textContent = code;
+        modal.classList.remove('hidden');
+    });
+
+    closeBtn?.addEventListener('click', () => modal.classList.add('hidden'));
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.add('hidden');
+    });
+
+    copyBtn?.addEventListener('click', async () => {
+        const success = await copyToClipboard(code);
+        if (success) {
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+        }
+    });
+}
+
 // Initialize the application
 async function init() {
     // Handle Stripe return and deep-link URL params
@@ -691,6 +726,14 @@ async function init() {
     initUrlInput(() => {
         updateExtractButtonLookState();
     });
+
+    // Pre-fill URL input if arriving from bookmarklet
+    const bookmarkletUrl = urlParams.get('url');
+    if (bookmarkletUrl) {
+        setUrlValue(bookmarkletUrl);
+        history.replaceState(null, '', window.location.pathname);
+        updateExtractButtonLookState();
+    }
 
     initRoleSwitch((role) => {
         applyRoleUI(role);
@@ -778,6 +821,8 @@ async function init() {
     updateExtractButtonLookState();
 
     initNotificationBadge();
+
+    setupBookmarkletModal();
 }
 
 // Update UI based on authentication state
