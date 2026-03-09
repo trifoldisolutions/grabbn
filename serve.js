@@ -27,20 +27,37 @@ const PORT = process.env.PORT || 3000;
 // ---------------------------------------------------------------------------
 // Popup-session — registered BEFORE the global CORS middleware so we can
 // allow any origin (bookmarklet runs on arbitrary third-party sites).
-// No credentials: the token provides short-lived access to link data only.
+// Credentials are accepted so the user's anonymousId can be stored in the
+// session and forwarded to popup.html, bypassing third-party cookie issues.
 // ---------------------------------------------------------------------------
 const popupSessions = new Map();
 
-app.options('/api/popup-session', cors({ origin: '*' }));
+// Reflect request origin to support credentialed cross-origin requests
+const popupSessionCors = cors({ origin: true, credentials: true, methods: ['POST', 'OPTIONS'] });
+
+app.options('/api/popup-session', popupSessionCors);
 
 app.post('/api/popup-session',
-    cors({ origin: '*', methods: ['POST', 'OPTIONS'] }),
+    popupSessionCors,
+    cookieParser(),
     express.json({ limit: '2mb' }),
-    (req, res) => {
+    async (req, res) => {
         const { links, sourceUrl, maxPage, currentPage, pagesCollected } = req.body;
         if (!Array.isArray(links)) {
             return res.status(400).json({ error: 'links is required' });
         }
+
+        // Identify the user from credentials so popup.html can authenticate
+        // without relying on third-party cookies (blocked on many browsers).
+        let anonymousId = null;
+        try {
+            const sessionToken = req.cookies?.anonymousId || req.headers['x-anonymous-id'];
+            if (sessionToken) {
+                const user = await User.findOne({ anonymousId: sessionToken });
+                if (user) anonymousId = user.anonymousId;
+            }
+        } catch { /* non-fatal */ }
+
         const token =
             Math.random().toString(36).slice(2, 10) +
             Math.random().toString(36).slice(2, 10);
@@ -50,7 +67,8 @@ app.post('/api/popup-session',
             maxPage: Math.min(Math.max(Number(maxPage) || 1, 1), 50), // cap at 50
             currentPage: Math.max(Number(currentPage) || 1, 1),
             pagesCollected: Math.max(Number(pagesCollected) || 1, 1),
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            anonymousId,
         });
         setTimeout(() => popupSessions.delete(token), 600_000); // 10-min TTL
         res.json({ token });

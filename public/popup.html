@@ -147,6 +147,14 @@
         let maxPage         = 1;
         let currentPage     = 1;
         let pagesCollected  = 1;
+        let anonId          = null; // resolved from popup session; avoids third-party cookie issues
+
+        // Build fetch options, injecting X-Anonymous-Id when available
+        function fetchOpts(extra = {}) {
+            const headers = Object.assign({}, extra.headers);
+            if (anonId) headers['X-Anonymous-Id'] = anonId;
+            return Object.assign({ credentials: 'include' }, extra, { headers });
+        }
 
         // --- Helpers ---
 
@@ -261,7 +269,7 @@
 
         async function checkAuth() {
             try {
-                const res = await fetch(`${API}/api/buckets`, { credentials: 'include' });
+                const res = await fetch(`${API}/api/buckets`, fetchOpts());
                 return res.ok;
             } catch {
                 return false;
@@ -270,7 +278,7 @@
 
         async function loadBuckets() {
             try {
-                const res = await fetch(`${API}/api/buckets`, { credentials: 'include' });
+                const res = await fetch(`${API}/api/buckets`, fetchOpts());
                 if (!res.ok) return;
                 const names = await res.json();
                 names.forEach(name => {
@@ -302,7 +310,8 @@
                     return;
                 }
 
-                const { links, sourceUrl: src, maxPage: mp, currentPage: cp, pagesCollected: pc } = await res.json();
+                const { links, sourceUrl: src, maxPage: mp, currentPage: cp, pagesCollected: pc, anonymousId: sid } = await res.json();
+                if (sid) anonId = sid;
                 sourceUrl      = src;
                 maxPage        = mp || 1;
                 currentPage    = cp || 1;
@@ -361,12 +370,11 @@
             saveStatus.classList.add('hidden');
 
             try {
-                const res = await fetch(`${API}/api/links`, {
+                const res = await fetch(`${API}/api/links`, fetchOpts({
                     method: 'POST',
-                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ links: linksToSave, buckets: [bucket] })
-                });
+                }));
 
                 if (res.ok) {
                     const n = linksToSave.length;
