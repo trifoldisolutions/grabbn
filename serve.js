@@ -960,7 +960,8 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
                     bucket.links.push({
                         href: link.href,
                         text: link.text || '',
-                        duration: link.duration || ''
+                        duration: link.duration || '',
+                        image: link.image || null
                     });
                 }
             }

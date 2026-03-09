@@ -6,6 +6,7 @@ const linkSchema = new mongoose.Schema({
   text: { type: String, default: '' },
   duration: { type: String, default: '' },
   isFree: { type: Boolean, default: false },
+  image: { type: String, default: null },
   addedAt: { type: Date, default: Date.now }
 }, { _id: false });
 

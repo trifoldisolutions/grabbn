@@ -231,6 +231,7 @@
                     <input type="checkbox" data-href="${escHtml(link.href)}"
                         class="mt-0.5 shrink-0 w-3.5 h-3.5 rounded accent-orchid-600 cursor-pointer"
                         ${selectedUrls.has(link.href) ? 'checked' : ''}>
+                    ${link.image ? `<img src="${escHtml(link.image)}" class="w-10 h-8 object-cover rounded shrink-0" onerror="this.remove()">` : ''}
                     <div class="flex-1 min-w-0">
                         <p class="text-xs font-medium text-gray-800 text-clamp">${escHtml(link.text)}</p>
                         <p class="text-[10px] text-gray-400 text-clamp">${escHtml(link.href)}</p>
