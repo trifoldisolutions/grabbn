@@ -409,7 +409,9 @@ function updateView() {
         copyBtn.disabled = filteredLinks.length === 0;
     }
 
-    updateContainers(filteredLinks.length > 0);
+    const allBuckets = getBucketOptions();
+    const hasUserBuckets = allBuckets.some(b => b !== 'Singletons');
+    updateContainers(filteredLinks.length > 0 || hasUserBuckets);
 }
 
 // Update button states
@@ -491,12 +493,7 @@ export function initLinksList() {
     });
 
     // Initial render
-    const storedLinks = getStoredLinks();
-    if (storedLinks.length > 0) {
-        updateView();
-    } else {
-        updateContainers(false);
-    }
+    updateView();
 
     updateViewButtons();
     initBucketPopup();
