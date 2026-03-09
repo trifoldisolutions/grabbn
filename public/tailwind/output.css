@@ -20,9 +20,11 @@
     --color-amber-50: oklch(98.7% 0.022 95.277);
     --color-amber-100: oklch(96.2% 0.059 95.617);
     --color-amber-200: oklch(92.4% 0.12 95.746);
+    --color-amber-500: oklch(76.9% 0.188 70.08);
     --color-amber-600: oklch(66.6% 0.179 58.318);
     --color-amber-700: oklch(55.5% 0.163 48.998);
     --color-amber-800: oklch(47.3% 0.137 46.201);
+    --color-amber-900: oklch(41.4% 0.112 45.904);
     --color-yellow-200: oklch(94.5% 0.129 101.54);
     --color-yellow-300: oklch(90.5% 0.182 98.111);
     --color-yellow-500: oklch(79.5% 0.184 86.047);
@@ -1399,6 +1401,9 @@
   .whitespace-nowrap {
     white-space: nowrap;
   }
+  .text-amber-500 {
+    color: var(--color-amber-500);
+  }
   .text-amber-600 {
     color: var(--color-amber-600);
   }
@@ -1727,6 +1732,13 @@
       }
     }
   }
+  .hover\:bg-amber-200 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-amber-200);
+      }
+    }
+  }
   .hover\:bg-gray-50 {
     &:hover {
       @media (hover: hover) {
@@ -1829,6 +1841,13 @@
     &:hover {
       @media (hover: hover) {
         color: var(--color-amber-800);
+      }
+    }
+  }
+  .hover\:text-amber-900 {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-amber-900);
       }
     }
   }

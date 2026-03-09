@@ -51,6 +51,17 @@
     <!-- Status bar -->
     <div id="statusBar" class="hidden px-3 py-1.5 text-[11px] font-medium border-b shrink-0"></div>
 
+    <!-- Pages banner: shown when more pages are available -->
+    <div id="pagesBanner" class="hidden px-3 py-1.5 border-b bg-amber-50 shrink-0 flex items-center gap-2">
+        <svg class="shrink-0 text-amber-500" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+        </svg>
+        <span class="text-[11px] text-amber-800 font-medium flex-1 min-w-0 truncate" id="pagesLabel"></span>
+        <button id="loadPagesBtn" class="shrink-0 text-[11px] font-semibold text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-md transition-colors">
+            Load all
+        </button>
+    </div>
+
     <!-- Loading state (initial) -->
     <div id="loadingState" class="flex-1 flex flex-col items-center justify-center gap-2 text-gray-400">
         <svg class="animate-spin w-5 h-5 text-orchid-400" viewBox="0 0 24 24" fill="none">
@@ -116,6 +127,9 @@
         const linksList     = document.getElementById('linksList');
         const footer        = document.getElementById('footer');
         const statusBar     = document.getElementById('statusBar');
+        const pagesBanner   = document.getElementById('pagesBanner');
+        const pagesLabel    = document.getElementById('pagesLabel');
+        const loadPagesBtn  = document.getElementById('loadPagesBtn');
         const searchBar     = document.getElementById('searchBar');
         const searchInput   = document.getElementById('searchInput');
         const bucketSelect  = document.getElementById('bucketSelect');
@@ -130,6 +144,8 @@
         let selectedUrls = new Set();
         let sourceUrl    = '';
         let filterText   = '';
+        let maxPage      = 1;
+        let currentPage  = 1;
 
         // --- Helpers ---
 
@@ -158,6 +174,28 @@
             emptyState.classList.toggle('hidden',   view !== 'empty');
             linksList.classList.toggle('hidden',    view !== 'list');
             footer.classList.toggle('hidden',       view !== 'list');
+        }
+
+        function updatePagesBanner() {
+            if (maxPage <= currentPage) {
+                pagesBanner.classList.add('hidden');
+                return;
+            }
+            const remaining = maxPage - currentPage;
+            pagesLabel.textContent = `${remaining} more page${remaining > 1 ? 's' : ''} detected (${currentPage + 1}–${maxPage})`;
+            pagesBanner.classList.remove('hidden');
+        }
+
+        function buildPageUrls() {
+            const urls = [];
+            for (let n = currentPage + 1; n <= maxPage; n++) {
+                try {
+                    const u = new URL(sourceUrl);
+                    u.searchParams.set('page', n);
+                    urls.push(u.href);
+                } catch {}
+            }
+            return urls;
         }
 
         function getFiltered() {
@@ -262,8 +300,10 @@
                     return;
                 }
 
-                const { links, sourceUrl: src } = await res.json();
-                sourceUrl = src;
+                const { links, sourceUrl: src, maxPage: mp, currentPage: cp } = await res.json();
+                sourceUrl   = src;
+                maxPage     = mp || 1;
+                currentPage = cp || 1;
 
                 try {
                     const u = new URL(src);
@@ -290,6 +330,7 @@
                 allLinks = links;
                 setView('list');
                 renderLinks();
+                updatePagesBanner();
 
             } catch {
                 sourceHostEl.textContent = 'Error loading links';
@@ -383,6 +424,50 @@
                 window.parent.postMessage('grabbn-close', '*');
             } else {
                 window.close();
+            }
+        });
+
+        // --- Pagination: load all pages ---
+
+        loadPagesBtn.addEventListener('click', () => {
+            const urls = buildPageUrls();
+            if (!urls.length) return;
+
+            loadPagesBtn.disabled = true;
+            loadPagesBtn.textContent = `Loading…`;
+            pagesLabel.textContent   = `Fetching page ${currentPage + 1} of ${maxPage}…`;
+
+            // Ask the bookmarklet (running in the outer page) to fetch each URL
+            window.parent.postMessage({ type: 'grabbn-fetch-pages', urls }, '*');
+        });
+
+        // --- Receive fetched-page link batches from the bookmarklet relay ---
+
+        window.addEventListener('message', (e) => {
+            if (!e.data || e.data.type !== 'grabbn-page-links') return;
+
+            const { links: newLinks = [], pageUrl, index, total, error } = e.data;
+
+            if (!error && newLinks.length) {
+                // Deduplicate before merging
+                const existing = new Set(allLinks.map(l => l.href));
+                newLinks.forEach(l => { if (!existing.has(l.href)) { allLinks.push(l); existing.add(l.href); } });
+                renderLinks();
+            }
+
+            const doneCount = index + 1;
+
+            if (doneCount >= total) {
+                // All pages finished
+                pagesBanner.classList.add('hidden');
+                showStatus(`All ${total + 1} pages loaded — ${allLinks.length} links total`, 'text-green-700 bg-green-50');
+                setTimeout(hideStatus, 3000);
+            } else {
+                // Still in progress — show which page we just got
+                try {
+                    const pageNum = new URL(pageUrl).searchParams.get('page');
+                    pagesLabel.textContent = `Fetching page ${pageNum} of ${maxPage}…`;
+                } catch {}
             }
         });
 
