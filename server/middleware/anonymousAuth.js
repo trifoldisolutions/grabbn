@@ -30,20 +30,23 @@ export async function anonymousAuth(req, res, next) {
     // If no user found, create new anonymous user
     if (!user) {
       const newAnonymousId = crypto.randomUUID();
-      
+
       user = await User.create({
         anonymousId: newAnonymousId,
         isAnonymous: true
       });
-
-      // Set cookie for future requests (7 days expiry)
-      res.cookie('anonymousId', newAnonymousId, {
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        httpOnly: true,
-        sameSite: 'lax',
-        // secure: true // Enable in production with HTTPS
-      });
     }
+
+    // Always refresh the cookie so existing users get the updated SameSite attribute.
+    // SameSite=None + Secure is required for the cookie to be sent from cross-site
+    // iframes (e.g. the bookmarklet popup embedded on third-party pages).
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('anonymousId', user.anonymousId, {
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      httpOnly: true,
+      sameSite: isProd ? 'none' : 'lax',
+      secure: isProd,
+    });
 
     // Attach user to request object
     req.user = user;
