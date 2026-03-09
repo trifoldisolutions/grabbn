@@ -46,23 +46,6 @@ const userSchema = new mongoose.Schema(
       of: mongoose.Schema.Types.Mixed,
       default: {}
     },
-    // Scraping limits tracking
-    dailyScrapingCount: {
-      type: Number,
-      default: 0
-    },
-    lastScrapingResetDate: {
-      type: Date,
-      default: Date.now
-    },
-    scrapingLimit: {
-      type: Number,
-      default: function() {
-        // Anonymous users: 2 scrapes per day
-        // Registered users: 12 scrapes per day
-        return this.isAnonymous ? 2 : 12;
-      }
-    },
     resetPasswordToken: {
       type: String,
       select: false
@@ -137,48 +120,11 @@ userSchema.methods.convertToRegistered = async function(email, password, usernam
   this.password = password; // Will be hashed by pre-save hook
   this.username = username;
   this.isAnonymous = false;
-  this.scrapingLimit = 12;
   return this.save();
 };
 
 // Update lastActive on every interaction
 userSchema.methods.touch = function() {
-  this.lastActive = new Date();
-  return this.save();
-};
-
-// Check if user needs daily reset
-userSchema.methods.checkAndResetDailyLimit = function() {
-  const now = new Date();
-  const lastReset = new Date(this.lastScrapingResetDate);
-  
-  // Check if it's a new day (UTC)
-  const isNewDay = now.toDateString() !== lastReset.toDateString();
-  
-  if (isNewDay) {
-    this.dailyScrapingCount = 0;
-    this.lastScrapingResetDate = now;
-  }
-  
-  return isNewDay;
-};
-
-// Check if user can scrape (has not exceeded limit)
-userSchema.methods.canScrape = function() {
-  this.checkAndResetDailyLimit();
-  return this.dailyScrapingCount < this.scrapingLimit;
-};
-
-// Get remaining scrapes for today
-userSchema.methods.getRemainingScrapers = function() {
-  this.checkAndResetDailyLimit();
-  return Math.max(0, this.scrapingLimit - this.dailyScrapingCount);
-};
-
-// Increment scraping count
-userSchema.methods.incrementScrapingCount = async function() {
-  this.checkAndResetDailyLimit();
-  this.dailyScrapingCount += 1;
   this.lastActive = new Date();
   return this.save();
 };

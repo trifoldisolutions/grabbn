@@ -13,7 +13,6 @@ import {
     requestCashout
 } from './state/store.js';
 
-import { scrapeMultiplePages, stopScraping } from './services/scraper.js';
 import {
     showStatus,
     hideStatus,
@@ -21,27 +20,14 @@ import {
     showNotification,
     showExtractSpinner,
     hideExtractSpinner,
-    showStopButton,
-    hideStopButton,
     showLookUpResults,
     hideLookUpResults,
     updateContainers,
     copyToClipboard
 } from './utils/helpers.js';
-import { initUrlInput, getUrlValue, setUrlValue, initRoleSwitch, getCurrentRole } from './components/urlInput.js';
-import {
-    initBucketDropdown,
-    getSelectedBuckets,
-    getIsAnyBucketSelected
-} from './components/bucketDropdown.js';
+import { initUrlInput, getUrlValue, setUrlValue } from './components/urlInput.js';
 import { initFilterDropdown } from './components/filterDropdown.js';
 import { initLinksList, applyFilter } from './components/linksList.js';
-import {
-    initScrapingStatus,
-    canUserScrape,
-    refreshScrapingStatus
-} from './components/scrapingStatus.js';
-
 import {
     checkAuthStatus,
     openLoginModal,
@@ -51,10 +37,7 @@ import { openBucketPopup, openBucketPopupReadOnly } from './components/bucketPop
 
 // DOM elements
 const extractBtn = document.getElementById('extractBtn');
-const extractBtnText = document.getElementById('extractBtnText');
-const stopBtn = document.getElementById('stopBtn');
 const copyBtn = document.getElementById('copy-links-btn');
-const linksBucketsDropdownWrapper = document.getElementById('linksBucketsDropdownWrapper');
 
 // User hub elements
 const userHubBtn = document.getElementById('userHubBtn');
@@ -249,18 +232,8 @@ async function displayUserInfo() {
 
 // Update extract button state
 function updateExtractButtonLookState() {
-    const isLookup = getCurrentRole() === 'bucket-lookup';
     const hasValue = Boolean(getUrlValue());
-
-    let isActive;
-    if (isLookup) {
-        isActive = hasValue;
-    } else {
-        const hasSelectedBucket = getIsAnyBucketSelected();
-        const hasScrapesRemaining = canUserScrape();
-        isActive = !isAccountSuspended && hasValue && hasSelectedBucket && hasScrapesRemaining;
-    }
-
+    const isActive = !isAccountSuspended && hasValue;
     if (extractBtn) {
         extractBtn.setAttribute('aria-disabled', String(!isActive));
         extractBtn.classList.toggle('opacity-50', !isActive);
@@ -269,134 +242,6 @@ function updateExtractButtonLookState() {
     }
 }
 
-// Apply UI changes when role switches
-function applyRoleUI(role) {
-    const isLookup = role === 'bucket-lookup';
-
-    // Update extract button text
-    if (extractBtnText) {
-        extractBtnText.textContent = isLookup ? 'Lookup Bucket' : 'Extract Links';
-    }
-
-    // Disable / enable bucket dropdown
-    if (linksBucketsDropdownWrapper) {
-        linksBucketsDropdownWrapper.classList.toggle('opacity-40', isLookup);
-        linksBucketsDropdownWrapper.classList.toggle('pointer-events-none', isLookup);
-    }
-
-    // When switching away from lookup mode, hide lookup results and restore normal view
-    if (!isLookup && lookUpBuckets.length > 0) {
-        clearLookUpResults();
-    }
-
-    updateExtractButtonLookState();
-}
-
-// Guard against activation when visually "disabled"
-function setupExtractButtonGuards() {
-    if (!extractBtn) return;
-
-    extractBtn.addEventListener('click', (e) => {
-        if (extractBtn.getAttribute('aria-disabled') === 'true') {
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Show specific message based on reason
-            if (isAccountSuspended) {
-                showNotification('Your account is suspended. Verify your email to restore access.', 'warning', 5000, false);
-            } else if (!canUserScrape()) {
-                showNotification('Daily scraping limit reached. Try again tomorrow or log in for more scrapes.', 'warning', 5000, false);
-            }
-            return;
-        }
-    });
-
-    extractBtn.addEventListener('keydown', (e) => {
-        if ((e.key === 'Enter' || e.key === ' ') &&
-            extractBtn.getAttribute('aria-disabled') === 'true') {
-            e.preventDefault();
-        }
-    });
-}
-
-// Handle extract button click
-async function handleExtract() {
-    const url = getUrlValue();
-    if (!url) {
-        showStatus('Please enter a valid URL.', 'text-red-500');
-        return;
-    }
-
-    if (getIsRunning()) return;
-
-    // Check if user can scrape
-    if (!canUserScrape()) {
-        showNotification('Daily scraping limit reached. Try again tomorrow or log in for more scrapes.', 'warning', 5000, false);
-        return;
-    }
-
-    const selectedBuckets = getSelectedBuckets();
-
-    if (selectedBuckets.length === 0) {
-        showStatus('Please select at least one bucket.', 'text-red-500');
-        return;
-    }
-
-    hideStatus();
-    if (copyBtn) copyBtn.disabled = true;
-
-    // Add disabled look to button during scraping
-    if (extractBtn) {
-        extractBtn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        extractBtn.setAttribute('aria-disabled', 'true');
-    }
-
-    // Show spinner (stop button will be shown by notification)
-    showExtractSpinner();
-
-    try {
-        await scrapeMultiplePages(url, selectedBuckets, (msg, type) => {
-            // Show status in notification with stop button ONLY during scraping
-            showNotification(msg, type === 'text-blue-500' ? 'info' :
-                type === 'text-green-600' ? 'success' :
-                    type === 'text-yellow-500' ? 'warning' : 'info',
-                0, true); // 0 duration means no auto-hide, true shows stop button
-        });
-
-        // Refresh scraping status after successful scrape
-        await refreshScrapingStatus();
-        updateExtractButtonLookState();
-
-        // Show final success notification that auto-hides
-        const filteredLinks = getFilteredLinks();
-        showNotification(
-            `Scraping complete! ${filteredLinks.length} link(s) extracted.`,
-            'success',
-            3000,
-            false
-        );
-    } catch (error) {
-        if (error.message.includes('Daily scraping limit reached')) {
-            showNotification('Daily scraping limit reached. Try again tomorrow or log in for more scrapes.', 'error', 5000, false);
-        } else if (error.message.includes('Failed to scrape')) {
-            showNotification(`Error: ${error.message}`, 'error', 5000, false);
-        } else {
-            showNotification('Cannot connect to server.', 'error', 5000, false);
-        }
-    } finally {
-        // Hide spinner and stop button
-        hideExtractSpinner();
-        hideStopButton();
-
-        // Restore button state based on current conditions
-        setTimeout(() => {
-            updateExtractButtonLookState();
-        }, 100);
-
-        const filteredLinks = getFilteredLinks();
-        if (copyBtn) copyBtn.disabled = filteredLinks.length === 0;
-    }
-}
 
 // Render a single bucket card in the lookup results container
 function renderLookUpCard(bucket) {
@@ -651,13 +496,6 @@ if (lookUpCardView) {
     });
 }
 
-// Handle stop button click
-function handleStop() {
-    if (!getIsRunning()) return;
-    stopScraping();
-    showNotification('Stop requested. Finishing current page...', 'warning', 0, false);
-}
-
 // Bookmarklet modal
 function setupBookmarkletModal() {
     const btn = document.getElementById('getBookmarkletBtn');
@@ -729,19 +567,8 @@ async function init() {
     // Display user info
     await displayUserInfo();
 
-    // Initialize scraping status
-    await initScrapingStatus();
-
     // Initialize components
     initUrlInput(() => {
-        updateExtractButtonLookState();
-    });
-
-    initRoleSwitch((role) => {
-        applyRoleUI(role);
-    });
-
-    initBucketDropdown(() => {
         updateExtractButtonLookState();
     });
 
@@ -786,14 +613,9 @@ async function init() {
     }
 
     // Setup extract button
-    setupExtractButtonGuards();
     if (extractBtn) {
         extractBtn.addEventListener('click', () => {
-            if (getCurrentRole() === 'bucket-lookup') {
-                handleLookup();
-            } else {
-                handleExtract();
-            }
+            handleLookup();
         });
     }
 
@@ -805,11 +627,6 @@ async function init() {
     // Setup close lookup results button (hides section, shows main view)
     if (closeLookUpResultsBtn) {
         closeLookUpResultsBtn.addEventListener('click', closeLookUpResults);
-    }
-
-    // Setup stop button
-    if (stopBtn) {
-        stopBtn.addEventListener('click', handleStop);
     }
 
     // Listen for bucket dropdown changes (for extract button state)

@@ -5,14 +5,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import axios from 'axios';
-import * as cheerio from 'cheerio';
 import User from './server/models/user.js';
 import Bucket from './server/models/bucket.js';
 import Report from './server/models/report.js';
 import BucketAccess from './server/models/bucketAccess.js';
 import { anonymousAuth, requireAuth, requireVerification } from './server/middleware/anonymousAuth.js';
-import { getScrapingStatus } from './server/middleware/scrapingLimit.js';
 import bucketShareRouter from './server/routes/bucketShare.js';
 import authRouter from './server/routes/auth.js';
 import creditsRouter, { handleWebhook } from './server/routes/credits.js';
@@ -124,50 +121,6 @@ async function connectMongo() {
     console.log(`MongoDB connected to database: ${dbName}`);
 }
 
-
-// Parse duration helper function
-function parseDuration(text) {
-    if (!text) return null;
-    text = String(text).toLowerCase().trim();
-
-    // Case: 137:55, 19:32, 1:02:33
-    const timeFormat = text.match(/(\d+):(\d{2})(?::(\d{2}))?/);
-    if (timeFormat) {
-        const part1 = parseInt(timeFormat[1], 10);
-        const part2 = parseInt(timeFormat[2], 10);
-        const part3 = timeFormat[3] ? parseInt(timeFormat[3], 10) : 0;
-
-        // If we have 3 parts, treat as hh:mm:ss
-        if (timeFormat[3]) {
-            const hours = part1;
-            const mins = part2;
-            const secs = part3;
-            return hours * 60 + mins + (secs > 0 ? 1 : 0);
-        } else {
-            // 2 parts => treat as mm:ss
-            const mins = part1;
-            const secs = part2;
-            return mins + (secs > 0 ? 1 : 0);
-        }
-    }
-
-    // Case: 19m, 25min, 60 mins
-    const minuteOnly = text.match(/(\d+)\s*m(in)?s?/);
-    if (minuteOnly) {
-        return parseInt(minuteOnly[1], 10);
-    }
-
-    // Case: 1h30, 2 hours 15 min
-    const hourFormat = text.match(/(\d+)\s*h(our)?s?\s*(\d+)?\s*m?/);
-    if (hourFormat) {
-        const h = parseInt(hourFormat[1], 10);
-        const m = parseInt(hourFormat[3] || 0, 10);
-        return h * 60 + m;
-    }
-
-    return null;
-}
-
 // ====================
 // API ENDPOINTS
 // ====================
@@ -180,36 +133,6 @@ app.get('/api/user', requireAuth, requireVerification, (req, res) => {
         createdAt: req.user.createdAt,
         lastActive: req.user.lastActive
     });
-});
-
-// Get scraping status (limits, remaining, etc.)
-app.get('/api/scraping-status', requireAuth, requireVerification, getScrapingStatus);
-
-// Increment scraping counter (called once per scraping session from frontend)
-app.post('/api/scraping/increment', requireAuth, requireVerification, async (req, res) => {
-    try {
-        // Check if user can scrape first
-        if (!req.user.canScrape()) {
-            return res.status(429).json({
-                error: 'Daily scraping limit reached',
-                message: 'You have reached your daily limit. Please try again tomorrow or log in for more scrapes.'
-            });
-        }
-
-        await req.user.incrementScrapingCount();
-
-        const remaining = req.user.getRemainingScrapers();
-
-        res.json({
-            success: true,
-            remaining: remaining,
-            used: req.user.dailyScrapingCount,
-            limit: req.user.scrapingLimit
-        });
-    } catch (error) {
-        console.error('Error incrementing scraping count:', error);
-        res.status(500).json({ error: 'Failed to update scraping count' });
-    }
 });
 
 // Get all buckets for current user (NO Singletons returned)
@@ -990,85 +913,6 @@ app.delete('/api/links', requireAuth, requireVerification, async (req, res) => {
     } catch (error) {
         console.error('Error clearing links:', error);
         res.status(500).json({ error: 'Failed to clear links' });
-    }
-});
-
-// Scrape endpoint — fetches a URL and extracts video links with durations
-app.get('/scrape', requireAuth, requireVerification, async (req, res) => {
-    const { url } = req.query;
-
-    if (!url) {
-        return res.status(400).json({ error: 'URL is required' });
-    }
-
-    try {
-        const { data } = await axios.get(url, {
-            headers: {
-                'User-Agent':
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
-
-        const $ = cheerio.load(data);
-        const linksMap = new Map();
-
-        // Detect maximum page number from any ?page=XX links
-        let maxPage = 1;
-        $('a').each((i, el) => {
-            const href = $(el).attr('href');
-            if (!href) return;
-            const match = href.match(/page=(\d+)/i);
-            if (match) {
-                const num = parseInt(match[1], 10);
-                if (!Number.isNaN(num) && num > maxPage) maxPage = num;
-            }
-        });
-
-        // Extract all relevant video links + durations
-        $('a').each((i, el) => {
-            const href = $(el).attr('href');
-            const text = $(el).text().trim();
-
-            if (!href) return;
-
-            try {
-                if (href.includes('viewkey=') && !href.includes('pkey=')) {
-                    const absoluteUrl = new URL(href, url).href;
-
-                    const container = $(el).closest('li, .thumb, .video, .phimage, .item, div');
-                    const durationVar =
-                        container.find('var.duration[data-title="Video Duration"]').first() ||
-                        $(el).find('var.duration[data-title="Video Duration"]').first();
-
-                    const durationText =
-                        (durationVar && durationVar.text() && durationVar.text().trim()) || '';
-
-                    const minutes = parseDuration(durationText);
-                    if (minutes !== null && minutes < 19) return;
-
-                    const existing = linksMap.get(absoluteUrl);
-                    const linkObj = {
-                        href: absoluteUrl,
-                        text: text || '(No Text)',
-                        duration: durationText || null
-                    };
-
-                    if (!existing || text.length > existing.text.length) {
-                        linksMap.set(absoluteUrl, linkObj);
-                    }
-                }
-            } catch (err) {
-                // Silently ignore errors for individual anchors
-            }
-        });
-
-        const links = Array.from(linksMap.values());
-        res.json({ links, count: links.length, maxPage });
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).json({
-            error: 'Failed to scrape the URL. It might differ by site security.'
-        });
     }
 });
 
