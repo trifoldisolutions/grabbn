@@ -604,6 +604,31 @@
         </div>
     </div>
 
+    <!-- Create Bucket FAB -->
+    <button id="createBucketFab" title="Create new bucket"
+        class="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-orchid-600 hover:bg-orchid-700 active:scale-95 text-white shadow-lg flex items-center justify-center transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"><path fill="currentColor" d="M12 20q-.213 0-.357-.144T11.5 19.5v-7h-7q-.213 0-.356-.144T4 11.999t.144-.356t.356-.143h7v-7q0-.213.144-.356T12.001 4t.356.144t.143.356v7h7q.213 0 .356.144t.144.357t-.144.356t-.356.143h-7v7q0 .213-.144.356t-.357.144"/></svg>
+    </button>
+
+    <!-- Create Bucket Modal -->
+    <div id="createBucketModal" class="hidden fixed inset-0 z-[100] items-center justify-center bg-black/50 p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 flex flex-col gap-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-gray-900 text-base">New Bucket</h3>
+                <button id="closeCreateBucketModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M6.4 19L5 17.6l5.6-5.6L5 6.4L6.4 5l5.6 5.6L17.6 5L19 6.4L13.4 12l5.6 5.6l-1.4 1.4l-5.6-5.6z"/></svg>
+                </button>
+            </div>
+            <input id="createBucketNameInput" type="text" placeholder="Bucket name…" maxlength="80"
+                class="w-full h-11 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-orchid-400 transition-colors">
+            <p id="createBucketError" class="hidden text-xs text-red-500"></p>
+            <button id="createBucketConfirmBtn"
+                class="h-11 w-full rounded-lg bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
+                Create Bucket
+            </button>
+        </div>
+    </div>
+
 </body>
 
 </html>

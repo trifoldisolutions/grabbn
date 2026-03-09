@@ -10,7 +10,8 @@ import {
     topupCredits,
     getConnectStatus,
     startConnectOnboarding,
-    requestCashout
+    requestCashout,
+    addBucket
 } from './state/store.js';
 
 import {
@@ -642,6 +643,7 @@ async function init() {
     initNotificationBadge();
 
     setupBookmarkletModal();
+    setupCreateBucketFab();
 }
 
 // Update UI based on authentication state
@@ -1163,6 +1165,70 @@ if (reportForm) {
             reportSubmitBtn.textContent = 'Submit Report';
         }
     });
+}
+
+// ========== CREATE BUCKET FAB ==========
+
+function setupCreateBucketFab() {
+    const fab       = document.getElementById('createBucketFab');
+    const modal     = document.getElementById('createBucketModal');
+    const closeBtn  = document.getElementById('closeCreateBucketModal');
+    const input     = document.getElementById('createBucketNameInput');
+    const confirmBtn = document.getElementById('createBucketConfirmBtn');
+    const errorEl   = document.getElementById('createBucketError');
+
+    if (!fab || !modal) return;
+
+    function openModal() {
+        if (input) { input.value = ''; input.disabled = false; }
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Create Bucket'; }
+        if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => input?.focus(), 50);
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    fab.addEventListener('click', openModal);
+    closeBtn?.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+    });
+
+    async function handleCreate() {
+        const name = input?.value.trim();
+        if (!name) { input?.focus(); return; }
+
+        if (name.toLowerCase() === 'singletons') {
+            if (errorEl) { errorEl.textContent = '"Singletons" is a reserved name.'; errorEl.classList.remove('hidden'); }
+            return;
+        }
+
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Creating…'; }
+        if (input) input.disabled = true;
+        if (errorEl) errorEl.classList.add('hidden');
+
+        try {
+            await addBucket(name);
+            showNotification(`Bucket "${name}" created.`, 'success', 3000);
+            closeModal();
+        } catch (err) {
+            if (errorEl) {
+                errorEl.textContent = err.message || 'Failed to create bucket.';
+                errorEl.classList.remove('hidden');
+            }
+            if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Create Bucket'; }
+            if (input) { input.disabled = false; input.focus(); }
+        }
+    }
+
+    confirmBtn?.addEventListener('click', handleCreate);
+    input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleCreate(); });
 }
 
 // Start the app
