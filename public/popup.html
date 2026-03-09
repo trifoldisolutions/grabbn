@@ -140,12 +140,13 @@
         const sourcePathEl  = document.getElementById('sourcePathDisplay');
 
         // State
-        let allLinks     = [];
-        let selectedUrls = new Set();
-        let sourceUrl    = '';
-        let filterText   = '';
-        let maxPage      = 1;
-        let currentPage  = 1;
+        let allLinks        = [];
+        let selectedUrls    = new Set();
+        let sourceUrl       = '';
+        let filterText      = '';
+        let maxPage         = 1;
+        let currentPage     = 1;
+        let pagesCollected  = 1;
 
         // --- Helpers ---
 
@@ -300,15 +301,19 @@
                     return;
                 }
 
-                const { links, sourceUrl: src, maxPage: mp, currentPage: cp } = await res.json();
-                sourceUrl   = src;
-                maxPage     = mp || 1;
-                currentPage = cp || 1;
+                const { links, sourceUrl: src, maxPage: mp, currentPage: cp, pagesCollected: pc } = await res.json();
+                sourceUrl      = src;
+                maxPage        = mp || 1;
+                currentPage    = cp || 1;
+                pagesCollected = Math.max(Number(pc) || 1, 1);
 
                 try {
                     const u = new URL(src);
                     sourceHostEl.textContent = u.hostname;
-                    sourcePathEl.textContent = (u.pathname + (u.search || '')).slice(0, 80);
+                    const pathStr = (u.pathname + (u.search || '')).slice(0, 70);
+                    sourcePathEl.textContent = pagesCollected > 1
+                        ? `${pagesCollected} pages · ${pathStr}`
+                        : pathStr;
                     sourcePathEl.title = src;
                 } catch {
                     sourceHostEl.textContent = String(src).slice(0, 60);
@@ -370,6 +375,12 @@
                     selectedUrls.clear();
                     renderLinks();
                     setTimeout(() => saveStatus.classList.add('hidden'), 3000);
+                    // Clear the window.name accumulator on the parent page so the
+                    // next bookmarklet click starts a fresh collection session.
+                    if (window.parent !== window) {
+                        window.parent.postMessage('grabbn-reset', '*');
+                    }
+                    pagesCollected = 1;
                 } else {
                     const err = await res.json().catch(() => ({}));
                     saveStatus.textContent = err.error || 'Failed to save links.';

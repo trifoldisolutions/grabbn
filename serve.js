@@ -40,7 +40,7 @@ app.post('/api/popup-session',
     cors({ origin: '*', methods: ['POST', 'OPTIONS'] }),
     express.json({ limit: '2mb' }),
     (req, res) => {
-        const { links, sourceUrl, maxPage, currentPage } = req.body;
+        const { links, sourceUrl, maxPage, currentPage, pagesCollected } = req.body;
         if (!Array.isArray(links)) {
             return res.status(400).json({ error: 'links is required' });
         }
@@ -48,10 +48,11 @@ app.post('/api/popup-session',
             Math.random().toString(36).slice(2, 10) +
             Math.random().toString(36).slice(2, 10);
         popupSessions.set(token, {
-            links: links.slice(0, 1000),
+            links: links.slice(0, 2000),
             sourceUrl: String(sourceUrl || '').slice(0, 2000),
             maxPage: Math.min(Math.max(Number(maxPage) || 1, 1), 50), // cap at 50
             currentPage: Math.max(Number(currentPage) || 1, 1),
+            pagesCollected: Math.max(Number(pagesCollected) || 1, 1),
             createdAt: Date.now()
         });
         setTimeout(() => popupSessions.delete(token), 600_000); // 10-min TTL
