@@ -27,36 +27,32 @@ const PORT = process.env.PORT || 3000;
 // ---------------------------------------------------------------------------
 // Popup-session — registered BEFORE the global CORS middleware so we can
 // allow any origin (bookmarklet runs on arbitrary third-party sites).
-// Credentials are accepted so the user's anonymousId can be stored in the
-// session and forwarded to popup.html, bypassing third-party cookie issues.
+// Auth is cookie-independent: the bookmarklet embeds a per-user bookmarkletToken
+// (fetched server-side when "Get bookmarklet" is opened) and sends it in the
+// request body so the server can identify the user without any cookies.
 // ---------------------------------------------------------------------------
 const popupSessions = new Map();
 
-// Reflect request origin to support credentialed cross-origin requests
-const popupSessionCors = cors({ origin: true, credentials: true, methods: ['POST', 'OPTIONS'] });
-
-app.options('/api/popup-session', popupSessionCors);
+app.options('/api/popup-session', cors({ origin: '*' }));
 
 app.post('/api/popup-session',
-    popupSessionCors,
-    cookieParser(),
+    cors({ origin: '*', methods: ['POST', 'OPTIONS'] }),
     express.json({ limit: '2mb' }),
     async (req, res) => {
-        const { links, sourceUrl, maxPage, currentPage, pagesCollected } = req.body;
+        const { links, sourceUrl, maxPage, currentPage, pagesCollected, bkt } = req.body;
         if (!Array.isArray(links)) {
             return res.status(400).json({ error: 'links is required' });
         }
 
-        // Identify the user from credentials so popup.html can authenticate
-        // without relying on third-party cookies (blocked on many browsers).
+        // Resolve the user via the bookmarklet token embedded in the code.
+        // This is completely cookie-independent and works in all browsers.
         let anonymousId = null;
-        try {
-            const sessionToken = req.cookies?.anonymousId || req.headers['x-anonymous-id'];
-            if (sessionToken) {
-                const user = await User.findOne({ anonymousId: sessionToken });
+        if (bkt) {
+            try {
+                const user = await User.findOne({ bookmarkletToken: bkt });
                 if (user) anonymousId = user.anonymousId;
-            }
-        } catch { /* non-fatal */ }
+            } catch { /* non-fatal */ }
+        }
 
         const token =
             Math.random().toString(36).slice(2, 10) +
@@ -142,6 +138,25 @@ async function connectMongo() {
 // ====================
 // API ENDPOINTS
 // ====================
+
+// Return (and lazily generate) a per-user bookmarklet token.
+// Called from the "Get bookmarklet" modal; cookies always work here because
+// it is a same-origin request from app.grabbn.com.
+app.get('/api/auth/bookmarklet-token', requireAuth, async (req, res) => {
+    try {
+        let { bookmarkletToken } = req.user;
+        if (!bookmarkletToken) {
+            const { randomUUID } = await import('crypto');
+            bookmarkletToken = randomUUID();
+            req.user.bookmarkletToken = bookmarkletToken;
+            await req.user.save();
+        }
+        res.json({ token: bookmarkletToken });
+    } catch (err) {
+        console.error('bookmarklet-token error:', err);
+        res.status(500).json({ error: 'Failed to generate token' });
+    }
+});
 
 // Get user info (for debugging/testing)
 app.get('/api/user', requireAuth, requireVerification, (req, res) => {

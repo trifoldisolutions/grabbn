@@ -94,7 +94,10 @@ const userSchema = new mongoose.Schema(
       enum: ['none', 'pending', 'active'],
       default: 'none'
     },
-    newsletterSubscribed: { type: Boolean, default: false }
+    newsletterSubscribed: { type: Boolean, default: false },
+    // Dedicated token embedded in the bookmarklet so the popup can authenticate
+    // without relying on third-party cookies (blocked by many modern browsers).
+    bookmarkletToken: { type: String, sparse: true, index: true }
   },
   { timestamps: true }
 );
