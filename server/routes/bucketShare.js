@@ -459,7 +459,6 @@ router.get('/bucket/:bucketId', async (req, res) => {
         .link-title a { color: #191919; text-decoration: none; }
         .link-title a:hover { text-decoration: underline; color: #943792; }
         .link-duration { font-weight: 400; color: #6b7280; font-size: 0.8125rem; }
-        .link-url { font-size: 0.75rem; color: #2563eb; word-break: break-all; }
 
         .empty-links {
             padding: 2.5rem;
@@ -532,7 +531,6 @@ router.get('/bucket/:bucketId', async (req, res) => {
                             <a href="${link.href}" target="_blank" rel="noopener noreferrer">${link.text || 'Untitled Link'}</a>
                             ${link.duration ? `<span class="link-duration">(${link.duration})</span>` : ''}
                         </div>
-                        <span class="link-url">${link.href}</span>
                     </div>
                 </div>
             `).join('')}
