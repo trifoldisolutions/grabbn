@@ -850,6 +850,7 @@ app.get('/api/links', requireAuth, requireVerification, async (req, res) => {
                         href: link.href,
                         text: link.text,
                         duration: link.duration,
+                        image: link.image || null,
                         isFree: link.isFree || false,
                         sourceUrl: bucket.sourceUrl || '',
                         buckets: [bucket.name]

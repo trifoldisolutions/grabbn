@@ -44,13 +44,16 @@ function renderListView(links) {
             : '';
 
         li.innerHTML = `
-            <div>
-                <span class="font-medium text-gray-800 text-sm">${link.text}</span>
-                ${link.duration ? `<span class="text-gray-500 text-xs ml-2">(${link.duration})</span>` : ''}
-                <a href="${link.href}" target="_blank" class="text-blue-600 text-xs mt-1 break-all block">
-                    ${link.href}
-                </a>
-                ${bucketsHTML}
+            <div class="flex gap-3 items-start">
+                ${link.image ? `<img src="${link.image}" alt="" class="w-16 h-12 object-cover rounded shrink-0 mt-0.5 bg-gray-100" onerror="this.style.display='none'">` : ''}
+                <div class="flex-1 min-w-0">
+                    <span class="font-medium text-gray-800 text-sm">${link.text}</span>
+                    ${link.duration ? `<span class="text-gray-500 text-xs ml-2">(${link.duration})</span>` : ''}
+                    <a href="${link.href}" target="_blank" class="text-blue-600 text-xs mt-1 break-all block">
+                        ${link.href}
+                    </a>
+                    ${bucketsHTML}
+                </div>
             </div>`;
 
         linkList.appendChild(li);

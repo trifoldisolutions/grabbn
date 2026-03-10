@@ -847,6 +847,7 @@ function renderPopupLinks(links, highlightLabel = '', highlightUrl = '') {
         li.innerHTML = `
             <div class="flex items-start gap-3">
                 ${leadingEl}
+                ${link.image ? `<img src="${link.image}" alt="" class="w-14 h-10 object-cover rounded shrink-0 mt-0.5 bg-gray-100" onerror="this.style.display='none'">` : ''}
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
                         <span class="font-medium text-gray-900 text-sm">${displayText}</span>
