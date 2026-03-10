@@ -434,15 +434,25 @@ router.get('/bucket/:bucketId', async (req, res) => {
         /* Link rows — clickable anchors */
         .link-item {
             display: flex;
-            flex-direction: column;
-            gap: 0.125rem;
-            padding: 0.875rem 1.5rem;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
             border-bottom: 1px solid #f3f4f6;
             text-decoration: none;
             transition: background 0.15s;
         }
         .link-item:last-child { border-bottom: none; }
         .link-item:hover { background: #fdf6fd; }
+        .link-img {
+            width: 64px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+            background: #f3f4f6;
+        }
+        .link-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
 
         .link-title {
             font-size: 0.875rem;
@@ -525,11 +535,14 @@ router.get('/bucket/:bucketId', async (req, res) => {
                 <div class="empty-links">No links in this collection.</div>
             ` : bucket.links.map(link => `
                 <a href="${link.href}" class="link-item" target="_blank" rel="noopener noreferrer">
-                    <div class="link-title">
-                        ${link.text || 'Untitled Link'}
-                        ${link.duration ? `<span class="link-duration">(${link.duration})</span>` : ''}
+                    ${link.image ? `<img class="link-img" src="${link.image}" alt="" loading="lazy">` : ''}
+                    <div class="link-content">
+                        <div class="link-title">
+                            ${link.text || 'Untitled Link'}
+                            ${link.duration ? `<span class="link-duration">(${link.duration})</span>` : ''}
+                        </div>
+                        <span class="link-url">${link.href}</span>
                     </div>
-                    <span class="link-url">${link.href}</span>
                 </a>
             `).join('')}
 
