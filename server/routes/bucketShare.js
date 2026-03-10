@@ -339,11 +339,6 @@ router.get('/bucket/:bucketId', async (req, res) => {
             padding: 2rem 1rem;
         }
 
-        /* Header */
-        .header { text-align: center; margin-bottom: 2rem; }
-        .header h1 { font-size: 1.875rem; font-weight: 700; color: #1f2937; margin-bottom: 0.25rem; }
-        .header p { color: #6b7280; font-size: 0.875rem; }
-
         /* Card */
         .card {
             background: white;
@@ -443,7 +438,6 @@ router.get('/bucket/:bucketId', async (req, res) => {
             transition: background 0.15s;
         }
         .link-item:last-child { border-bottom: none; }
-        .link-item:hover { background: #fdf6fd; }
         .link-img {
             width: 64px;
             height: 48px;
@@ -462,6 +456,8 @@ router.get('/bucket/:bucketId', async (req, res) => {
             align-items: center;
             gap: 0.375rem;
         }
+        .link-title a { color: #191919; text-decoration: none; }
+        .link-title a:hover { text-decoration: underline; color: #943792; }
         .link-duration { font-weight: 400; color: #6b7280; font-size: 0.8125rem; }
         .link-url { font-size: 0.75rem; color: #2563eb; word-break: break-all; }
 
@@ -494,11 +490,6 @@ router.get('/bucket/:bucketId', async (req, res) => {
 </head>
 <body>
     <div class="container">
-
-        <div class="header">
-            <h1>Grabbn • Link Grabber</h1>
-            <p>Shared link collection</p>
-        </div>
 
         <div class="card">
 
@@ -534,16 +525,16 @@ router.get('/bucket/:bucketId', async (req, res) => {
             ${bucket.links.length === 0 ? `
                 <div class="empty-links">No links in this collection.</div>
             ` : bucket.links.map(link => `
-                <a href="${link.href}" class="link-item" target="_blank" rel="noopener noreferrer">
+                <div class="link-item">
                     ${link.image ? `<img class="link-img" src="${link.image}" alt="" loading="lazy">` : ''}
                     <div class="link-content">
                         <div class="link-title">
-                            ${link.text || 'Untitled Link'}
+                            <a href="${link.href}" target="_blank" rel="noopener noreferrer">${link.text || 'Untitled Link'}</a>
                             ${link.duration ? `<span class="link-duration">(${link.duration})</span>` : ''}
                         </div>
                         <span class="link-url">${link.href}</span>
                     </div>
-                </a>
+                </div>
             `).join('')}
 
         </div>
