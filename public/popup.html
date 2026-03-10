@@ -363,7 +363,7 @@
 
             const linksToSave = allLinks
                 .filter(l => selectedUrls.has(l.href))
-                .map(l => ({ href: l.href, text: l.text, sourceUrl }));
+                .map(l => ({ href: l.href, text: l.text, image: l.image || null, sourceUrl }));
 
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving…';
