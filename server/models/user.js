@@ -100,7 +100,8 @@ const userSchema = new mongoose.Schema(
     bookmarkletToken: { type: String, sparse: true, index: true },
     // Region inferred from IP on first visit (ISO 3166-1 alpha-2 country + subdivision code)
     country: { type: String, default: null },
-    region:  { type: String, default: null }
+    region:  { type: String, default: null },
+    city:    { type: String, default: null }
   },
   { timestamps: true }
 );

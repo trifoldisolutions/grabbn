@@ -16,10 +16,10 @@ function lookupRegion(req) {
   const geo = geoip.lookup(ip);
   if (!geo) {
     console.log(`[geo] ip=${ip} → no match`);
-    return { country: null, region: null };
+    return { country: null, region: null, city: null };
   }
-  console.log(`[geo] ip=${ip} → ${geo.country} / ${geo.region}`);
-  return { country: geo.country || null, region: geo.region || null };
+  console.log(`[geo] ip=${ip} → ${geo.country} / ${geo.region} / ${geo.city}`);
+  return { country: geo.country || null, region: geo.region || null, city: geo.city || null };
 }
 
 /**
@@ -48,20 +48,22 @@ export async function anonymousAuth(req, res, next) {
     // If no user found, create new anonymous user
     if (!user) {
       const newAnonymousId = crypto.randomUUID();
-      const { country, region } = lookupRegion(req);
+      const { country, region, city } = lookupRegion(req);
 
       user = await User.create({
         anonymousId: newAnonymousId,
         isAnonymous: true,
         country,
-        region
+        region,
+        city
       });
     } else if (!user.country) {
       // Lazy backfill for existing users created before geo tracking was added
-      const { country, region } = lookupRegion(req);
+      const { country, region, city } = lookupRegion(req);
       if (country) {
         user.country = country;
         user.region = region;
+        user.city = city;
         await user.save();
       }
     }
