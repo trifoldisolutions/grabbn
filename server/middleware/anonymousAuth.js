@@ -1,8 +1,26 @@
 // server/middleware/anonymousAuth.js
 import crypto from 'crypto';
+import geoip from 'geoip-lite';
 import User from '../models/user.js';
 import Bucket from '../models/bucket.js';
 import { sendAccountSuspendedEmail, sendAccountDeletedEmail } from '../utils/email.js';
+
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  const raw = forwarded ? forwarded.split(',')[0].trim() : (req.ip || '');
+  return raw.replace(/^::ffff:/, ''); // strip IPv4-mapped IPv6 prefix
+}
+
+function lookupRegion(req) {
+  const ip = getClientIp(req);
+  const geo = geoip.lookup(ip);
+  if (!geo) {
+    console.log(`[geo] ip=${ip} → no match`);
+    return { country: null, region: null };
+  }
+  console.log(`[geo] ip=${ip} → ${geo.country} / ${geo.region}`);
+  return { country: geo.country || null, region: geo.region || null };
+}
 
 /**
  * Middleware to handle anonymous user sessions
@@ -30,11 +48,22 @@ export async function anonymousAuth(req, res, next) {
     // If no user found, create new anonymous user
     if (!user) {
       const newAnonymousId = crypto.randomUUID();
+      const { country, region } = lookupRegion(req);
 
       user = await User.create({
         anonymousId: newAnonymousId,
-        isAnonymous: true
+        isAnonymous: true,
+        country,
+        region
       });
+    } else if (!user.country) {
+      // Lazy backfill for existing users created before geo tracking was added
+      const { country, region } = lookupRegion(req);
+      if (country) {
+        user.country = country;
+        user.region = region;
+        await user.save();
+      }
     }
 
     // Always refresh the cookie so existing users get the updated SameSite attribute.

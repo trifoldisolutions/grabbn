@@ -87,6 +87,8 @@ const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production'
     ? ['https://grabbn.com', 'https://www.grabbn.com', 'https://app.grabbn.com']
     : true;
 
+app.set('trust proxy', 1); // trust first proxy (nginx/reverse proxy) so req.ip resolves correctly
+
 app.use(cors({
     origin: ALLOWED_ORIGINS,
     credentials: true,
