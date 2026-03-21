@@ -213,7 +213,8 @@ router.get('/bucket/:bucketId', async (req, res) => {
             <!-- Free links (if any) -->
             ${freeLinks.map(link => `
             <a href="${link.href}" target="_blank" rel="noopener noreferrer"
-               class="free-link-row flex items-center gap-3 px-5 sm:px-6 py-3.5 border-b border-gray-50 hover:bg-orchid-50 transition-colors group">
+               data-bucket-id="${bucketId}"
+               class="free-link-row link-row flex items-center gap-3 px-5 sm:px-6 py-3.5 border-b border-gray-50 hover:bg-orchid-50 transition-colors group">
                 <div style="flex:1;min-width:0;">
                     <p class="text-sm font-medium text-woodsmoke-950 group-hover:text-orchid-700 transition-colors" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                         ${link.text || 'Untitled Link'}${link.duration ? `<span class="text-gray-400 font-normal"> · ${link.duration}</span>` : ''}
@@ -264,6 +265,15 @@ router.get('/bucket/:bucketId', async (req, res) => {
 
     <!-- Toast -->
     <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-woodsmoke-950 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg z-50" style="display:none;"></div>
+
+    <script>
+        document.querySelectorAll('a.link-row[data-bucket-id]').forEach(function(a) {
+            a.addEventListener('click', function() {
+                var payload = JSON.stringify({ href: this.href, bucketId: this.dataset.bucketId });
+                navigator.sendBeacon('/api/links/click', new Blob([payload], { type: 'application/json' }));
+            });
+        });
+    </script>
 
     ${!isAnonymous ? `<script>
         const unlockBtn = document.getElementById('unlockBtn');
@@ -409,6 +419,7 @@ router.get('/bucket/:bucketId', async (req, res) => {
             <div class="px-5 py-12 text-center text-gray-400 text-sm italic">No links in this collection.</div>
             ` : bucket.links.map(link => `
             <a href="${link.href}" target="_blank" rel="noopener noreferrer"
+               data-bucket-id="${bucketId}"
                class="link-row flex items-center gap-3 px-5 sm:px-6 py-3.5 border-b border-gray-50 hover:bg-orchid-50 transition-colors group">
                 ${link.image ? `<img src="${link.image}" alt="" loading="lazy" style="width:56px;height:40px;object-fit:cover;border-radius:8px;flex-shrink:0;background:#f3f4f6;">` : ''}
                 <div style="flex:1;min-width:0;">
@@ -444,9 +455,18 @@ router.get('/bucket/:bucketId', async (req, res) => {
         </div>
     </footer>
 
+    <script>
+        document.querySelectorAll('a.link-row[data-bucket-id]').forEach(function(a) {
+            a.addEventListener('click', function() {
+                var payload = JSON.stringify({ href: this.href, bucketId: this.dataset.bucketId });
+                navigator.sendBeacon('/api/links/click', new Blob([payload], { type: 'application/json' }));
+            });
+        });
+    </script>
+
 </body>
 </html>`;
-        
+
         // Track view — skip owner, deduplicate for authed users, simple increment for anon
         const isOwner = req.user && bucket.userId.equals(req.user._id);
         if (!isOwner) {

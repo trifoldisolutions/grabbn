@@ -10,6 +10,10 @@ import Bucket from './server/models/bucket.js';
 import Report from './server/models/report.js';
 import BucketAccess from './server/models/bucketAccess.js';
 import { anonymousAuth, requireAuth, requireVerification } from './server/middleware/anonymousAuth.js';
+import LinkClick from './server/models/linkClick.js';
+import Repository from './server/models/repository.js';
+import Subscription from './server/models/subscription.js';
+import { buildRepositories } from './server/jobs/buildRepositories.js';
 import bucketShareRouter from './server/routes/bucketShare.js';
 import authRouter from './server/routes/auth.js';
 import creditsRouter, { handleWebhook } from './server/routes/credits.js';
@@ -21,8 +25,12 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
 // ---------------------------------------------------------------------------
 // Popup-session — registered BEFORE the global CORS middleware so we can
@@ -725,6 +733,12 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
             originalBucketId: source.originalBucketId || source._id
         });
 
+        // Track grabber on the root (original) bucket
+        const rootBucketId = source.originalBucketId || source._id;
+        await Bucket.findByIdAndUpdate(rootBucketId, {
+            $push: { grabbedBy: { userId: req.user._id, username: req.user.username || '', avatar: req.user.avatar || '' } }
+        });
+
         res.status(201).json({ bucket: cloned });
     } catch (error) {
         // Handle duplicate name (same user already has a bucket with this name)
@@ -733,6 +747,39 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
         }
         console.error('Error grabbing bucket:', error);
         res.status(500).json({ error: 'Failed to grab bucket' });
+    }
+});
+
+// Ungrab (remove a previously grabbed clone of a bucket)
+app.delete('/api/buckets/grab/:sourceBucketId', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { sourceBucketId } = req.params;
+
+        const cloned = await Bucket.findOneAndDelete({
+            userId: req.user._id,
+            $or: [
+                { sourceBucketId:   sourceBucketId },
+                { originalBucketId: sourceBucketId }
+            ]
+        });
+
+        if (!cloned) {
+            // Already gone — treat as success so client stays in ungrabbed state
+            return res.json({ success: true });
+        }
+
+        // Remove grabber from the root bucket's grabbedBy list
+        const rootBucketId = cloned.originalBucketId || cloned.sourceBucketId;
+        if (rootBucketId) {
+            await Bucket.findByIdAndUpdate(rootBucketId, {
+                $pull: { grabbedBy: { userId: req.user._id } }
+            });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error ungrabbing bucket:', error);
+        res.status(500).json({ error: 'Failed to ungrab bucket' });
     }
 });
 
@@ -952,6 +999,260 @@ app.delete('/api/links', requireAuth, requireVerification, async (req, res) => {
     }
 });
 
+// ---------------------------------------------------------------------------
+// Link click tracking — fire-and-forget, always returns 204
+// ---------------------------------------------------------------------------
+app.post('/api/links/click', async (req, res) => {
+    res.sendStatus(204); // respond immediately, don't block the user
+    try {
+        const { href, bucketId } = req.body;
+        if (!href || !bucketId) return;
+
+        let domain;
+        try { domain = new URL(href).hostname; } catch { return; }
+
+        await LinkClick.create({
+            href,
+            domain,
+            bucketId,
+            userId: req.user?._id ?? null
+        });
+    } catch (err) {
+        console.error('LinkClick record error:', err);
+    }
+});
+
+// ---------------------------------------------------------------------------
+// V2 API — showroom feed (public buckets, paginated)
+// ---------------------------------------------------------------------------
+app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
+    try {
+        const page  = Math.max(1, parseInt(req.query.page)  || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+        const skip  = (page - 1) * limit;
+
+        const buckets = await Bucket.find({ isPublic: true, name: { $ne: 'Singletons' } })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit + 1)
+            .populate('userId', 'username anonymousId avatar')
+            .select('name thumbnail links isPaywalled price viewCount shareCount createdAt userId grabbedBy');
+
+        const hasMore = buckets.length > limit;
+        const items   = hasMore ? buckets.slice(0, limit) : buckets;
+
+        // Build a set of bucket IDs the current user has already grabbed
+        let grabbedSet = new Set();
+        if (req.user?._id) {
+            const grabs = await Bucket.find({
+                userId:         req.user._id,
+                sourceBucketId: { $in: items.map(b => b._id) }
+            }).select('sourceBucketId').lean();
+            grabs.forEach(g => grabbedSet.add(String(g.sourceBucketId)));
+        }
+
+        // Build a public bucket count per curator in one aggregation
+        const curatorIds = [...new Set(items.map(b => b.userId?._id).filter(Boolean))];
+        const bucketCounts = await Bucket.aggregate([
+            { $match: { userId: { $in: curatorIds }, isPublic: true, name: { $ne: 'Singletons' } } },
+            { $group: { _id: '$userId', count: { $sum: 1 } } }
+        ]);
+        const bucketCountMap = Object.fromEntries(bucketCounts.map(r => [String(r._id), r.count]));
+
+        res.json({
+            hasMore,
+            buckets: items.map(b => ({
+                _id:        b._id,
+                name:       b.name,
+                thumbnail:  b.thumbnail || b.links.find(l => l.image)?.image || '',
+                linkCount:  b.links.length,
+                isPaywalled: b.isPaywalled || false,
+                price:      b.price || 0,
+                viewCount:  b.viewCount  || 0,
+                shareCount: b.shareCount || 0,
+                createdAt:  b.createdAt,
+                isGrabbed:  grabbedSet.has(String(b._id)),
+                grabCount:  (b.grabbedBy || []).length,
+                grabbers:   (b.grabbedBy || [])
+                    .filter(g => g.avatar)
+                    .slice(-4)
+                    .map(g => ({ username: g.username || '?', avatar: g.avatar })),
+                curator: {
+                    username:    b.userId?.username    || 'Unknown',
+                    userId:      b.userId?.anonymousId || '',
+                    avatar:      b.userId?.avatar      || '',
+                    bucketCount: bucketCountMap[String(b.userId?._id)] || 0
+                }
+            }))
+        });
+    } catch (err) {
+        console.error('Showroom feed error:', err);
+        res.status(500).json({ error: 'Failed to load showroom' });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// Subscriptions — follow / unfollow a curator
+// ---------------------------------------------------------------------------
+
+// Subscribe to a curator (identified by their anonymousId)
+app.post('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const curator = await User.findOne({ anonymousId: req.params.anonymousId });
+        if (!curator) return res.status(404).json({ error: 'Curator not found' });
+        if (curator._id.equals(req.user._id)) return res.status(400).json({ error: 'Cannot subscribe to yourself' });
+
+        await Subscription.create({ followerId: req.user._id, followeeId: curator._id });
+        res.status(201).json({ success: true });
+    } catch (err) {
+        if (err.code === 11000) return res.status(409).json({ error: 'Already subscribed' });
+        console.error('Subscribe error:', err);
+        res.status(500).json({ error: 'Failed to subscribe' });
+    }
+});
+
+// Unsubscribe from a curator
+app.delete('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const curator = await User.findOne({ anonymousId: req.params.anonymousId });
+        if (!curator) return res.status(404).json({ error: 'Curator not found' });
+
+        await Subscription.findOneAndDelete({ followerId: req.user._id, followeeId: curator._id });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Unsubscribe error:', err);
+        res.status(500).json({ error: 'Failed to unsubscribe' });
+    }
+});
+
+// Get subscription status + follower count for a curator
+app.get('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const curator = await User.findOne({ anonymousId: req.params.anonymousId });
+        if (!curator) return res.status(404).json({ error: 'Curator not found' });
+
+        const [isSubscribed, followerCount] = await Promise.all([
+            Subscription.exists({ followerId: req.user._id, followeeId: curator._id }),
+            Subscription.countDocuments({ followeeId: curator._id })
+        ]);
+
+        res.json({ isSubscribed: !!isSubscribed, followerCount });
+    } catch (err) {
+        console.error('Subscription status error:', err);
+        res.status(500).json({ error: 'Failed to fetch subscription status' });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// V2 API — repositories (pre-computed cache, rebuilt hourly)
+// ---------------------------------------------------------------------------
+app.get('/api/v2/repositories', anonymousAuth, async (req, res) => {
+    try {
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+        const skip  = Math.max(0, parseInt(req.query.skip)  || 0);
+
+        // Fetch full cache — personalization is done in JS, not at DB query level
+        const allRepos = await Repository.find().lean();
+
+        // ── Anonymous users: pure global popularity ──────────────────────────
+        if (!req.user || req.user.isAnonymous) {
+            allRepos.sort((a, b) => b.totalClicks - a.totalClicks);
+            const page    = allRepos.slice(skip, skip + limit + 1);
+            const hasMore = page.length > limit;
+            return res.json({ hasMore, repositories: hasMore ? page.slice(0, limit) : page });
+        }
+
+        // ── Logged-in users: personalised scoring ────────────────────────────
+        const userId = req.user._id;
+        const cutoff = new Date(Date.now() - 90 * 86_400_000); // 90-day window
+
+        // Run both lookups in parallel
+        const [domainClicks, subscriptions] = await Promise.all([
+            // Signal 1 — direct affinity: domains this user has clicked recently
+            LinkClick.aggregate([
+                { $match: { userId, createdAt: { $gte: cutoff } } },
+                { $group: { _id: '$domain', count: { $sum: 1 } } }
+            ]),
+            // Signal 2 — subscription: curators this user follows
+            Subscription.find({ followerId: userId }).select('followeeId').lean()
+        ]);
+
+        // domain  → click count  (direct affinity map)
+        const affinityMap   = Object.fromEntries(domainClicks.map(d => [d._id, d.count]));
+        // set of subscribed curator _id strings (for O(1) lookup)
+        const subscribedIds = new Set(subscriptions.map(s => String(s.followeeId)));
+
+        // Score every repo and attach an internal rank value
+        const scored = allRepos.map(repo => {
+            // How many times has this user clicked links in this domain?
+            const affinityScore = (affinityMap[repo.domain] || 0) * 3;
+
+            // How many of the top links were curated by someone this user subscribes to?
+            const subLinkCount  = repo.topLinks.filter(
+                l => l.curatorId && subscribedIds.has(String(l.curatorId))
+            ).length;
+            const subscriptionScore = subLinkCount * 5; // subscription is the strongest signal
+
+            // Global popularity as a tiebreaker (log-dampened so viral repos don't dominate)
+            const popularityScore = Math.log(repo.totalClicks + 1) * 0.5;
+
+            return { ...repo, _score: affinityScore + subscriptionScore + popularityScore };
+        });
+
+        scored.sort((a, b) => b._score - a._score);
+
+        const page    = scored.slice(skip, skip + limit + 1);
+        const hasMore = page.length > limit;
+        const items   = (hasMore ? page.slice(0, limit) : page)
+            .map(({ _score, ...repo }) => repo); // strip internal field before sending
+
+        res.json({ hasMore, repositories: items });
+    } catch (err) {
+        console.error('Repositories endpoint error:', err);
+        res.status(500).json({ error: 'Failed to load repositories' });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// V2 API — single repository detail by domain
+// ---------------------------------------------------------------------------
+app.get('/api/v2/repositories/:domain', anonymousAuth, async (req, res) => {
+    try {
+        const repo = await Repository.findOne({ domain: req.params.domain }).lean();
+        if (!repo) return res.status(404).json({ error: 'Repository not found' });
+        res.json(repo);
+    } catch (err) {
+        console.error('Repository detail error:', err);
+        res.status(500).json({ error: 'Failed to load repository' });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// V2 routes — server-rendered with EJS
+// ---------------------------------------------------------------------------
+const v2Pages = [
+    { path: '/v2',              view: 'v2/showroom',     title: 'Show Room',    page: 'home'         },
+    { path: '/v2/showroom',     view: 'v2/showroom',     title: 'Show Room',    page: 'home'         },
+    { path: '/v2/explore',      view: 'v2/explore',      title: 'Explore',      page: 'explore'      },
+    { path: '/v2/transactions', view: 'v2/transactions', title: 'Transactions', page: 'transactions' },
+    { path: '/v2/settings',     view: 'v2/settings',     title: 'Settings',     page: 'settings'     },
+    { path: '/v2/docs',         view: 'v2/docs',         title: 'Docs',         page: 'docs'         },
+    { path: '/v2/faq',          view: 'v2/faq',          title: 'FAQ',          page: 'faq'          },
+    { path: '/v2/contact',      view: 'v2/contact',      title: 'Contact',      page: 'contact'      },
+];
+
+for (const { path: routePath, view, title, page } of v2Pages) {
+    app.get(routePath, anonymousAuth, (req, res) => {
+        res.render(view, { title, page, user: req.user ?? null });
+    });
+}
+
+// Dynamic repository page — domain comes from the URL
+app.get('/v2/repository/:domain', anonymousAuth, (req, res) => {
+    const domain = req.params.domain;
+    res.render('v2/repository', { title: domain, page: 'repository', user: req.user ?? null, domain });
+});
+
 // Start the server
 connectMongo()
     .then(() => {
@@ -960,6 +1261,13 @@ connectMongo()
             console.log(`Scraping endpoint: http://localhost:${PORT}/scrape?url=YOUR_URL`);
             console.log(`Frontend available at http://localhost:${PORT}`);
         });
+
+        // Run the repository build immediately, then every hour
+        const REPO_REBUILD_INTERVAL = 60 * 60 * 1000; // 1 hour
+        buildRepositories().catch(err => console.error('[repos] Initial build failed:', err));
+        setInterval(() => {
+            buildRepositories().catch(err => console.error('[repos] Scheduled build failed:', err));
+        }, REPO_REBUILD_INTERVAL);
     })
     .catch(err => {
         console.error('Failed to connect to MongoDB:', err.message);

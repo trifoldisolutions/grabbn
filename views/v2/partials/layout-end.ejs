@@ -1,0 +1,1071 @@
+        </main>
+    </div>
+
+<!-- ── New Bucket Modal ───────────────────────────────────────────────────── -->
+<div id="newBucketModal" class="hidden fixed inset-0 left-16 z-50 flex items-center justify-center" aria-modal="true" role="dialog">
+    <!-- Backdrop -->
+    <div id="newBucketBackdrop" class="absolute inset-0 bg-woodsmoke-950/40"></div>
+
+    <!-- Panel -->
+    <div class="relative w-[75vw] h-[88vh] bg-white rounded-md shadow-2xl flex flex-col overflow-hidden">
+
+        <!-- Header -->
+        <!-- <div class="flex items-center justify-between px-8 h-[60px] border-b border-silver-100 shrink-0">
+            <h2 class="text-xl font-semibold text-woodsmoke-950">Create a new bucket</h2>
+            <button id="newBucketCloseBtn" class="w-8 h-8 flex items-center justify-center rounded-full text-woodsmoke-400 hover:text-woodsmoke-950 hover:bg-silver-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="m12 13.414 4.243 4.243a1 1 0 0 0 1.414-1.414L13.414 12l4.243-4.243a1 1 0 0 0-1.414-1.414L12 10.586 7.757 6.343a1 1 0 0 0-1.414 1.414L10.586 12l-4.243 4.243a1 1 0 1 0 1.414 1.414z"/></svg>
+            </button>
+        </div> -->
+
+        <!-- 3-column body -->
+        <div class="flex flex-row flex-1 overflow-hidden min-h-0">
+
+            <!-- ── Column 1 · Name & Thumbnail ────────────────────────────── -->
+            <div class="w-1/4 shrink-0 flex flex-col gap-5 p-6 border-r border-silver-100 overflow-y-auto">
+
+                <!-- Bucket name -->
+                <div class="flex flex-col gap-1.5">
+                    <label for="newBucketNameInput" class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Bucket name</label>
+                    <input
+                        id="newBucketNameInput"
+                        type="text"
+                        placeholder="e.g. Design inspiration"
+                        maxlength="120"
+                        autocomplete="off"
+                        class="w-full h-12 px-3 rounded-md border border-silver-200 text-sm text-woodsmoke-950 placeholder-woodsmoke-400 outline-none focus:border-orchid-400 focus:ring-2 focus:ring-orchid-100 transition"
+                    />
+                    <div class="flex items-center justify-between">
+                        <p id="newBucketError" class="hidden text-sm text-red-500"></p>
+                        <p id="newBucketCharCount" class="text-sm text-woodsmoke-400 ml-auto">0 / 120</p>
+                    </div>
+                </div>
+
+                <!-- Thumbnail -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Thumbnail</label>
+
+                    <!-- Square container -->
+                    <div id="thumbnailSquare" class="relative w-full aspect-square bg-silver-50 rounded-xl overflow-hidden">
+                        <!-- Placeholder -->
+                        <div id="thumbPlaceholder" class="absolute inset-0 flex items-center justify-center text-silver-300">
+                            <!-- mingcute:pic-fill -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>
+                        </div>
+                        <!-- Loading pulse -->
+                        <div id="thumbLoading" class="hidden absolute inset-0 bg-silver-200 animate-pulse"></div>
+                        <!-- Preview -->
+                        <img id="thumbPreviewImg" class="hidden absolute inset-0 w-full h-full object-cover" alt="thumbnail" />
+                        <!-- Eye / Delete overlay -->
+                        <div id="thumbActionBtns" class="hidden absolute bottom-0 left-0 right-0 p-2 flex justify-center gap-2 bg-gradient-to-t from-woodsmoke-950/40 to-transparent">
+                            <button id="thumbVisibilityBtn" title="Toggle visibility" class="w-10 h-10 rounded-lg bg-woodsmoke-950/50 text-white flex items-center justify-center hover:bg-woodsmoke-950/70 transition-colors">
+                                <!-- mingcute:eye-fill -->
+                                <svg id="thumbEyeIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4C7.286 4 3.201 6.896 1.268 11.08a1 1 0 0 0 0 .84C3.2 17.104 7.286 20 12 20s8.8-2.896 10.732-7.08a1 1 0 0 0 0-.84C20.8 6.896 16.714 4 12 4zm0 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>
+                                <!-- mingcute:eye-close-fill (hidden by default) -->
+                                <svg id="thumbEyeClosedIcon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M2.293 2.293a1 1 0 0 1 1.414 0l3.53 3.53A10.96 10.96 0 0 1 12 4c4.713 0 8.8 2.895 10.732 7.08a1 1 0 0 1 0 .84 11.17 11.17 0 0 1-3.255 4.329l2.93 2.929a1 1 0 0 1-1.414 1.414L2.293 3.707a1 1 0 0 1 0-1.414zM12 8a4 4 0 0 1 3.968 3.554l-4.522-4.522A4 4 0 0 1 12 8zm-1.432-1.012 1.988 1.988A4 4 0 0 0 8.024 13.42l-2.19-2.19A8.977 8.977 0 0 1 12 6a9 9 0 0 1 0 0 10.96 10.96 0 0 0-1.432 0.988zm-5.321-1.737 1.92 1.92A10.96 10.96 0 0 0 4.268 12C5.884 15.44 8.74 18 12 18a9 9 0 0 0 4.04-.95l1.493 1.492A10.97 10.97 0 0 1 12 20C7.286 20 3.201 17.104 1.268 12.92a1 1 0 0 1 0-.84 11.18 11.18 0 0 1 3.979-4.829z"/></svg>
+                            </button>
+                            <button id="thumbDeleteBtn" title="Delete thumbnail" class="w-10 h-10 rounded-lg bg-woodsmoke-950/50 text-white flex items-center justify-center hover:bg-red-500/80 transition-colors">
+                                <!-- mingcute:delete-2-fill -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M14.28 2a2 2 0 0 1 1.897 1.368L16.72 5H20a1 1 0 1 1 0 2h-.28l-.982 10.803A2 2 0 0 1 16.743 19H7.257a2 2 0 0 1-1.995-1.197L4.28 7H4a1 1 0 0 1 0-2h3.28l.543-1.632A2 2 0 0 1 9.72 2h4.56zM9 10a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-4a1 1 0 0 0-1-1zm6 0a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-4a1 1 0 0 0-1-1z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- File pick / drop zone -->
+                    <label
+                        id="thumbDropZone"
+                        for="thumbnailFileInput"
+                        class="flex flex-col items-center justify-center gap-1.5 py-4 px-3 rounded-lg border border-dashed border-silver-300 text-sm text-woodsmoke-500 hover:border-orchid-400 hover:text-orchid-600 hover:bg-orchid-50 cursor-pointer transition-colors"
+                    >
+                        <!-- mingcute:upload-2-fill -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a1 1 0 0 1 .707.293l4 4a1 1 0 0 1-1.414 1.414L13 5.414V15a1 1 0 1 1-2 0V5.414L8.707 7.707A1 1 0 0 1 7.293 6.293l4-4A1 1 0 0 1 12 2zM4 17a1 1 0 0 1 1 1v2h14v-2a1 1 0 1 1 2 0v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a1 1 0 0 1 1-1z"/></svg>
+                        <span class="font-medium">Drag & drop or click to select</span>
+                        <span class="text-woodsmoke-400 text-xs">JPG, PNG · max 5 MB</span>
+                    </label>
+                    <input id="thumbnailFileInput" type="file" accept=".jpg,.jpeg,.png" class="hidden" />
+                </div>
+
+                <!-- Source URL -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Source URL</label>
+                    <div class="flex items-center gap-1 h-12 px-3 rounded-lg border border-silver-200 bg-silver-50 focus-within:border-orchid-400 focus-within:ring-2 focus-within:ring-orchid-100 transition">
+                        <input
+                            id="bucketSourceUrl"
+                            type="url"
+                            placeholder="https://..."
+                            class="flex-1 min-w-0 text-sm bg-transparent outline-none text-woodsmoke-700 placeholder-woodsmoke-400"
+                        />
+                        <button id="copySourceUrlBtn" title="Copy URL" class="shrink-0 w-8 h-8 flex items-center justify-center rounded text-woodsmoke-400 hover:text-orchid-600 transition-colors">
+                            <!-- mingcute:copy-fill -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
+                        </button>
+                        <button id="deleteSourceUrlBtn" title="Clear URL" class="shrink-0 w-8 h-8 flex items-center justify-center rounded text-woodsmoke-400 hover:text-red-500 transition-colors">
+                            <!-- mingcute:close-medium-line -->
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.889 6.697a1.001 1.001 0 0 1 1.415 1.414L13.414 12l3.89 3.89a1 1 0 0 1-1.414 1.414L12 13.414l-3.889 3.89a1 1 0 1 1-1.414-1.414L10.586 12L6.697 8.11a1 1 0 0 1 1.414-1.414L12 10.586z"/></g></svg>
+                        </button>
+                    </div>
+                </div>
+
+            </div><!-- /col-1 -->
+
+            <!-- ── Column 2 · Links ───────────────────────────────────────── -->
+            <div class="flex-1 flex flex-col overflow-hidden min-h-0 relative border-r border-silver-100">
+
+                <!-- Add link form -->
+                <div class="px-6 pt-5 pb-4 shrink-0 border-b border-silver-100">
+                    <label class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Content</label>
+
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center gap-1 h-12 px-3 rounded-lg border border-silver-200 bg-white focus-within:border-orchid-400 focus-within:ring-2 focus-within:ring-orchid-100 transition">
+                            <input
+                                id="newLinkTitle"
+                                type="text"
+                                placeholder="Link title"
+                                class="flex-1 min-w-0 text-sm bg-transparent outline-none text-woodsmoke-950 placeholder-woodsmoke-400"
+                            />
+                            <button id="pasteLinkTitleBtn" title="Paste" class="shrink-0 w-8 h-8 flex items-center justify-center rounded text-woodsmoke-400 hover:text-orchid-600 transition-colors">
+                                <!-- mingcute:paste-fill -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6.268 3H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3v-7a4 4 0 0 1 4-4h6V5a2 2 0 0 0-2-2h-1.268A2 2 0 0 0 13 2H8a2 2 0 0 0-1.732 1M12.5 6a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5zm-.5 4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2z"/></g></svg>
+                            </button>
+                            <button id="clearLinkTitleBtn" title="Clear" class="shrink-0 w-8 h-8 flex items-center justify-center rounded text-woodsmoke-400 hover:text-red-500 transition-colors">
+                                <!-- mingcute:close-medium-line -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.889 6.697a1.001 1.001 0 0 1 1.415 1.414L13.414 12l3.89 3.89a1 1 0 0 1-1.414 1.414L12 13.414l-3.889 3.89a1 1 0 1 1-1.414-1.414L10.586 12L6.697 8.11a1 1 0 0 1 1.414-1.414L12 10.586z"/></g></svg>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-1 h-12 px-3 rounded-lg border border-silver-200 bg-white focus-within:border-orchid-400 focus-within:ring-2 focus-within:ring-orchid-100 transition">
+                            <input
+                                id="newLinkUrl"
+                                type="url"
+                                placeholder="https://"
+                                class="flex-1 min-w-0 text-sm bg-transparent outline-none text-woodsmoke-950 placeholder-woodsmoke-400"
+                            />
+                            <button id="pasteLinkUrlBtn" title="Paste" class="shrink-0 w-8 h-8 flex items-center justify-center rounded text-woodsmoke-400 hover:text-orchid-600 transition-colors">
+                                <!-- mingcute:paste-fill -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6.268 3H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3v-7a4 4 0 0 1 4-4h6V5a2 2 0 0 0-2-2h-1.268A2 2 0 0 0 13 2H8a2 2 0 0 0-1.732 1M12.5 6a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5zm-.5 4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2z"/></g></svg>
+                            </button>
+                            <button id="clearLinkUrlBtn" title="Clear" class="shrink-0 w-8 h-8 flex items-center justify-center rounded text-woodsmoke-400 hover:text-red-500 transition-colors">
+                                <!-- mingcute:close-medium-line -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.889 6.697a1.001 1.001 0 0 1 1.415 1.414L13.414 12l3.89 3.89a1 1 0 0 1-1.414 1.414L12 13.414l-3.889 3.89a1 1 0 1 1-1.414-1.414L10.586 12L6.697 8.11a1 1 0 0 1 1.414-1.414L12 10.586z"/></g></svg>
+                            </button>
+                        </div>
+                        <button id="addLinkBtn" disabled class="w-full h-12 items-center justify-center bg-orchid-200 text-orchid-600 font-semibold rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-orchid-600">
+                            Add
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bulk selection bar -->
+                <div class="px-6 h-12 shrink-0 flex items-center gap-3 border-b border-silver-100 bg-silver-50/60">
+                    <button id="bulkSelectAllBtn" class="flex items-center gap-1.5 text-woodsmoke-500 hover:text-woodsmoke-950 transition-colors">
+                        <!-- mingcute:square-line (unchecked) -->
+                        <svg id="bulkCheckboxUnchecked" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm16 0H5v14h14z"/></g></svg>
+                        <!-- mingcute:checkbox-fill (checked, hidden by default) -->
+                        <svg id="bulkCheckboxChecked" class="hidden text-orchid-600" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M5 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm11.95 6.796a1 1 0 0 0-1.414-1.415l-4.95 4.95l-2.121-2.121a1 1 0 1 0-1.415 1.414l2.758 2.758a1.1 1.1 0 0 0 1.556 0z"/></g></svg>
+                        <span class="text-sm font-medium">Select all</span>
+                    </button>
+                    <!-- Bulk action btns — shown when ≥1 item selected -->
+                    <div id="bulkActions" class="hidden items-center gap-2">
+                        <button id="bulkDeleteBtn" class="px-3 h-8 items-center justify-center text-sm rounded-md bg-red-50 text-red-600 hover:bg-red-100 font-medium transition-colors">Delete All</button>
+                        <button id="bulkCopyBtn"   class="px-3 h-8 items-center justify-center text-sm rounded-md bg-silver-100 text-woodsmoke-600 hover:bg-silver-200 font-medium transition-colors">Copy All</button>
+                        <button id="bulkMonetizeBtn" class="px-3 h-8 items-center justify-center text-sm rounded-md bg-orchid-50 text-orchid-600 hover:bg-orchid-100 font-medium transition-colors">Monetize All</button>
+                    </div>
+                </div>
+
+                <!-- Links list (scrollable) -->
+                <div id="linksList" class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-2 min-h-0">
+                    <!-- Empty state -->
+                    <div id="linksEmptyState" class="flex flex-col items-center justify-center h-full gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" class="text-silver-200"><path fill="currentColor" d="M10 6a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2zm-1 5a1 1 0 0 1 1-1h4a1 1 0 1 1 0 2h-4a1 1 0 0 1-1-1zm0 4a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1zm-2-9a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H7z"/></svg>
+                        <p class="text-base text-woodsmoke-400">No links added yet</p>
+                    </div>
+                </div>
+
+                <!-- Bookmarklet btn · absolute bottom-right -->
+                <button id="bookmarkletToolBtn2" title="Grabbn Bookmarklet Tool" class="absolute bottom-7 right-7 w-12 h-12 flex items-center justify-center rounded-full bg-orchid-100 text-orchid-600 hover:bg-orchid-200 shadow-sm transition-colors z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M5 5a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6a1 1 0 1 1-2 0V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v14.131l4.168-2.778a1.5 1.5 0 0 1 1.664 0l.723.482a1 1 0 0 1-1.11 1.664L12 18.202l-4.668 3.112C6.335 21.978 5 21.264 5 20.066zm14 10a1 1 0 0 1 1 1v2h2a1 1 0 1 1 0 2h-2v2a1 1 0 1 1-2 0v-2h-2a1 1 0 1 1 0-2h2v-2a1 1 0 0 1 1-1"/></svg>
+                </button>
+
+            </div><!-- /col-2 -->
+
+            <!-- ── Column 3 · Details & Settings ─────────────────────────── -->
+            <div class="w-1/4 shrink-0 flex flex-col overflow-hidden">
+                <div class="flex flex-col gap-0 flex-1 overflow-y-auto p-6">
+
+                    <!-- Tags -->
+                    <div class="flex flex-col gap-1.5 mb-5">
+                        <label class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Tags</label>
+                        <div
+                            id="tagsContainer"
+                            onclick="document.getElementById('tagInput').focus()"
+                            class="flex flex-wrap gap-1.5 py-2 px-3 rounded-md border border-silver-200 min-h-12 cursor-text focus-within:border-orchid-400 focus-within:ring-2 focus-within:ring-orchid-100 transition"
+                        >
+                            <input
+                                id="tagInput"
+                                type="text"
+                                placeholder="Add tag, press Enter"
+                                class="bg-transparent outline-none text-sm text-woodsmoke-950 placeholder-woodsmoke-400 flex-1 min-w-[120px] h-7 leading-7"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Visibility -->
+                    <div class="flex items-center justify-between py-3.5 border-b border-silver-100">
+                        <div>
+                            <p class="text-base font-medium text-woodsmoke-800">Public</p>
+                            <p id="visibilityLabel" class="text-sm text-woodsmoke-400 mt-0.5">Anyone can find this bucket</p>
+                        </div>
+                        <button id="visibilityToggle" data-state="public" class="relative w-14 h-7 rounded-full bg-orchid-500 transition-colors shrink-0 focus:outline-none">
+                            <span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform translate-x-7"></span>
+                        </button>
+                    </div>
+
+                    <!-- Monetization -->
+                    <div class="flex items-center justify-between py-3.5 border-b border-silver-100">
+                        <div>
+                            <p class="text-base font-medium text-woodsmoke-800">Monetization</p>
+                            <p id="monetizationLabel" class="text-sm text-woodsmoke-400 mt-0.5">Disabled</p>
+                        </div>
+                        <button id="monetizationToggle" data-state="off" class="relative w-14 h-7 rounded-full bg-silver-200 transition-colors shrink-0 focus:outline-none">
+                            <span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform"></span>
+                        </button>
+                    </div>
+
+                    <!-- Mature audience -->
+                    <div class="flex items-center justify-between py-3.5 border-b border-silver-100">
+                        <div>
+                            <p class="text-base font-medium text-woodsmoke-800">Mature audience</p>
+                            <p class="text-sm text-woodsmoke-400 mt-0.5">18+ content</p>
+                        </div>
+                        <button id="matureToggle" data-state="off" class="relative w-14 h-7 rounded-full bg-silver-200 transition-colors shrink-0 focus:outline-none">
+                            <span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform"></span>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Monetization amount panel -->
+                <div id="monetizationAmountPanel" class="hidden px-6 py-4 border-t border-silver-100">
+                    <p class="text-sm font-medium text-woodsmoke-400 uppercase tracking-wide mb-3">Bucket price</p>
+                    <div class="flex items-baseline gap-2 mb-1">
+                        <input id="monetizationAmountInput" type="number" min="0" step="1" placeholder="0"
+                            class="w-full text-3xl font-bold text-woodsmoke-950 bg-transparent border-none outline-none placeholder-silver-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                        <span class="text-xl font-semibold text-woodsmoke-400 shrink-0">EWL</span>
+                    </div>
+                    <p id="monetizationFiatValue" class="text-base text-woodsmoke-400">≈ $0.00 USD</p>
+                </div>
+
+                <!-- Cancel / Save -->
+                <div class="px-6 pb-6 pt-4 flex items-center gap-3 shrink-0 border-t border-silver-100">
+                    <button type="button" id="newBucketCancelBtn" class="flex-1 h-12 items-center justify-center text-base font-medium text-woodsmoke-600 hover:text-woodsmoke-950 hover:bg-silver-100 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="button" id="newBucketSubmitBtn" class="flex-1 h-12 items-center justify-center gap-2 text-base font-semibold text-white bg-orchid-600 hover:bg-orchid-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span id="newBucketSubmitLabel">Save</span>
+                        <svg id="newBucketSpinner" class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><circle cx="4" cy="12" r="3" fill="currentColor"><animate id="a" attributeName="r" begin="0;b.end-0.25s" dur="0.75s" values="3;.2;3"/></circle><circle cx="12" cy="12" r="3" fill="currentColor"><animate attributeName="r" begin="a.end-0.6s" dur="0.75s" values="3;.2;3"/></circle><circle cx="20" cy="12" r="3" fill="currentColor"><animate id="b" attributeName="r" begin="a.end-0.45s" dur="0.75s" values="3;.2;3"/></circle></svg>
+                    </button>
+                </div>
+            </div><!-- /col-3 -->
+
+        </div><!-- /3-col body -->
+    </div><!-- /panel -->
+</div>
+<!-- ── End New Bucket Modal ───────────────────────────────────────────────── -->
+
+<!-- Hidden file input for per-link thumbnail uploads -->
+<input id="linkThumbFileInput" type="file" accept=".jpg,.jpeg,.png" class="hidden" />
+
+
+<script>
+(function () {
+    var user = window.__GRABBN_USER__;
+
+    // ── Auth gate ────────────────────────────────────────────────────────────
+    if (!user || user.isAnonymous) {
+        ['newBucketCreationBtn', 'bookmarkletToolBtn'].forEach(function (id) {
+            var btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.stopImmediatePropagation();
+                    window.location.href = '/signup.html';
+                }, true);
+            }
+        });
+        return;
+    }
+
+    // ── State ────────────────────────────────────────────────────────────────
+    var state = {
+        links: [],          // { id, title, url, thumb: null, monetized: false, checked: false }
+        tags:  [],
+        visibility:  'public',
+        monetization: false,
+        mature:       false,
+        thumbnail:    null, // { dataUrl, visible }
+        _linkThumbTargetId: null
+    };
+
+    // ── Element refs ─────────────────────────────────────────────────────────
+    var modal          = document.getElementById('newBucketModal');
+    var backdrop       = document.getElementById('newBucketBackdrop');
+    var nameInput      = document.getElementById('newBucketNameInput');
+    var charCount      = document.getElementById('newBucketCharCount');
+    var errorEl        = document.getElementById('newBucketError');
+    var submitBtn      = document.getElementById('newBucketSubmitBtn');
+    var submitLabel    = document.getElementById('newBucketSubmitLabel');
+    var spinner        = document.getElementById('newBucketSpinner');
+    var cancelBtn      = document.getElementById('newBucketCancelBtn');
+    var triggerBtn     = document.getElementById('newBucketCreationBtn');
+
+    // Thumb
+    var thumbSquare      = document.getElementById('thumbnailSquare');
+    var thumbPlaceholder = document.getElementById('thumbPlaceholder');
+    var thumbLoading     = document.getElementById('thumbLoading');
+    var thumbPreview     = document.getElementById('thumbPreviewImg');
+    var thumbActionBtns  = document.getElementById('thumbActionBtns');
+    var thumbVisBtn      = document.getElementById('thumbVisibilityBtn');
+    var thumbEyeOpen     = document.getElementById('thumbEyeIcon');
+    var thumbEyeClosed   = document.getElementById('thumbEyeClosedIcon');
+    var thumbDeleteBtn   = document.getElementById('thumbDeleteBtn');
+    var thumbFileInput   = document.getElementById('thumbnailFileInput');
+
+    // Source URL
+    var sourceUrlInput   = document.getElementById('bucketSourceUrl');
+    var copySourceBtn    = document.getElementById('copySourceUrlBtn');
+    var deleteSourceBtn  = document.getElementById('deleteSourceUrlBtn');
+
+    // Links (col 2)
+    var newLinkTitle     = document.getElementById('newLinkTitle');
+    var newLinkUrl       = document.getElementById('newLinkUrl');
+    var addLinkBtn       = document.getElementById('addLinkBtn');
+    var pasteLinkTitleBtn = document.getElementById('pasteLinkTitleBtn');
+    var clearLinkTitleBtn = document.getElementById('clearLinkTitleBtn');
+    var pasteLinkUrlBtn   = document.getElementById('pasteLinkUrlBtn');
+    var clearLinkUrlBtn   = document.getElementById('clearLinkUrlBtn');
+    var linksList        = document.getElementById('linksList');
+    var linksEmptyState  = document.getElementById('linksEmptyState');
+    var bulkSelectAllBtn = document.getElementById('bulkSelectAllBtn');
+    var bulkCheckboxUnchecked = document.getElementById('bulkCheckboxUnchecked');
+    var bulkCheckboxChecked   = document.getElementById('bulkCheckboxChecked');
+    var bulkActions      = document.getElementById('bulkActions');
+    var bulkDeleteBtn    = document.getElementById('bulkDeleteBtn');
+    var bulkCopyBtn      = document.getElementById('bulkCopyBtn');
+    var bulkMonetizeBtn  = document.getElementById('bulkMonetizeBtn');
+    var linkThumbInput   = document.getElementById('linkThumbFileInput');
+
+    // Tags
+    var tagsContainer    = document.getElementById('tagsContainer');
+    var tagInput         = document.getElementById('tagInput');
+
+    // Toggles
+    var visibilityToggle    = document.getElementById('visibilityToggle');
+    var visibilityLabel     = document.getElementById('visibilityLabel');
+    var monetizationToggle      = document.getElementById('monetizationToggle');
+    var monetizationLabel       = document.getElementById('monetizationLabel');
+    var monetizationAmountPanel = document.getElementById('monetizationAmountPanel');
+    var monetizationAmountInput = document.getElementById('monetizationAmountInput');
+    var monetizationFiatValue   = document.getElementById('monetizationFiatValue');
+    var matureToggle            = document.getElementById('matureToggle');
+
+    // EWL → USD rate (placeholder; swap with real rate when available)
+    var EWL_TO_USD = 0.01;
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function uid() { return Math.random().toString(36).slice(2, 9); }
+
+    function showError(msg) {
+        errorEl.textContent = msg;
+        errorEl.classList.remove('hidden');
+        nameInput.classList.add('border-red-400');
+        nameInput.classList.remove('border-silver-200');
+    }
+
+    function hideError() {
+        errorEl.classList.add('hidden');
+        nameInput.classList.remove('border-red-400');
+        nameInput.classList.add('border-silver-200');
+    }
+
+    function setLoading(on) {
+        submitBtn.disabled = on;
+        spinner.classList.toggle('hidden', !on);
+        submitLabel.textContent = on ? 'Saving…' : 'Save';
+    }
+
+    function resetState() {
+        state.links        = [{ id: uid(), title: 'Example Article', url: 'https://example.com/article', thumb: null, monetized: false, checked: false }];
+        state.tags         = [];
+        state.visibility   = 'public';
+        state.monetization = false;
+        state.mature       = false;
+        state.thumbnail    = null;
+        state._linkThumbTargetId = null;
+    }
+
+    function updateCharCount() {
+        var len = nameInput.value.length;
+        charCount.textContent = len + ' / 120';
+        charCount.classList.toggle('text-red-500',    len >= 110);
+        charCount.classList.toggle('text-woodsmoke-400', len < 110);
+        submitBtn.disabled = len === 0;
+    }
+
+    nameInput.addEventListener('input', updateCharCount);
+
+    function resetUI() {
+        nameInput.value = '';
+        sourceUrlInput.value = '';
+        hideError();
+        updateCharCount();
+        setLoading(false);
+
+        // Thumbnail
+        thumbPlaceholder.classList.remove('hidden');
+        thumbLoading.classList.add('hidden');
+        thumbPreview.classList.add('hidden');
+        thumbPreview.src = '';
+        thumbActionBtns.classList.add('hidden');
+        thumbEyeOpen.classList.remove('hidden');
+        thumbEyeClosed.classList.add('hidden');
+
+        // Links
+        renderLinks();
+
+        // Tags
+        renderTags();
+
+        // Toggles
+        setToggle(visibilityToggle,   true);
+        visibilityLabel.textContent = 'Anyone can find this bucket';
+        setToggle(monetizationToggle, false);
+        monetizationLabel.textContent = 'Disabled';
+        monetizationAmountPanel.classList.add('hidden');
+        monetizationAmountInput.value = '';
+        monetizationFiatValue.textContent = '≈ $0.00 USD';
+        setToggle(matureToggle,       false);
+
+        // Inputs
+        newLinkTitle.value = '';
+        newLinkUrl.value   = '';
+        tagInput.value     = '';
+        addLinkBtn.disabled = true;
+    }
+
+    // ── Open / Close ─────────────────────────────────────────────────────────
+    function openModal() {
+        resetState();
+        resetUI();
+        modal.classList.remove('hidden');
+        newLinkUrl.focus();
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    if (triggerBtn) triggerBtn.addEventListener('click', function (e) { e.stopPropagation(); openModal(); });
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (backdrop)  backdrop.addEventListener('click', closeModal);
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+    });
+
+    document.addEventListener('click', function () {
+        document.querySelectorAll('.link-context-menu:not(.hidden)').forEach(function (m) { m.classList.add('hidden'); });
+    });
+
+    // ── Thumbnail ─────────────────────────────────────────────────────────────
+    var thumbDropZone = document.getElementById('thumbDropZone');
+
+    function loadThumbnailFile(file) {
+        if (!file) return;
+        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+            alert('Only JPG and PNG images are allowed.');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Image must be under 5 MB.');
+            return;
+        }
+        thumbPlaceholder.classList.add('hidden');
+        thumbPreview.classList.add('hidden');
+        thumbActionBtns.classList.add('hidden');
+        thumbLoading.classList.remove('hidden');
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+            state.thumbnail = { dataUrl: ev.target.result, visible: true };
+            thumbLoading.classList.add('hidden');
+            thumbPreview.src = ev.target.result;
+            thumbPreview.classList.remove('hidden');
+            thumbActionBtns.classList.remove('hidden');
+            thumbEyeOpen.classList.remove('hidden');
+            thumbEyeClosed.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    thumbFileInput.addEventListener('change', function () {
+        loadThumbnailFile(this.files[0]);
+        this.value = '';
+    });
+
+    // Drag & drop
+    thumbDropZone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        this.classList.add('border-orchid-400', 'bg-orchid-50', 'text-orchid-600');
+        this.classList.remove('border-silver-300');
+    });
+    thumbDropZone.addEventListener('dragleave', function (e) {
+        if (this.contains(e.relatedTarget)) return;
+        this.classList.remove('border-orchid-400', 'bg-orchid-50', 'text-orchid-600');
+        this.classList.add('border-silver-300');
+    });
+    thumbDropZone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        this.classList.remove('border-orchid-400', 'bg-orchid-50', 'text-orchid-600');
+        this.classList.add('border-silver-300');
+        var file = e.dataTransfer.files[0];
+        loadThumbnailFile(file);
+    });
+
+    thumbVisBtn.addEventListener('click', function () {
+        if (!state.thumbnail) return;
+        state.thumbnail.visible = !state.thumbnail.visible;
+        if (state.thumbnail.visible) {
+            thumbPreview.style.opacity = '1';
+            thumbEyeOpen.classList.remove('hidden');
+            thumbEyeClosed.classList.add('hidden');
+        } else {
+            thumbPreview.style.opacity = '0.25';
+            thumbEyeOpen.classList.add('hidden');
+            thumbEyeClosed.classList.remove('hidden');
+        }
+    });
+
+    thumbDeleteBtn.addEventListener('click', function () {
+        state.thumbnail = null;
+        thumbPreview.src = '';
+        thumbPreview.classList.add('hidden');
+        thumbActionBtns.classList.add('hidden');
+        thumbLoading.classList.add('hidden');
+        thumbPlaceholder.classList.remove('hidden');
+    });
+
+    // ── Source URL ────────────────────────────────────────────────────────────
+    copySourceBtn.addEventListener('click', function () {
+        var v = sourceUrlInput.value.trim();
+        if (!v) return;
+        navigator.clipboard.writeText(v).catch(function () {});
+    });
+
+    deleteSourceBtn.addEventListener('click', function () {
+        sourceUrlInput.value = '';
+        sourceUrlInput.focus();
+    });
+
+    // ── Content input actions ─────────────────────────────────────────────────
+    pasteLinkTitleBtn.addEventListener('click', function () {
+        navigator.clipboard.readText().then(function (text) {
+            newLinkTitle.value = text.trim();
+            newLinkTitle.focus();
+            updateAddBtn();
+        }).catch(function () {});
+    });
+
+    clearLinkTitleBtn.addEventListener('click', function () {
+        newLinkTitle.value = '';
+        newLinkTitle.focus();
+        updateAddBtn();
+    });
+
+    pasteLinkUrlBtn.addEventListener('click', function () {
+        navigator.clipboard.readText().then(function (text) {
+            newLinkUrl.value = text.trim();
+            newLinkUrl.focus();
+            updateAddBtn();
+        }).catch(function () {});
+    });
+
+    clearLinkUrlBtn.addEventListener('click', function () {
+        newLinkUrl.value = '';
+        newLinkUrl.focus();
+        updateAddBtn();
+    });
+
+    // ── Toggle switch helper ──────────────────────────────────────────────────
+    function setToggle(btn, on) {
+        var knob = btn.querySelector('span');
+        if (on) {
+            btn.classList.remove('bg-silver-200');
+            btn.classList.add('bg-orchid-500');
+            knob.classList.add('translate-x-7');
+        } else {
+            btn.classList.remove('bg-orchid-500');
+            btn.classList.add('bg-silver-200');
+            knob.classList.remove('translate-x-7');
+        }
+    }
+
+    visibilityToggle.addEventListener('click', function () {
+        state.visibility = state.visibility === 'public' ? 'private' : 'public';
+        var isPublic = state.visibility === 'public';
+        setToggle(this, isPublic);
+        visibilityLabel.textContent = isPublic ? 'Anyone can find this bucket' : 'Only you can see this';
+    });
+
+    monetizationToggle.addEventListener('click', function () {
+        state.monetization = !state.monetization;
+        setToggle(this, state.monetization);
+        monetizationLabel.textContent = state.monetization ? 'Enabled' : 'Disabled';
+        monetizationAmountPanel.classList.toggle('hidden', !state.monetization);
+        if (state.monetization) {
+            state.links.forEach(function (l) { l.monetized = true; });
+        }
+        renderLinks();
+    });
+
+    monetizationAmountInput.addEventListener('input', function () {
+        var ewl = parseFloat(this.value) || 0;
+        var usd = (ewl * EWL_TO_USD).toFixed(2);
+        monetizationFiatValue.textContent = '≈ $' + usd + ' USD';
+    });
+
+    matureToggle.addEventListener('click', function () {
+        state.mature = !state.mature;
+        setToggle(this, state.mature);
+    });
+
+    // ── Tags ──────────────────────────────────────────────────────────────────
+    function renderTags() {
+        // Remove all existing tag chips (keep the input)
+        var chips = tagsContainer.querySelectorAll('.tag-chip');
+        chips.forEach(function (c) { c.remove(); });
+
+        state.tags.forEach(function (tag) {
+            var chip = document.createElement('span');
+            chip.className = 'tag-chip flex items-center gap-1 px-3 py-1 rounded-md bg-orchid-100 text-orchid-700 text-sm font-medium';
+            chip.innerHTML =
+                '<span>' + escapeHtml(tag) + '</span>' +
+                '<button type="button" class="flex items-center justify-center text-orchid-400 hover:text-orchid-700 transition-colors" data-tag="' + escapeHtml(tag) + '">' +
+                    // mingcute:close-small-line
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.889 6.697a1.001 1.001 0 0 1 1.415 1.414L13.414 12l3.89 3.89a1 1 0 0 1-1.414 1.414L12 13.414l-3.889 3.89a1 1 0 1 1-1.414-1.414L10.586 12L6.697 8.11a1 1 0 0 1 1.414-1.414L12 10.586z"/></g></svg>' +
+                '</button>';
+            chip.querySelector('button').addEventListener('click', function () {
+                var t = this.getAttribute('data-tag');
+                state.tags = state.tags.filter(function (x) { return x !== t; });
+                renderTags();
+            });
+            tagsContainer.insertBefore(chip, tagInput);
+        });
+
+        tagInput.classList.toggle('hidden', state.tags.length >= 8);
+    }
+
+    tagInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            var val = this.value.trim().replace(/,$/, '');
+            if (val && !state.tags.includes(val) && state.tags.length < 8) {
+                state.tags.push(val);
+                renderTags();
+            }
+            this.value = '';
+        } else if (e.key === 'Backspace' && this.value === '' && state.tags.length) {
+            state.tags.pop();
+            renderTags();
+        }
+    });
+
+    // ── Links ─────────────────────────────────────────────────────────────────
+    var ICON_PIC_FILL =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>';
+
+    var ICON_SQUARE_LINE =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm16 0H5v14h14z"/></g></svg>';
+
+    var ICON_CHECKBOX_FILL =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M5 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm11.95 6.796a1 1 0 0 0-1.414-1.415l-4.95 4.95l-2.121-2.121a1 1 0 1 0-1.415 1.414l2.758 2.758a1.1 1.1 0 0 0 1.556 0z"/></g></svg>';
+
+    var ICON_DELETE2 =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M14.28 2a2 2 0 0 1 1.897 1.368L16.72 5H20a1 1 0 1 1 0 2l-.003.071l-.867 12.143A3 3 0 0 1 16.138 22H7.862a3 3 0 0 1-2.992-2.786L4.003 7.07L4 7a1 1 0 0 1 0-2h3.28l.543-1.632A2 2 0 0 1 9.721 2zM9 10a1 1 0 0 0-.993.883L8 11v6a1 1 0 0 0 1.993.117L10 17v-6a1 1 0 0 0-1-1m6 0a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1m-.72-6H9.72l-.333 1h5.226z"/></g></svg>';
+
+    var ICON_UPLOAD2 =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 15a1 1 0 0 1 1 1v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4a1 1 0 1 1 2 0v4h14v-4a1 1 0 0 1 1-1M12.884 3.474L16.95 7.54a1 1 0 1 1-1.414 1.414L13 6.42V16a1 1 0 1 1-2 0V6.419L8.464 8.954A1 1 0 0 1 7.05 7.54l4.066-4.066a1.25 1.25 0 0 1 1.768 0"/></g></svg>';
+
+    var ICON_COPY =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M9 2a2 2 0 0 0-2 2v2h2V4h11v11h-2v2h2a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM4 7a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></g></svg>';
+
+    var ICON_DOLLAR =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="M0 0h24v24H0z"/><path fill="currentColor" d="M13.5 4a1.5 1.5 0 0 0-3 0v.5h-1a4.5 4.5 0 0 0 0 9h5a1.5 1.5 0 0 1 0 3H7a1.5 1.5 0 0 0 0 3h3.5v.5a1.5 1.5 0 0 0 3 0v-.5h1a4.5 4.5 0 1 0 0-9h-5a1.5 1.5 0 1 1 0-3H17a1.5 1.5 0 0 0 0-3h-3.5z"/></g></svg>';
+
+    
+    var ICON_CLOSE =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m12 13.414l5.657 5.657a1 1 0 0 0 1.414-1.414L13.414 12l5.657-5.657a1 1 0 0 0-1.414-1.414L12 10.586L6.343 4.929A1 1 0 0 0 4.93 6.343L10.586 12l-5.657 5.657a1 1 0 1 0 1.414 1.414z"/></g></svg>';
+
+    // mingcute:more-2-line — vertical 3-dot menu trigger
+    var ICON_MORE =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3m0 7.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3m0 7.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3"/></g></svg>'
+
+    function escapeHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function buildLinkRow(link) {
+        var row = document.createElement('div');
+        row.className = 'flex items-center gap-3 p-3 rounded-lg border border-silver-100 hover:bg-silver-50/70 transition-colors group';
+        row.setAttribute('data-link-id', link.id);
+
+        row.innerHTML =
+            // Checkbox
+            '<button class="link-checkbox mt-0.5 shrink-0 text-silver-300 hover:text-orchid-600 transition-colors">' +
+                ICON_SQUARE_LINE +
+            '</button>' +
+
+            // Thumbnail column
+            '<div class="relative shrink-0 w-24 h-24 rounded-md overflow-hidden bg-silver-100">' +
+                '<div class="link-thumb-box absolute inset-0 flex items-center justify-center text-silver-300">' +
+                    (link.thumb
+                        ? '<img src="' + escapeHtml(link.thumb) + '" class="w-full h-full object-cover" />'
+                        : ICON_PIC_FILL) +
+                '</div>' +
+            '</div>' +
+
+            // Content
+            '<div class="flex-1 flex flex-col gap-1 min-w-0">' +
+                '<p class="text-base font-medium text-woodsmoke-950 truncate link-title">' + escapeHtml(link.title) + '</p>' +
+                '<p class="text-sm text-woodsmoke-400 truncate link-url">' + escapeHtml(link.url) + '</p>' +
+                '<div class="flex items-center gap-0.5">' +
+                    '<button class="link-copy w-10 h-10 flex items-center justify-center rounded-md text-woodsmoke-400 transition-colors" title="Copy URL">' +
+                        ICON_COPY +
+                    '</button>' +
+                    '<button class="link-monetize w-10 h-10 flex items-center justify-center rounded-md transition-colors ' +
+                        (!state.monetization ? 'text-silver-300 cursor-not-allowed' : (link.monetized ? 'bg-orchid-600 text-orchid-200' : 'text-woodsmoke-400 hover:text-orchid-600 hover:bg-orchid-50')) +
+                        '" title="Toggle monetization">' +
+                        ICON_DOLLAR +
+                    '</button>' +
+                '</div>' +
+            '</div>' +
+
+            // 3-dots context menu
+            '<div class="relative shrink-0 self-start">' +
+                '<button class="link-more-btn w-8 h-8 flex items-center justify-center rounded-md text-woodsmoke-950 transition-colors">' +
+                    ICON_MORE +
+                '</button>' +
+                '<div class="link-context-menu hidden absolute right-0 top-full mt-1 bg-white rounded-md shadow-lg border border-silver-100 py-1 z-50 w-44">' +
+                    '<button class="link-set-thumb w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Set thumbnail</button>' +
+                    '<button class="link-remove-thumb w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Remove thumbnail</button>' +
+                    '<div class="my-1 border-t border-silver-100"></div>' +
+                    '<button class="link-delete w-full px-3 py-2 text-sm font-medium text-left text-red-500 hover:bg-red-50 transition-colors">Delete link</button>' +
+                '</div>' +
+            '</div>';
+
+        // ── Row events ──
+        var checkboxBtn = row.querySelector('.link-checkbox');
+        checkboxBtn.addEventListener('click', function () {
+            link.checked = !link.checked;
+            checkboxBtn.innerHTML = link.checked ? ICON_CHECKBOX_FILL : ICON_SQUARE_LINE;
+            row.classList.toggle('bg-orchid-50/40', link.checked);
+            row.classList.toggle('border-orchid-200', link.checked);
+            row.classList.toggle('border-silver-100', !link.checked);
+            updateBulkBar();
+        });
+
+        row.querySelector('.link-copy').addEventListener('click', function () {
+            navigator.clipboard.writeText(link.url).catch(function () {});
+        });
+
+        row.querySelector('.link-monetize').addEventListener('click', function () {
+            if (!state.monetization) return;
+            link.monetized = !link.monetized;
+            this.className = 'link-monetize w-10 h-10 flex items-center justify-center rounded-md transition-colors ' +
+                (link.monetized ? 'bg-orchid-600 text-orchid-200' : 'text-woodsmoke-400 hover:text-orchid-600 hover:bg-orchid-50');
+        });
+
+        var moreBtn     = row.querySelector('.link-more-btn');
+        var contextMenu = row.querySelector('.link-context-menu');
+
+        moreBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var isOpen = !contextMenu.classList.contains('hidden');
+            document.querySelectorAll('.link-context-menu:not(.hidden)').forEach(function (m) { m.classList.add('hidden'); });
+            if (!isOpen) contextMenu.classList.remove('hidden');
+        });
+
+        row.querySelector('.link-set-thumb').addEventListener('click', function () {
+            contextMenu.classList.add('hidden');
+            state._linkThumbTargetId = link.id;
+            linkThumbInput.value = '';
+            linkThumbInput.click();
+        });
+
+        row.querySelector('.link-remove-thumb').addEventListener('click', function () {
+            contextMenu.classList.add('hidden');
+            link.thumb = null;
+            row.querySelector('.link-thumb-box').innerHTML = ICON_PIC_FILL;
+        });
+
+        row.querySelector('.link-delete').addEventListener('click', function () {
+            contextMenu.classList.add('hidden');
+            state.links = state.links.filter(function (l) { return l.id !== link.id; });
+            renderLinks();
+        });
+
+        return row;
+    }
+
+    function renderLinks() {
+        // Clear existing rows (not the empty state)
+        var rows = linksList.querySelectorAll('[data-link-id]');
+        rows.forEach(function (r) { r.remove(); });
+
+        if (state.links.length === 0) {
+            linksEmptyState.classList.remove('hidden');
+            updateBulkBar();
+            return;
+        }
+
+        linksEmptyState.classList.add('hidden');
+        state.links.forEach(function (link) {
+            linksList.appendChild(buildLinkRow(link));
+        });
+        updateBulkBar();
+    }
+
+    // Add link
+    function tryAddLink() {
+        var title = newLinkTitle.value.trim();
+        var url   = newLinkUrl.value.trim();
+        if (!url) { newLinkUrl.focus(); return; }
+        state.links.push({ id: uid(), title: title || url, url: url, thumb: null, monetized: false, checked: false });
+        newLinkTitle.value = '';
+        newLinkUrl.value   = '';
+        newLinkTitle.focus();
+        renderLinks();
+    }
+
+    function updateAddBtn() {
+        addLinkBtn.disabled = !newLinkTitle.value.trim() || !newLinkUrl.value.trim();
+    }
+
+    newLinkTitle.addEventListener('input', updateAddBtn);
+    newLinkUrl.addEventListener('input', updateAddBtn);
+
+    addLinkBtn.addEventListener('click', tryAddLink);
+    newLinkUrl.addEventListener('keydown', function (e) { if (e.key === 'Enter') tryAddLink(); });
+    newLinkTitle.addEventListener('keydown', function (e) { if (e.key === 'Enter') { newLinkUrl.focus(); } });
+
+    // Per-link thumb upload
+    linkThumbInput.addEventListener('change', function () {
+        var id   = state._linkThumbTargetId;
+        var file = this.files[0];
+        if (!id || !file) return;
+        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) { alert('Only JPG and PNG images are allowed.'); this.value = ''; return; }
+        if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5 MB.'); this.value = ''; return; }
+
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+            var link = state.links.find(function (l) { return l.id === id; });
+            if (!link) return;
+            link.thumb = ev.target.result;
+            var row = linksList.querySelector('[data-link-id="' + id + '"]');
+            if (row) {
+                var box = row.querySelector('.link-thumb-box');
+                box.innerHTML = '<img src="' + escapeHtml(ev.target.result) + '" class="w-full h-full object-cover" />';
+            }
+        };
+        reader.readAsDataURL(file);
+        this.value = '';
+    });
+
+    // ── Bulk select bar ───────────────────────────────────────────────────────
+    function updateBulkBar() {
+        var checked = state.links.filter(function (l) { return l.checked; });
+        var allChecked = state.links.length > 0 && checked.length === state.links.length;
+
+        bulkCheckboxUnchecked.classList.toggle('hidden', allChecked);
+        bulkCheckboxChecked.classList.toggle('hidden', !allChecked);
+
+        if (checked.length > 0) {
+            bulkActions.classList.remove('hidden');
+            bulkActions.classList.add('flex');
+        } else {
+            bulkActions.classList.add('hidden');
+            bulkActions.classList.remove('flex');
+        }
+    }
+
+    bulkSelectAllBtn.addEventListener('click', function () {
+        var allChecked = state.links.length > 0 && state.links.every(function (l) { return l.checked; });
+        state.links.forEach(function (l) { l.checked = !allChecked; });
+        renderLinks();
+    });
+
+    bulkDeleteBtn.addEventListener('click', function () {
+        state.links = state.links.filter(function (l) { return !l.checked; });
+        renderLinks();
+    });
+
+    bulkCopyBtn.addEventListener('click', function () {
+        var urls = state.links.filter(function (l) { return l.checked; }).map(function (l) { return l.url; });
+        navigator.clipboard.writeText(urls.join('\n')).catch(function () {});
+    });
+
+    bulkMonetizeBtn.addEventListener('click', function () {
+        state.links.forEach(function (l) { if (l.checked) l.monetized = true; });
+        renderLinks();
+    });
+
+    // ── Save / Submit ─────────────────────────────────────────────────────────
+    submitBtn.addEventListener('click', async function () {
+        hideError();
+        var name = nameInput.value.trim();
+        if (!name) {
+            showError('Please enter a bucket name.');
+            nameInput.focus();
+            return;
+        }
+
+        setLoading(true);
+        try {
+            var payload = {
+                name:        name,
+                visibility:  state.visibility,
+                monetized:   state.monetization,
+                mature:      state.mature,
+                tags:        state.tags,
+                sourceUrl:   sourceUrlInput.value.trim(),
+                thumbnail:   state.thumbnail ? state.thumbnail.dataUrl : null,
+                links:       state.links.map(function (l) { return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized }; })
+            };
+
+            var res  = await fetch('/api/buckets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            var data = await res.json();
+
+            if (res.ok) {
+                closeModal();
+            } else if (res.status === 409) {
+                showError('You already have a bucket with that name.');
+                setLoading(false);
+                nameInput.focus();
+            } else {
+                showError(data.error || 'Something went wrong. Please try again.');
+                setLoading(false);
+            }
+        } catch (err) {
+            showError('Network error. Please try again.');
+            setLoading(false);
+        }
+    });
+
+})();
+</script>
+
+<!-- ── Bookmarklet Modal ───────────────────────────────────────────────── -->
+<div id="bookmarkletModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-woodsmoke-950/50 p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 flex flex-col gap-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="font-bold text-woodsmoke-950 text-base">Get the Bookmarklet</h3>
+            <button id="closeBookmarkletModal" class="w-8 h-8 flex items-center justify-center rounded-full text-woodsmoke-400 hover:text-woodsmoke-950 hover:bg-silver-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="m12 13.414 4.243 4.243a1 1 0 0 0 1.414-1.414L13.414 12l4.243-4.243a1 1 0 0 0-1.414-1.414L12 10.586 7.757 6.343a1 1 0 0 0-1.414 1.414L10.586 12l-4.243 4.243a1 1 0 1 0 1.414 1.414z"/></svg>
+            </button>
+        </div>
+        <p class="text-sm text-woodsmoke-500">Drag the button below to your bookmarks bar. Then click it on any webpage to open Grabbn with that page's links pre-loaded.</p>
+        <div class="flex justify-center py-3 bg-silver-50 rounded-lg border border-dashed border-silver-200">
+            <a id="bookmarkletLink" href=""
+                class="inline-flex items-center gap-x-1.5 px-4 py-2 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md cursor-grab active:cursor-grabbing select-none transition-colors"
+                onclick="return false;"
+                title="Drag this to your bookmarks bar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M5 5a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6a1 1 0 1 1-2 0V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v14.131l4.168-2.778a1.5 1.5 0 0 1 1.664 0l.723.482a1 1 0 0 1-1.11 1.664L12 18.202l-4.668 3.112C6.335 21.978 5 21.264 5 20.066zm14 10a1 1 0 0 1 1 1v2h2a1 1 0 1 1 0 2h-2v2a1 1 0 1 1-2 0v-2h-2a1 1 0 1 1 0-2h2v-2a1 1 0 0 1 1-1"/></g></svg>
+                Grabbn
+            </a>
+        </div>
+        <p class="text-xs text-center text-woodsmoke-400">Drag to your bookmarks bar · or copy the code below</p>
+        <div class="flex flex-row gap-x-2 items-start">
+            <code id="bookmarkletCode" class="flex-1 text-xs bg-silver-50 border border-silver-200 rounded-lg p-2 break-all font-mono text-woodsmoke-500 overflow-auto max-h-20 leading-relaxed">Generating…</code>
+            <button id="copyBookmarkletBtn" class="shrink-0 px-3 py-2 text-xs font-semibold border border-silver-200 rounded-lg hover:bg-silver-50 transition-colors text-woodsmoke-700">Copy</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var bookmarkletModal      = document.getElementById('bookmarkletModal');
+    var bookmarkletLink       = document.getElementById('bookmarkletLink');
+    var bookmarkletCode       = document.getElementById('bookmarkletCode');
+    var closeBookmarkletModal = document.getElementById('closeBookmarkletModal');
+    var copyBookmarkletBtn    = document.getElementById('copyBookmarkletBtn');
+    var bookmarkletToolBtn    = document.getElementById('bookmarkletToolBtn');
+    var bookmarkletToolBtn2   = document.getElementById('bookmarkletToolBtn2');
+
+    if (!bookmarkletModal) return;
+
+    var origin = window.location.origin;
+    var cachedCode = null;
+
+    var SPINNER_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" style="animation:grabbn-btn-spin .7s linear infinite"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 4a8 8 0 1 0 0 16a8 8 0 0 0 0-16M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12" opacity="0.1"/><path fill="currentColor" d="M12 4a7.96 7.96 0 0 0-5.533 2.222a1 1 0 1 1-1.384-1.444A9.96 9.96 0 0 1 12 2a1 1 0 1 1 0 2"/></g></svg>';
+
+    // Inject keyframe once
+    var _ks = document.createElement('style');
+    _ks.textContent = '@keyframes grabbn-btn-spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(_ks);
+
+    function setButtonSpinner(btn, spinning) {
+        if (!btn) return;
+        if (spinning) {
+            btn.dataset.origHtml = btn.innerHTML;
+            btn.innerHTML = SPINNER_SVG;
+            btn.disabled = true;
+        } else {
+            if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
+            btn.disabled = false;
+        }
+    }
+
+    function buildCode(bkToken) {
+        var safeTok = String(bkToken || '').replace(/['"\\]/g, '');
+        return `javascript:(function(){var ex=document.getElementById('grabbn-widget');if(ex){ex.remove();return;}function xi(a,base){var el=a,img,src,attrs=['data-src','data-lazy','data-original','data-srcset','src'],depth=0;while(el&&depth<5){img=el.querySelector('img');if(img){for(var k=0;k<attrs.length;k++){src=(img.getAttribute(attrs[k])||'').trim();if(src.indexOf(' ')!==-1)src=src.split(',')[0].trim().split(' ')[0];if(src&&src.indexOf('data:')!==0&&src.indexOf('.svg')===-1){try{return new URL(src,base).href;}catch{}}}}el=el.parentElement;depth++;}return null;}function xl(doc,base){var l=[],s=new Set();doc.querySelectorAll('a[href]').forEach(function(a){var r=a.getAttribute('href');if(!r||r[0]==='#'||/^(javascript|mailto|tel):/.test(r))return;try{var h=new URL(r,base).href;if(s.has(h))return;s.add(h);var t=(a.title||a.getAttribute('aria-label')||'').trim();if(!t){var i=a.querySelector('img');if(i)t=(i.alt||'').trim();}if(!t){var f=a.textContent.trim().replace(/\\s+/g,' ');t=f.replace(/[$€£¥][\\d\\s,.]+.*/,'').trim()||f;}t=t.slice(0,120);if(t.length>2)l.push({href:h,text:t,image:xi(a,base)});}catch{}});return l;}var WN_KEY='grabbn:'+location.hostname+':';var acc=null;try{if(window.name&&window.name.indexOf(WN_KEY)===0)acc=JSON.parse(window.name.slice(WN_KEY.length));}catch{}if(acc&&acc.pagesCollected>=50){alert('Grabbn: 50-page limit reached. Save your current collection first, then continue grabbing.');return;}var curLinks=xl(document,location.href);var seen=new Set(acc?acc.links.map(function(l){return l.href;}):[]);var merged=acc?acc.links.slice():[];curLinks.forEach(function(l){if(!seen.has(l.href)){merged.push(l);seen.add(l.href);}});if(merged.length>2000)merged=merged.slice(0,2000);var pagesCollected=(acc?acc.pagesCollected:0)+1;try{window.name=WN_KEY+JSON.stringify({links:merged,pagesCollected:pagesCollected});}catch{}var maxPage=1,cp=parseInt(new URLSearchParams(location.search).get('page')||'1',10);document.querySelectorAll('a[href]').forEach(function(a){var m=(a.getAttribute('href')||'').match(/[?&]page=(\\d+)/i);if(m){var n=parseInt(m[1],10);if(n>maxPage)maxPage=n;}});var sty=document.createElement('style');sty.textContent='@keyframes grabbn-spin{to{transform:rotate(360deg)}}';document.head.appendChild(sty);var ov=document.createElement('div');ov.id='grabbn-widget';ov.style.cssText='position:fixed;bottom:20px;right:20px;width:380px;height:560px;z-index:2147483647;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden;background:#fff;border:1px solid #e5e7eb;';var xb=document.createElement('button');xb.title='Close';xb.textContent='\u00d7';xb.style.cssText='position:absolute;top:9px;right:9px;z-index:10;background:rgba(255,255,255,.95);border:1px solid #e5e7eb;border-radius:6px;width:24px;height:24px;font-size:16px;cursor:pointer;color:#6b7280;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;';xb.onclick=function(){ov.remove();};ov.appendChild(xb);var ld=document.createElement('div');ld.style.cssText='display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:8px;color:#9ca3af;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';ld.innerHTML='<div style="width:20px;height:20px;border:2px solid #f3e8ff;border-top-color:#b346b3;border-radius:50%;animation:grabbn-spin .8s linear infinite;"></div><span>Loading Grabbn\u2026</span>';ov.appendChild(ld);document.body.appendChild(ov);var wf=null;window.addEventListener('message',function(e){if(e.origin!=='${origin}')return;if(e.data==='grabbn-close'){ov.remove();return;}if(e.data==='grabbn-reset'){try{window.name='';}catch{}return;}if(e.data&&e.data.type==='grabbn-fetch-pages'){var urls=e.data.urls;urls.forEach(function(u,i){fetch(u).then(function(r){return r.text();}).then(function(html){var d2=new DOMParser().parseFromString(html,'text/html');var pl=xl(d2,u);if(wf)wf.contentWindow.postMessage({type:'grabbn-page-links',links:pl,pageUrl:u,index:i,total:urls.length},'${origin}');}).catch(function(){if(wf)wf.contentWindow.postMessage({type:'grabbn-page-links',links:[],pageUrl:u,index:i,total:urls.length,error:true},'${origin}');});});}});fetch('${origin}/api/popup-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({links:merged,sourceUrl:location.href,maxPage:maxPage,currentPage:cp,pagesCollected:pagesCollected,bkt:'${safeTok}'})}).then(function(r){return r.json();}).then(function(d){if(!d.token){ld.querySelector('span').textContent='Server error.';return;}ld.remove();var fr=document.createElement('iframe');fr.src='${origin}/popup.html?session='+d.token;fr.style.cssText='width:100%;height:100%;border:none;display:block;';ov.appendChild(fr);wf=fr;}).catch(function(){ld.querySelector('span').textContent='Could not connect.';});})();`;
+    }
+
+    async function openBookmarkletModal(triggerBtn) {
+        if (cachedCode) {
+            bookmarkletModal.classList.remove('hidden');
+            return;
+        }
+        setButtonSpinner(triggerBtn, true);
+        bookmarkletCode.textContent = 'Generating…';
+        try {
+            var res = await fetch('/api/auth/bookmarklet-token', { credentials: 'include' });
+            var data = await res.json();
+            cachedCode = buildCode(data.token);
+        } catch {
+            cachedCode = buildCode('');
+        }
+        setButtonSpinner(triggerBtn, false);
+        if (bookmarkletLink) bookmarkletLink.href = cachedCode;
+        if (bookmarkletCode) bookmarkletCode.textContent = cachedCode;
+        bookmarkletModal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+        bookmarkletModal.classList.add('hidden');
+    }
+
+    if (bookmarkletToolBtn)  bookmarkletToolBtn.addEventListener('click',  function () { openBookmarkletModal(bookmarkletToolBtn); });
+    if (bookmarkletToolBtn2) bookmarkletToolBtn2.addEventListener('click', function () { openBookmarkletModal(bookmarkletToolBtn2); });
+
+    closeBookmarkletModal.addEventListener('click', closeModal);
+    bookmarkletModal.addEventListener('click', function (e) {
+        if (e.target === bookmarkletModal) closeModal();
+    });
+
+    copyBookmarkletBtn.addEventListener('click', async function () {
+        if (!cachedCode) return;
+        try {
+            await navigator.clipboard.writeText(cachedCode);
+            copyBookmarkletBtn.textContent = 'Copied!';
+            setTimeout(function () { copyBookmarkletBtn.textContent = 'Copy'; }, 2000);
+        } catch {}
+    });
+})();
+</script>
+
+</body>
+</html>

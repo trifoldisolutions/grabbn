@@ -82,6 +82,11 @@ const bucketSchema = new mongoose.Schema(
     sharedBy: [{
       userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       lastSharedVersion: { type: Date }
+    }],
+    grabbedBy: [{
+      userId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      username: { type: String, default: '' },
+      avatar:   { type: String, default: '' }
     }]
   },
   { timestamps: true }

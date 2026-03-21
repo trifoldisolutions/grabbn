@@ -341,7 +341,7 @@
                 });
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Verification failed');
-                window.location.href = '/app.html';
+                window.location.href = '/v2';
             } catch (error) {
                 otpError.textContent = error.message;
                 otpError.classList.remove('hidden');

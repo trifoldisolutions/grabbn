@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+    --font-sans: 'Jost', sans-serif;
     --color-orchid-50: #fdf6fd;
     --color-orchid-100: #faecfb;
     --color-orchid-200: #f3d8f6;
@@ -50,6 +51,6 @@
     }
 }
 
-#cardView::-webkit-scrollbar{
+#cardView::-webkit-scrollbar, #showroom-grid::-webkit-scrollbar, #main-feed::-webkit-scrollbar{
     display: none;
 }
