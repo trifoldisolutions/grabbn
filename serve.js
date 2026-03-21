@@ -128,7 +128,7 @@ app.use('/share', bucketShareRouter);
 app.get('/', (req, res) => {
     const host = req.hostname; // excludes port
     if (host === 'app.grabbn.com') {
-        res.sendFile(path.join(__dirname, 'public', 'app.html'));
+        res.redirect('/v2');
     } else {
         res.sendFile(path.join(__dirname, 'public', 'landing.html'));
     }
