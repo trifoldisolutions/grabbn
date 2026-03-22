@@ -1,0 +1,287 @@
+<%
+  title = bucket.name
+  page  = ''
+%>
+<%- include('partials/layout') %>
+
+<div class="flex justify-center px-4 md:px-6 py-6">
+    <div class="w-full max-w-3xl flex flex-col gap-5">
+
+        <!-- ── Row 1 · Header ──────────────────────────────────────────────── -->
+        <div class="flex gap-5">
+
+            <!-- Left · Thumbnail + Source URL -->
+            <div class="w-44 shrink-0 flex flex-col gap-3">
+
+                <!-- Thumbnail -->
+                <div class="relative w-full aspect-square bg-silver-50 rounded-xl overflow-hidden border border-silver-100">
+                    <% if (thumbnailUrl) { %>
+                        <img src="<%= thumbnailUrl %>" alt="<%= bucket.name %>" class="absolute inset-0 w-full h-full object-cover">
+                    <% } else { %>
+                        <div class="absolute inset-0 flex items-center justify-center text-silver-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>
+                        </div>
+                    <% } %>
+                </div>
+
+                <!-- Source URL -->
+                <% if (bucket.sourceUrl) { %>
+                <div class="flex flex-col gap-1">
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-woodsmoke-400">Source</span>
+                    <div class="flex items-center gap-1 px-2.5 py-2 rounded-lg border border-silver-200 bg-silver-50">
+                        <a href="<%= bucket.sourceUrl %>" target="_blank" rel="noopener noreferrer"
+                           class="flex-1 min-w-0 text-xs text-orchid-600 hover:underline truncate">
+                            <%= bucket.sourceUrl %>
+                        </a>
+                        <button
+                            class="shrink-0 w-6 h-6 flex items-center justify-center rounded text-woodsmoke-400 hover:text-orchid-600 transition-colors"
+                            title="Copy source URL"
+                            onclick="(function(btn){var url='<%= bucket.sourceUrl.replace(/'/g, "\\'") %>';navigator.clipboard.writeText(url).then(function(){btn.title='Copied!';setTimeout(function(){btn.title='Copy source URL';},2000);});})(this)"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <% } %>
+
+            </div>
+
+            <!-- Right · Title, badges, actions -->
+            <div class="flex-1 flex flex-col gap-3 min-w-0">
+
+                <!-- Title -->
+                <h1 class="text-2xl font-bold text-woodsmoke-950 leading-snug break-words"><%= bucket.name %></h1>
+
+                <!-- Curator + badges -->
+                <div class="flex items-center flex-wrap gap-2">
+                    <span class="text-sm text-woodsmoke-400">by <span class="font-medium text-woodsmoke-700">@<%= curatorName %></span></span>
+                    <span class="inline-flex items-center bg-orchid-50 text-orchid-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-orchid-200">
+                        <%= bucket.links.length %> link<%= bucket.links.length !== 1 ? 's' : '' %>
+                    </span>
+                    <% if (bucket.isPaywalled) { %>
+                    <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-200">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <%= bucket.price %> CRD
+                    </span>
+                    <% } else { %>
+                    <span class="inline-flex items-center bg-green-50 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200">Free</span>
+                    <% } %>
+                </div>
+
+                <!-- Spacer -->
+                <div class="flex-1"></div>
+
+                <!-- Action buttons -->
+                <div class="flex items-center gap-2">
+                    <button id="bvShareBtn"
+                        class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-gray-600 hover:bg-silver-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
+                        <span id="bvShareLabel">Share</span>
+                    </button>
+                    <button id="bvCopyLinksBtn"
+                        class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-gray-600 hover:bg-silver-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
+                        <span id="bvCopyLinksLabel">Copy all links</span>
+                    </button>
+                    <button id="bvReportBtn"
+                        class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-red-400 hover:bg-red-50 hover:border-red-200 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2a1 1 0 0 1 .894.553l9 18A1 1 0 0 1 21 22H3a1 1 0 0 1-.894-1.447l9-18A1 1 0 0 1 12 2m0 3.236L4.763 20H19.24zM12 17a1 1 0 1 1 0 2 1 1 0 0 1 0-2m0-7a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0v-4a1 1 0 0 1 1-1"/></g></svg>
+                        <span id="bvReportLabel">Report</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── Row 2 · Links list ──────────────────────────────────────────── -->
+        <div class="bg-white rounded-md border border-silver-100 overflow-hidden">
+
+            <!-- Section header -->
+            <div class="px-5 py-3 border-b border-silver-100 flex items-center gap-2">
+                <span class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Content</span>
+                <span class="ml-auto text-xs text-woodsmoke-400"><%= bucket.links.length %> link<%= bucket.links.length !== 1 ? 's' : '' %></span>
+                <span class="text-xs font-medium text-woodsmoke-400 bg-silver-100 px-2 py-0.5 rounded-full">View only</span>
+            </div>
+
+<%
+    const freeLinks   = bucket.isPaywalled ? bucket.links.filter(function(l){ return l.isFree; })  : bucket.links;
+    const lockedLinks = bucket.isPaywalled ? bucket.links.filter(function(l){ return !l.isFree; }) : [];
+    const visibleLinks = hasAccess ? bucket.links : freeLinks;
+    const showLocked   = bucket.isPaywalled && !hasAccess && lockedLinks.length > 0;
+%>
+            <% if (bucket.links.length === 0) { %>
+            <div class="px-5 py-12 text-center text-woodsmoke-400 text-sm italic">No links in this collection.</div>
+            <% } else { %>
+
+                <!-- Visible links -->
+                <% visibleLinks.forEach(function(link) { %>
+                <a href="<%= link.href %>" target="_blank" rel="noopener noreferrer"
+                   data-bucket-id="<%= bucketId %>"
+                   class="bv-link-row flex items-center gap-3 px-5 py-3 border-b border-silver-50 last:border-b-0 hover:bg-orchid-50 transition-colors group">
+                    <% if (link.image) { %>
+                    <img src="<%= link.image %>" alt="" loading="lazy" class="w-12 h-9 object-cover rounded-md shrink-0 bg-silver-100">
+                    <% } %>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-woodsmoke-950 group-hover:text-orchid-700 transition-colors truncate">
+                            <%= link.text || 'Untitled Link' %><% if (link.duration) { %><span class="text-woodsmoke-400 font-normal"> · <%= link.duration %></span><% } %>
+                        </p>
+                        <p class="text-xs text-woodsmoke-400 truncate mt-0.5"><%= link.href %></p>
+                    </div>
+                    <svg class="w-4 h-4 shrink-0 text-silver-300 group-hover:text-orchid-400 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </a>
+                <% }); %>
+
+                <!-- Blurred locked links -->
+                <% if (showLocked) { %>
+                    <% lockedLinks.slice(0, 5).forEach(function(link) { %>
+                    <div class="flex items-center gap-3 px-5 py-3 border-b border-silver-50 select-none">
+                        <% if (link.image) { %>
+                        <div class="w-12 h-9 rounded-md shrink-0 bg-silver-100 blur-sm overflow-hidden">
+                            <img src="<%= link.image %>" alt="" class="w-full h-full object-cover">
+                        </div>
+                        <% } %>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate blur-sm text-woodsmoke-950 pointer-events-none">
+                                <%= link.text || 'Untitled Link' %>
+                            </p>
+                        </div>
+                        <svg class="w-4 h-4 shrink-0 text-silver-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                    </div>
+                    <% }); %>
+                    <% if (lockedLinks.length > 5) { %>
+                    <p class="px-5 py-2 text-xs text-woodsmoke-400 italic">+ <%= lockedLinks.length - 5 %> more locked</p>
+                    <% } %>
+
+                    <!-- Unlock CTA -->
+                    <div class="px-5 py-5 border-t border-silver-100 text-center">
+                        <p class="text-sm font-semibold text-woodsmoke-950 mb-1">Unlock this collection</p>
+                        <p class="text-xs text-woodsmoke-400 mb-4">One-time purchase · Access forever</p>
+                        <% if (user.isAnonymous) { %>
+                        <a href="/?openAuth=true" class="inline-flex items-center justify-center gap-2 w-full max-w-xs h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors mx-auto">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            Sign in to unlock
+                        </a>
+                        <% } else { %>
+                        <button id="bvUnlockBtn" class="inline-flex items-center justify-center gap-2 w-full max-w-xs h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors mx-auto">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            Unlock for <%= bucket.price %> credits ($<%= (bucket.price / 100).toFixed(2) %>)
+                        </button>
+                        <% } %>
+                    </div>
+                <% } %>
+
+            <% } %>
+
+        </div>
+
+        <!-- ── Row 3 · Description + Tags ─────────────────────────────────── -->
+        <% if (bucket.description || (bucket.tags && bucket.tags.length > 0)) { %>
+        <div class="bg-white rounded-md border border-silver-100 p-5 flex flex-col gap-4">
+
+            <% if (bucket.description) { %>
+            <div class="flex flex-col gap-1.5">
+                <span class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Description</span>
+                <p class="text-sm text-woodsmoke-700 leading-relaxed whitespace-pre-wrap"><%= bucket.description %></p>
+            </div>
+            <% } %>
+
+            <% if (bucket.tags && bucket.tags.length > 0) { %>
+            <div class="flex flex-col gap-2">
+                <span class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Tags</span>
+                <div class="flex flex-wrap gap-1.5">
+                    <% bucket.tags.forEach(function(tag) { %>
+                    <span class="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full bg-silver-100 text-woodsmoke-600"><%= tag %></span>
+                    <% }); %>
+                </div>
+            </div>
+            <% } %>
+
+        </div>
+        <% } %>
+
+    </div>
+</div>
+
+<script>
+(function () {
+    const bucketId  = '<%= bucketId %>';
+    const shareUrl  = '<%= `${shareBaseUrl}/share/bucket/${bucketId}` %>';
+    const linkHrefs = <%- JSON.stringify(visibleLinks.map(function(l){ return l.href; })) %>;
+
+    // Track link clicks
+    document.querySelectorAll('a.bv-link-row').forEach(function (a) {
+        a.addEventListener('click', function () {
+            var payload = JSON.stringify({ href: this.href, bucketId: bucketId });
+            navigator.sendBeacon('/api/links/click', new Blob([payload], { type: 'application/json' }));
+        });
+    });
+
+    // Share
+    document.getElementById('bvShareBtn').addEventListener('click', async function () {
+        const label = document.getElementById('bvShareLabel');
+        if (navigator.share) {
+            try { await navigator.share({ title: '<%= bucket.name.replace(/'/g, "\\'") %>', url: shareUrl }); } catch (_) {}
+        } else {
+            await navigator.clipboard.writeText(shareUrl).catch(() => {});
+            label.textContent = 'Link copied!';
+            setTimeout(function () { label.textContent = 'Share'; }, 2000);
+        }
+        // Record share
+        fetch('/api/buckets/' + bucketId + '/share', { method: 'POST', credentials: 'include' }).catch(() => {});
+    });
+
+    // Copy all links
+    document.getElementById('bvCopyLinksBtn').addEventListener('click', async function () {
+        const label = document.getElementById('bvCopyLinksLabel');
+        if (!linkHrefs.length) return;
+        try {
+            await navigator.clipboard.writeText(linkHrefs.join('\n'));
+            label.textContent = 'Copied!';
+        } catch (_) {
+            label.textContent = 'Failed';
+        }
+        setTimeout(function () { label.textContent = 'Copy all links'; }, 2000);
+    });
+
+    // Report
+    document.getElementById('bvReportBtn').addEventListener('click', function () {
+        const btn = document.getElementById('bvReportBtn');
+        const label = document.getElementById('bvReportLabel');
+        btn.disabled = true;
+        btn.classList.add('opacity-60', 'cursor-default');
+        label.textContent = 'Reported';
+        fetch('/api/buckets/' + bucketId + '/report', { method: 'POST', credentials: 'include' }).catch(() => {});
+    });
+
+    // Unlock button (paywalled, logged-in user without access)
+    const unlockBtn = document.getElementById('bvUnlockBtn');
+    if (unlockBtn) {
+        unlockBtn.addEventListener('click', async function () {
+            unlockBtn.disabled = true;
+            unlockBtn.textContent = 'Unlocking…';
+            try {
+                const res = await fetch('/api/credits/unlock/' + bucketId, { method: 'POST', credentials: 'include' });
+                const data = await res.json();
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    unlockBtn.textContent = data.error || 'Failed';
+                    setTimeout(function () {
+                        unlockBtn.disabled = false;
+                        unlockBtn.textContent = 'Unlock for <%= bucket.price %> credits ($<%= (bucket.price / 100).toFixed(2) %>)';
+                    }, 2500);
+                }
+            } catch (_) {
+                unlockBtn.disabled = false;
+                unlockBtn.textContent = 'Network error — try again';
+            }
+        });
+    }
+})();
+</script>
+
+<%- include('partials/layout-end') %>

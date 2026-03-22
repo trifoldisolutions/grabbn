@@ -26,6 +26,11 @@ const bucketSchema = new mongoose.Schema(
       type: [linkSchema],
       default: []
     },
+    description: {
+      type: String,
+      default: '',
+      maxlength: 256
+    },
     sourceUrl: {
       type: String,
       default: ''

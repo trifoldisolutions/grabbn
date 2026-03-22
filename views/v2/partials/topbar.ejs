@@ -79,6 +79,8 @@
                 <!-- Profile context menu -->
                 <div id="profileContextMenu" class="hidden absolute right-0 top-full mt-2 bg-white rounded-md shadow-lg border border-silver-100 py-1 z-50 w-44">
                     <% if (user && !user.isAnonymous) { %>
+                        <a href="/v2/@<%= user.username %>" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">View Profile</a>
+                        <div class="border-t border-silver-100 my-1"></div>
                         <button id="profileLogoutBtn" class="w-full px-4 py-2.5 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Log Out</button>
                         <div class="border-t border-silver-100 my-1"></div>
                         <button id="profileDeleteBtn" class="w-full px-4 py-2.5 text-sm font-medium text-left text-red-500 hover:bg-red-50 transition-colors">Delete Account</button>

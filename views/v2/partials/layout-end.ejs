@@ -154,7 +154,7 @@
                 </div>
 
                 <!-- Bulk selection bar -->
-                <div class="px-6 h-12 shrink-0 flex items-center gap-3 border-b border-silver-100 bg-silver-50/60">
+                <div class="px-6 h-12 shrink-0 flex items-center gap-3">
                     <button id="bulkSelectAllBtn" class="flex items-center gap-1.5 text-woodsmoke-500 hover:text-woodsmoke-950 transition-colors">
                         <!-- mingcute:square-line (unchecked) -->
                         <svg id="bulkCheckboxUnchecked" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zm16 0H5v14h14z"/></g></svg>
@@ -168,14 +168,28 @@
                         <button id="bulkCopyBtn"   class="px-3 h-8 items-center justify-center text-sm rounded-md bg-silver-100 text-woodsmoke-600 hover:bg-silver-200 font-medium transition-colors">Copy All</button>
                         <button id="bulkMonetizeBtn" class="px-3 h-8 items-center justify-center text-sm rounded-md bg-orchid-50 text-orchid-600 hover:bg-orchid-100 font-medium transition-colors">Monetize All</button>
                     </div>
+                    <!-- Search — pushed to the right -->
+                    <div class="ml-auto flex items-center gap-1.5 h-10 px-2.5 rounded-md bg-silver-50 focus-within:border-orchid-400 focus-within:ring-1 focus-within:ring-orchid-100 transition-colors w-[35%]">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" class="shrink-0 text-woodsmoke-400"><g fill="none"><path fill="currentColor" d="M11 3a8 8 0 1 0 4.906 14.32l3.387 3.387a1 1 0 0 0 1.414-1.414l-3.387-3.387A8 8 0 0 0 11 3m-6 8a6 6 0 1 1 12 0a6 6 0 0 1-12 0"/></g></svg>
+                        <input id="linksSearchInput" type="text" placeholder="Search…" autocomplete="off"
+                            class="flex-1 min-w-0 text-sm bg-transparent outline-none text-woodsmoke-950 placeholder-woodsmoke-400" />
+                        <button id="linksSearchClear" class="hidden shrink-0 text-woodsmoke-400 hover:text-woodsmoke-950 transition-colors leading-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><path fill="currentColor" d="m12 13.414 4.243 4.243a1 1 0 0 0 1.414-1.414L13.414 12l4.243-4.243a1 1 0 0 0-1.414-1.414L12 10.586 7.757 6.343a1 1 0 0 0-1.414 1.414L10.586 12l-4.243 4.243a1 1 0 1 0 1.414 1.414z"/></svg>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Links list (scrollable) -->
                 <div id="linksList" class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-2 min-h-0">
-                    <!-- Empty state -->
+                    <!-- Empty state (no links at all) -->
                     <div id="linksEmptyState" class="flex flex-col items-center justify-center h-full gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" class="text-silver-200"><path fill="currentColor" d="M10 6a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2zm-1 5a1 1 0 0 1 1-1h4a1 1 0 1 1 0 2h-4a1 1 0 0 1-1-1zm0 4a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1zm-2-9a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H7z"/></svg>
                         <p class="text-base text-woodsmoke-400">No links added yet</p>
+                    </div>
+                    <!-- No-results state (links exist but none match search) -->
+                    <div id="linksSearchEmpty" class="hidden flex-col items-center justify-center h-full gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" class="text-silver-200"><g fill="none"><path fill="currentColor" d="M11 3a8 8 0 1 0 4.906 14.32l3.387 3.387a1 1 0 0 0 1.414-1.414l-3.387-3.387A8 8 0 0 0 11 3m-6 8a6 6 0 1 1 12 0a6 6 0 0 1-12 0"/></g></svg>
+                        <p class="text-base text-woodsmoke-400">No links match your search</p>
                     </div>
                 </div>
 
@@ -205,6 +219,19 @@
                                 class="bg-transparent outline-none text-sm text-woodsmoke-950 placeholder-woodsmoke-400 flex-1 min-w-[120px] h-7 leading-7"
                             />
                         </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="flex flex-col gap-1.5 mb-5">
+                        <label for="bucketDescription" class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Description</label>
+                        <textarea
+                            id="bucketDescription"
+                            maxlength="256"
+                            placeholder="Describe what's in this bucket…"
+                            rows="4"
+                            class="w-full px-3 py-2.5 rounded-md border border-silver-200 text-sm text-woodsmoke-950 placeholder-woodsmoke-400 outline-none focus:border-orchid-400 focus:ring-2 focus:ring-orchid-100 transition resize-none leading-relaxed"
+                        ></textarea>
+                        <p id="bucketDescCharCount" class="text-xs text-woodsmoke-400 text-right">0 / 256</p>
                     </div>
 
                     <!-- Visibility -->
@@ -246,9 +273,10 @@
                 <div id="monetizationAmountPanel" class="hidden px-6 py-4 border-t border-silver-100">
                     <p class="text-sm font-medium text-woodsmoke-400 uppercase tracking-wide mb-3">Bucket price</p>
                     <div class="flex items-baseline gap-2 mb-1">
-                        <input id="monetizationAmountInput" type="number" min="0" step="1" placeholder="0"
-                            class="w-full text-3xl font-bold text-woodsmoke-950 bg-transparent border-none outline-none placeholder-silver-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-                        <span class="text-xl font-semibold text-woodsmoke-400 shrink-0">EWL</span>
+                        <input id="monetizationAmountInput" type="text" inputmode="decimal" placeholder="0"
+                            class="w-full text-3xl font-bold text-woodsmoke-950 bg-transparent border-none outline-none placeholder-silver-300" />
+                        <button id="currencyToggleBtn" title="Switch currency"
+                            class="text-xl font-semibold text-woodsmoke-400 hover:text-orchid-600 shrink-0 transition-colors">EWL</button>
                     </div>
                     <p id="monetizationFiatValue" class="text-base text-woodsmoke-400">≈ $0.00 USD</p>
                 </div>
@@ -300,7 +328,8 @@
         monetization: false,
         mature:       false,
         thumbnail:    null, // { dataUrl, visible }
-        _linkThumbTargetId: null
+        _linkThumbTargetId: null,
+        _editBucket:  null  // { _id, name } when editing an existing bucket
     };
 
     // ── Element refs ─────────────────────────────────────────────────────────
@@ -327,6 +356,14 @@
     var thumbDeleteBtn   = document.getElementById('thumbDeleteBtn');
     var thumbFileInput   = document.getElementById('thumbnailFileInput');
 
+    // Description
+    var descInput        = document.getElementById('bucketDescription');
+    var descCharCount    = document.getElementById('bucketDescCharCount');
+
+    descInput.addEventListener('input', function () {
+        descCharCount.textContent = descInput.value.length + ' / 256';
+    });
+
     // Source URL
     var sourceUrlInput   = document.getElementById('bucketSourceUrl');
     var copySourceBtn    = document.getElementById('copySourceUrlBtn');
@@ -340,9 +377,12 @@
     var clearLinkTitleBtn = document.getElementById('clearLinkTitleBtn');
     var pasteLinkUrlBtn   = document.getElementById('pasteLinkUrlBtn');
     var clearLinkUrlBtn   = document.getElementById('clearLinkUrlBtn');
-    var linksList        = document.getElementById('linksList');
-    var linksEmptyState  = document.getElementById('linksEmptyState');
-    var bulkSelectAllBtn = document.getElementById('bulkSelectAllBtn');
+    var linksList          = document.getElementById('linksList');
+    var linksEmptyState    = document.getElementById('linksEmptyState');
+    var linksSearchEmpty   = document.getElementById('linksSearchEmpty');
+    var linksSearchInput   = document.getElementById('linksSearchInput');
+    var linksSearchClear   = document.getElementById('linksSearchClear');
+    var bulkSelectAllBtn   = document.getElementById('bulkSelectAllBtn');
     var bulkCheckboxUnchecked = document.getElementById('bulkCheckboxUnchecked');
     var bulkCheckboxChecked   = document.getElementById('bulkCheckboxChecked');
     var bulkActions      = document.getElementById('bulkActions');
@@ -365,8 +405,47 @@
     var monetizationFiatValue   = document.getElementById('monetizationFiatValue');
     var matureToggle            = document.getElementById('matureToggle');
 
-    // EWL → USD rate (placeholder; swap with real rate when available)
-    var EWL_TO_USD = 0.01;
+    // EWL ↔ USD rate (placeholder; swap with live rate when available)
+    var EWL_TO_USD = 0.01; // 1 EWL = $0.01 USD
+    var currentCurrency = 'EWL'; // 'EWL' | 'USD'
+    var currencyToggleBtn = document.getElementById('currencyToggleBtn');
+
+    // ── Price formatting helpers (US format: 1,234.56) ───────────────────────
+    // Sanitise raw input: keep digits + at most one period (decimal)
+    function sanitisePriceRaw(val) {
+        var cleaned = val.replace(/[^\d.]/g, '');
+        var dotIdx = cleaned.indexOf('.');
+        if (dotIdx !== -1) {
+            cleaned = cleaned.slice(0, dotIdx + 1) + cleaned.slice(dotIdx + 1).replace(/\./g, '');
+        }
+        return cleaned;
+    }
+    // Add comma thousands separators to the integer portion
+    function formatPriceDisplay(sanitised) {
+        var parts = sanitised.split('.');
+        var integer = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return integer + (parts.length > 1 ? '.' + parts[1] : '');
+    }
+    // Parse display value back to a JS number (strip commas — period is already decimal)
+    function parsePriceValue(display) {
+        return parseFloat(display.replace(/,/g, '')) || 0;
+    }
+    function updateFiatLine() {
+        var raw = parsePriceValue(monetizationAmountInput.value);
+        if (currentCurrency === 'EWL') {
+            var usd = (raw * EWL_TO_USD).toFixed(2);
+            monetizationFiatValue.textContent = '≈ $' + usd + ' USD';
+        } else {
+            var ewl = Math.round(raw / EWL_TO_USD);
+            monetizationFiatValue.textContent = '≈ ' + Number(ewl).toLocaleString('en-US') + ' EWL';
+        }
+    }
+
+    // Returns the price in EWL regardless of which currency the user entered
+    function priceAsEWL() {
+        var raw = parsePriceValue(monetizationAmountInput.value);
+        return currentCurrency === 'USD' ? raw / EWL_TO_USD : raw;
+    }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
     function uid() { return Math.random().toString(36).slice(2, 9); }
@@ -387,7 +466,7 @@
     function setLoading(on) {
         submitBtn.disabled = on;
         spinner.classList.toggle('hidden', !on);
-        submitLabel.textContent = on ? 'Saving…' : 'Save';
+        submitLabel.classList.toggle('hidden', on);
     }
 
     function resetState() {
@@ -398,6 +477,7 @@
         state.mature       = false;
         state.thumbnail    = null;
         state._linkThumbTargetId = null;
+        state._editBucket  = null;
     }
 
     function updateCharCount() {
@@ -412,7 +492,12 @@
 
     function resetUI() {
         nameInput.value = '';
+        descInput.value = '';
+        descCharCount.textContent = '0 / 256';
         sourceUrlInput.value = '';
+        linksSearchInput.value = '';
+        linksSearchClear.classList.add('hidden');
+        linksSearchEmpty.classList.add('hidden');
         hideError();
         updateCharCount();
         setLoading(false);
@@ -439,6 +524,8 @@
         monetizationLabel.textContent = 'Disabled';
         monetizationAmountPanel.classList.add('hidden');
         monetizationAmountInput.value = '';
+        currentCurrency = 'EWL';
+        currencyToggleBtn.textContent = 'EWL';
         monetizationFiatValue.textContent = '≈ $0.00 USD';
         setToggle(matureToggle,       false);
 
@@ -460,6 +547,53 @@
     function closeModal() {
         modal.classList.add('hidden');
     }
+
+    // Exposed globally so the profile page (and any other page) can open a bucket for editing
+    window.openBucketModal = function (bucket) {
+        // Populate state from existing bucket data
+        state._editBucket  = { _id: bucket._id, name: bucket.name };
+        state.links        = (bucket.links || []).map(function (l) {
+            return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: false };
+        });
+        state.tags         = bucket.tags || [];
+        state.visibility   = bucket.isPublic ? 'public' : 'private';
+        state.monetization = !!bucket.isPaywalled;
+        state.mature       = !!bucket.mature;
+        state.thumbnail    = bucket.thumbnail ? { dataUrl: bucket.thumbnail, visible: true } : null;
+
+        // Reset the UI using the populated state
+        resetUI();
+
+        // resetUI hardcodes toggles — fix them to match the bucket's actual settings
+        setToggle(visibilityToggle, state.visibility === 'public');
+        visibilityLabel.textContent = state.visibility === 'public' ? 'Anyone can find this bucket' : 'Only you can see this';
+        setToggle(monetizationToggle, state.monetization);
+        monetizationLabel.textContent = state.monetization ? 'Enabled' : 'Disabled';
+        monetizationAmountPanel.classList.toggle('hidden', !state.monetization);
+        if (state.monetization) monetizationAmountInput.value = bucket.price
+            ? formatPriceDisplay(sanitisePriceRaw(String(bucket.price)))
+            : '';
+
+        // Set bucket name, description and source URL (resetUI clears them)
+        nameInput.value = bucket.name;
+        updateCharCount();
+        descInput.value = bucket.description || '';
+        descCharCount.textContent = (bucket.description || '').length + ' / 256';
+        sourceUrlInput.value = bucket.sourceUrl || '';
+
+        // Show thumbnail if present
+        if (state.thumbnail) {
+            thumbPlaceholder.classList.add('hidden');
+            thumbPreview.src = state.thumbnail.dataUrl;
+            thumbPreview.classList.remove('hidden');
+            thumbActionBtns.classList.remove('hidden');
+        }
+
+        // Switch submit label to Update
+        submitLabel.textContent = 'Update';
+
+        modal.classList.remove('hidden');
+    };
 
     if (triggerBtn) triggerBtn.addEventListener('click', function (e) { e.stopPropagation(); openModal(); });
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
@@ -623,9 +757,32 @@
     });
 
     monetizationAmountInput.addEventListener('input', function () {
-        var ewl = parseFloat(this.value) || 0;
-        var usd = (ewl * EWL_TO_USD).toFixed(2);
-        monetizationFiatValue.textContent = '≈ $' + usd + ' USD';
+        var cursor = this.selectionStart;
+        var oldLen = this.value.length;
+        var sanitised = sanitisePriceRaw(this.value);
+        var formatted = formatPriceDisplay(sanitised);
+        this.value = formatted;
+        // nudge cursor to account for added/removed separator dots
+        var delta = formatted.length - oldLen;
+        this.setSelectionRange(cursor + delta, cursor + delta);
+        updateFiatLine();
+    });
+
+    currencyToggleBtn.addEventListener('click', function () {
+        var raw = parsePriceValue(monetizationAmountInput.value);
+        if (currentCurrency === 'EWL') {
+            // switching to USD: convert current EWL amount → USD
+            currentCurrency = 'USD';
+            var asUsd = raw * EWL_TO_USD;
+            monetizationAmountInput.value = asUsd > 0 ? formatPriceDisplay(sanitisePriceRaw(asUsd.toFixed(2))) : '';
+        } else {
+            // switching to EWL: convert current USD amount → EWL
+            currentCurrency = 'EWL';
+            var asEwl = Math.round(raw / EWL_TO_USD);
+            monetizationAmountInput.value = asEwl > 0 ? formatPriceDisplay(String(asEwl)) : '';
+        }
+        currencyToggleBtn.textContent = currentCurrency;
+        updateFiatLine();
     });
 
     matureToggle.addEventListener('click', function () {
@@ -752,6 +909,9 @@
                 '<div class="link-context-menu hidden absolute right-0 top-full mt-1 bg-white rounded-md shadow-lg border border-silver-100 py-1 z-50 w-44">' +
                     '<button class="link-set-thumb w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Set thumbnail</button>' +
                     '<button class="link-remove-thumb w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Remove thumbnail</button>' +
+                    '<button class="link-use-as-bucket-thumb w-full px-3 py-2 text-sm font-medium text-left transition-colors ' +
+                        (link.thumb ? 'text-woodsmoke-700 hover:bg-silver-50' : 'text-woodsmoke-300 cursor-not-allowed') +
+                    '"' + (!link.thumb ? ' disabled' : '') + '>Set as bucket thumbnail</button>' +
                     '<div class="my-1 border-t border-silver-100"></div>' +
                     '<button class="link-delete w-full px-3 py-2 text-sm font-medium text-left text-red-500 hover:bg-red-50 transition-colors">Delete link</button>' +
                 '</div>' +
@@ -802,6 +962,26 @@
             row.querySelector('.link-thumb-box').innerHTML = ICON_PIC_FILL;
         });
 
+        row.querySelector('.link-use-as-bucket-thumb').addEventListener('click', function () {
+            if (!link.thumb) return;
+            contextMenu.classList.add('hidden');
+            state.thumbnail = { dataUrl: link.thumb, visible: true };
+            thumbPlaceholder.classList.add('hidden');
+            thumbPreview.src = link.thumb;
+            thumbPreview.classList.remove('hidden');
+            thumbActionBtns.classList.remove('hidden');
+        });
+
+        // Open lightbox when clicking the thumbnail image
+        var thumbImg = row.querySelector('.link-thumb-box img');
+        if (thumbImg) {
+            thumbImg.classList.add('cursor-zoom-in');
+            thumbImg.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (typeof window.openGlobalLightbox === 'function') window.openGlobalLightbox(link.thumb);
+            });
+        }
+
         row.querySelector('.link-delete').addEventListener('click', function () {
             contextMenu.classList.add('hidden');
             state.links = state.links.filter(function (l) { return l.id !== link.id; });
@@ -811,13 +991,36 @@
         return row;
     }
 
+    function applySearch() {
+        var q = linksSearchInput.value.trim().toLowerCase();
+        linksSearchClear.classList.toggle('hidden', !q);
+
+        if (state.links.length === 0) return; // empty state already shown by renderLinks
+
+        var rows = linksList.querySelectorAll('[data-link-id]');
+        var visibleCount = 0;
+        rows.forEach(function (row) {
+            var link = state.links.find(function (l) { return l.id === row.dataset.linkId; });
+            var matches = !q || (link && (
+                link.title.toLowerCase().includes(q) ||
+                link.url.toLowerCase().includes(q)
+            ));
+            row.classList.toggle('hidden', !matches);
+            if (matches) visibleCount++;
+        });
+
+        linksSearchEmpty.classList.toggle('hidden', visibleCount > 0);
+        linksSearchEmpty.classList.toggle('flex', visibleCount === 0);
+    }
+
     function renderLinks() {
-        // Clear existing rows (not the empty state)
+        // Clear existing rows (not the empty/search-empty states)
         var rows = linksList.querySelectorAll('[data-link-id]');
         rows.forEach(function (r) { r.remove(); });
 
         if (state.links.length === 0) {
             linksEmptyState.classList.remove('hidden');
+            linksSearchEmpty.classList.add('hidden');
             updateBulkBar();
             return;
         }
@@ -827,7 +1030,17 @@
             linksList.appendChild(buildLinkRow(link));
         });
         updateBulkBar();
+        applySearch(); // re-apply any active filter after re-render
     }
+
+    linksSearchInput.addEventListener('input', applySearch);
+
+    linksSearchClear.addEventListener('click', function () {
+        linksSearchInput.value = '';
+        linksSearchClear.classList.add('hidden');
+        applySearch();
+        linksSearchInput.focus();
+    });
 
     // Add link
     function tryAddLink() {
@@ -886,6 +1099,14 @@
         if (checked.length > 0) {
             bulkActions.classList.remove('hidden');
             bulkActions.classList.add('flex');
+
+            // Reflect monetize toggle state: all selected are monetized → active style
+            var allMonetized = checked.length > 0 && checked.every(function (l) { return l.monetized; });
+            bulkMonetizeBtn.textContent = allMonetized ? 'Unmonetize All' : 'Monetize All';
+            bulkMonetizeBtn.className = 'px-3 h-8 items-center justify-center text-sm rounded-md font-medium transition-colors ' +
+                (allMonetized
+                    ? 'bg-orchid-600 text-white hover:bg-orchid-700'
+                    : 'bg-orchid-50 text-orchid-600 hover:bg-orchid-100');
         } else {
             bulkActions.classList.add('hidden');
             bulkActions.classList.remove('flex');
@@ -909,7 +1130,9 @@
     });
 
     bulkMonetizeBtn.addEventListener('click', function () {
-        state.links.forEach(function (l) { if (l.checked) l.monetized = true; });
+        var checked = state.links.filter(function (l) { return l.checked; });
+        var allMonetized = checked.length > 0 && checked.every(function (l) { return l.monetized; });
+        checked.forEach(function (l) { l.monetized = !allMonetized; });
         renderLinks();
     });
 
@@ -929,18 +1152,28 @@
                 name:        name,
                 visibility:  state.visibility,
                 monetized:   state.monetization,
+                price:       priceAsEWL(),
                 mature:      state.mature,
                 tags:        state.tags,
+                description: descInput.value.trim(),
                 sourceUrl:   sourceUrlInput.value.trim(),
                 thumbnail:   state.thumbnail ? state.thumbnail.dataUrl : null,
                 links:       state.links.map(function (l) { return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized }; })
             };
 
-            var res  = await fetch('/api/buckets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            var isEdit = !!state._editBucket;
+            var url    = isEdit ? '/api/buckets/' + state._editBucket._id + '/full' : '/api/buckets';
+            var method = isEdit ? 'PATCH' : 'POST';
+
+            var res  = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             var data = await res.json();
 
             if (res.ok) {
                 closeModal();
+                // Reload the profile page to reflect changes
+                if (isEdit && window.location.pathname.startsWith('/v2/@')) {
+                    window.location.reload();
+                }
             } else if (res.status === 409) {
                 showError('You already have a bucket with that name.');
                 setLoading(false);
@@ -955,6 +1188,38 @@
         }
     });
 
+})();
+</script>
+
+<!-- ── Global image lightbox (shared by bucket modal & other in-page modals) ── -->
+<div id="globalImgLightbox" class="hidden fixed inset-0 z-[200] flex items-center justify-center cursor-zoom-out" aria-modal="true" role="dialog">
+    <div class="absolute inset-0 bg-woodsmoke-950/85 backdrop-blur-sm"></div>
+    <img id="globalImgLightboxImg" src="" alt="" class="relative w-[98vw] h-[96vh] rounded-lg shadow-2xl object-contain select-none">
+    <button id="globalImgLightboxClose" class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="m12 13.414 4.243 4.243a1 1 0 0 0 1.414-1.414L13.414 12l4.243-4.243a1 1 0 0 0-1.414-1.414L12 10.586 7.757 6.343a1 1 0 0 0-1.414 1.414L10.586 12l-4.243 4.243a1 1 0 1 0 1.414 1.414z"/></svg>
+    </button>
+</div>
+<script>
+(function () {
+    var lb      = document.getElementById('globalImgLightbox');
+    var lbImg   = document.getElementById('globalImgLightboxImg');
+    var lbClose = document.getElementById('globalImgLightboxClose');
+
+    window.openGlobalLightbox = function (src) {
+        lbImg.src = src;
+        lb.classList.remove('hidden');
+    };
+
+    function close() {
+        lb.classList.add('hidden');
+        lbImg.src = '';
+    }
+
+    lb.addEventListener('click', function (e) { if (e.target !== lbImg) close(); });
+    lbClose.addEventListener('click', close);
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !lb.classList.contains('hidden')) close();
+    });
 })();
 </script>
 

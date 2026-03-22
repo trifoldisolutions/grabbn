@@ -260,6 +260,42 @@ app.put('/api/buckets/:oldName', requireAuth, requireVerification, async (req, r
     }
 });
 
+// Full bucket update (used by profile edit modal)
+app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { name, description, visibility, monetized, price, mature, sourceUrl, thumbnail, links } = req.body;
+
+        const update = {};
+        if (name        !== undefined) update.name        = name;
+        if (description !== undefined) update.description = String(description || '').slice(0, 256);
+        if (visibility  !== undefined) update.isPublic    = visibility === 'public';
+        if (monetized   !== undefined) update.isPaywalled = !!monetized;
+        if (price       !== undefined) update.price       = Number(price) || 0;
+        if (sourceUrl   !== undefined) update.sourceUrl   = sourceUrl || '';
+        if (thumbnail   !== undefined) update.thumbnail   = thumbnail || '';
+        if (links       !== undefined) {
+            update.links = links.map(l => ({
+                href:    l.url   || '',
+                text:    l.title || '',
+                isFree:  !l.monetized,
+                image:   l.thumb || null,
+            }));
+        }
+
+        const bucket = await Bucket.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            update,
+            { new: true }
+        );
+
+        if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
+        res.json({ name: bucket.name });
+    } catch (error) {
+        console.error('Error updating bucket:', error);
+        res.status(500).json({ error: 'Failed to update bucket' });
+    }
+});
+
 // Get bucket ID by name for sharing
 app.get('/api/buckets/:name/id', requireAuth, requireVerification, async (req, res) => {
     try {
@@ -1247,10 +1283,126 @@ for (const { path: routePath, view, title, page } of v2Pages) {
     });
 }
 
+// Profile page — redirect /v2/profile to the logged-in user's @username route
+app.get('/v2/profile', anonymousAuth, requireAuth, (req, res) => {
+    const username = req.user?.username;
+    if (username) return res.redirect(`/v2/@${username}`);
+    res.redirect('/v2');
+});
+
+// Profile page — /v2/@:username  (public — anyone can view)
+app.get('/v2/@:username', anonymousAuth, async (req, res) => {
+    // Who is being viewed
+    const profileUser = await User.findOne({ username: req.params.username, isAnonymous: false }).lean();
+    if (!profileUser) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null }).catch(() => res.status(404).send('User not found'));
+
+    // Is the logged-in user the owner of this profile?
+    const viewer  = req.user ?? null;
+    const isOwner = !!(viewer && !viewer.isAnonymous && viewer._id.toString() === profileUser._id.toString());
+
+    const addDisplayThumb = (b) => ({
+        ...b,
+        _id: b._id.toString(),
+        displayThumb: b.thumbnail || b.links?.find(l => l.image)?.image || null,
+    });
+
+    // Owners see all their buckets; visitors only see public ones
+    const bucketFilter = isOwner
+        ? { userId: profileUser._id }
+        : { userId: profileUser._id, isPublic: true };
+
+    const [allBuckets, subscriberCount, followingCount] = await Promise.all([
+        Bucket.find(bucketFilter)
+            .select('name description thumbnail isPublic isPaywalled price links viewCount shareCount grabbedBy sourceBucketId sourceUrl originalCuratorName createdAt updatedAt')
+            .sort({ order: 1, createdAt: -1 })
+            .lean(),
+        Subscription.countDocuments({ followeeId: profileUser._id }),
+        Subscription.countDocuments({ followerId: profileUser._id }),
+    ]);
+
+    const ownBuckets     = allBuckets.filter(b => !b.sourceBucketId).map(addDisplayThumb);
+    // Grabbed tab is only shown to the owner
+    const grabbedBuckets = isOwner ? allBuckets.filter(b => b.sourceBucketId).map(addDisplayThumb) : [];
+    const totalViews     = ownBuckets.reduce((sum, b) => sum + (b.viewCount ?? 0), 0);
+    const memberSince    = new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    res.render('v2/profile', {
+        title:       `@${profileUser.username}`,
+        page:        'profile',
+        user:        viewer,          // logged-in user → used by topbar/sidebar
+        profileUser,                  // the user whose profile this is
+        isOwner,
+        ownBuckets,
+        grabbedBuckets,
+        totalViews,
+        subscriberCount,
+        followingCount,
+        memberSince,
+    });
+});
+
 // Dynamic repository page — domain comes from the URL
 app.get('/v2/repository/:domain', anonymousAuth, (req, res) => {
     const domain = req.params.domain;
     res.render('v2/repository', { title: domain, page: 'repository', user: req.user ?? null, domain });
+});
+
+// Bucket view page — /v2/:bucketId  (accessible to anyone)
+app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
+    try {
+        const { bucketId } = req.params;
+        const bucket = await Bucket.findById(bucketId).lean();
+        if (!bucket) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+
+        const curator = await User.findById(bucket.userId).select('username').lean();
+        const curatorName = curator?.username || 'Anonymous';
+
+        // Thumbnail: use raw stored value (data URL or URL) directly, fall back to first link image
+        const thumbnailUrl = bucket.thumbnail || bucket.links?.find(l => l.image)?.image || null;
+        const shareBaseUrl = `${req.protocol}://${req.get('host')}`;
+
+        // Paywall access check
+        const isOwner = !!(req.user && !req.user.isAnonymous && bucket.userId.toString() === req.user._id.toString());
+        const hasAccess = isOwner
+            || !bucket.isPaywalled
+            || (!req.user.isAnonymous && !!(await BucketAccess.findOne({ userId: req.user._id, bucketId: bucket._id })));
+
+        // Track view (fire-and-forget, skip owner)
+        if (!isOwner) {
+            if (req.user) {
+                const existing = bucket.viewedBy?.find(v => v.userId.toString() === req.user._id.toString());
+                if (!existing) {
+                    Bucket.findByIdAndUpdate(bucketId, {
+                        $push: { viewedBy: { userId: req.user._id, lastViewedVersion: bucket.updatedAt } },
+                        $inc: { viewCount: 1 }
+                    }).catch(() => {});
+                } else if (existing.lastViewedVersion < bucket.updatedAt) {
+                    Bucket.updateOne(
+                        { _id: bucketId, 'viewedBy.userId': req.user._id },
+                        { $set: { 'viewedBy.$.lastViewedVersion': bucket.updatedAt }, $inc: { viewCount: 1 } }
+                    ).catch(() => {});
+                }
+            } else {
+                Bucket.findByIdAndUpdate(bucketId, { $inc: { viewCount: 1 } }).catch(() => {});
+            }
+        }
+
+        res.render('v2/bucket', {
+            title: bucket.name,
+            page: '',
+            user: req.user ?? null,
+            bucket,
+            bucketId,
+            curatorName,
+            thumbnailUrl,
+            shareBaseUrl,
+            isOwner,
+            hasAccess,
+        });
+    } catch (err) {
+        console.error('Error loading bucket view:', err);
+        res.status(500).send('Error loading bucket');
+    }
 });
 
 // Start the server

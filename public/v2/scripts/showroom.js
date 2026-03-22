@@ -66,7 +66,7 @@
 
     function createCard(b) {
         const card = document.createElement('a');
-        card.href      = `/share/bucket/${b._id}`;
+        card.href      = `/v2/${b._id}`;
         card.className = 'flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer';
 
         // Thumbnail / placeholder
