@@ -327,7 +327,7 @@
 
         const thumb = bucket.displayThumb;
         thumbEl.innerHTML = thumb
-            ? `<img src="${esc(imgProxy(thumb))}" class="w-full h-full object-cover cursor-zoom-in" alt="" data-lightbox="${esc(thumb)}">`
+            ? `<img src="${esc(imgProxy(thumb))}" class="w-full h-full object-cover cursor-zoom-in" alt="" data-lightbox="${esc(thumb)}" onerror="this.style.display='none'">`
             : `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>`;
         if (thumb) {
             thumbEl.querySelector('img')?.addEventListener('click', () => openLightbox(thumb));
@@ -404,7 +404,7 @@
                 li.className = 'flex items-center gap-3 px-5 py-3 hover:bg-silver-50 transition-colors group';
                 const domain = (() => { try { return new URL(link.href).hostname.replace(/^www\./, ''); } catch { return ''; } })();
                 const thumbHtml = link.image
-                    ? `<img src="${esc(imgProxy(link.image))}" class="w-10 h-10 rounded-md object-cover shrink-0 cursor-zoom-in" loading="lazy" data-lightbox="${esc(link.image)}">`
+                    ? `<img src="${esc(imgProxy(link.image))}" class="w-10 h-10 rounded-md object-cover shrink-0 cursor-zoom-in" loading="lazy" data-lightbox="${esc(link.image)}" onerror="this.style.display='none'">`
                     : `<div class="w-10 h-10 rounded-md bg-silver-100 flex items-center justify-center shrink-0 text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg></div>`;
                 li.innerHTML = `
                     ${thumbHtml}

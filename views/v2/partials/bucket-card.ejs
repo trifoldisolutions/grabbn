@@ -13,7 +13,7 @@
     <div class="relative">
         <div class="px-3 pt-3 pb-3">
             <% if (b.displayThumb) { %>
-                <img src="<%= imgSrc(b.displayThumb) %>" class="w-full aspect-[1] object-cover rounded-md" loading="lazy">
+                <img src="<%= imgSrc(b.displayThumb) %>" class="w-full aspect-[1] object-cover rounded-md" loading="lazy" onerror="this.style.display='none'">
             <% } else { %>
                 <div class="w-full aspect-[1] bg-silver-100 rounded-md flex items-center justify-center text-gray-400">
                     <!-- pic placeholder -->
