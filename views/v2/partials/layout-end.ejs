@@ -297,6 +297,12 @@
 
         <!-- ── Cancel / Save · always visible ───────────────────────────────── -->
         <div class="px-4 md:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-5 flex items-center gap-3 shrink-0 border-t border-silver-100">
+            <!-- Delete bucket (edit mode only) — hidden when creating -->
+            <button type="button" id="newBucketDeleteBtn" class="hidden h-12 px-4 flex items-center justify-center gap-1.5 text-sm font-medium text-red-500 hover:text-white hover:bg-red-500 border border-red-200 hover:border-red-500 rounded-lg transition-colors shrink-0">
+                <!-- mingcute:delete-2-fill -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M14.28 2a2 2 0 0 1 1.897 1.368L16.72 5H20a1 1 0 1 1 0 2h-.28l-.982 10.803A2 2 0 0 1 16.743 19H7.257a2 2 0 0 1-1.995-1.197L4.28 7H4a1 1 0 0 1 0-2h3.28l.543-1.632A2 2 0 0 1 9.72 2h4.56zM9 10a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-4a1 1 0 0 0-1-1zm6 0a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-4a1 1 0 0 0-1-1z"/></svg>
+                <span id="newBucketDeleteLabel">Delete</span>
+            </button>
             <button type="button" id="newBucketCancelBtn" class="flex-1 h-12 flex items-center justify-center text-base font-medium text-woodsmoke-600 hover:text-woodsmoke-950 hover:bg-silver-100 rounded-lg transition-colors">
                 Cancel
             </button>
@@ -353,6 +359,8 @@
     var submitLabel    = document.getElementById('newBucketSubmitLabel');
     var spinner        = document.getElementById('newBucketSpinner');
     var cancelBtn      = document.getElementById('newBucketCancelBtn');
+    var deleteBtn      = document.getElementById('newBucketDeleteBtn');
+    var deleteBtnLabel = document.getElementById('newBucketDeleteLabel');
     var triggerBtn     = document.getElementById('newBucketCreationBtn');
 
     // Thumb
@@ -596,6 +604,7 @@
     function openModal() {
         resetState();
         resetUI();
+        deleteBtn.classList.add('hidden');       // not shown when creating
         modal.classList.remove('hidden');
         resetMobileTabs();
         newLinkUrl.focus();
@@ -650,6 +659,11 @@
         // Switch submit label to Update
         submitLabel.textContent = 'Update';
 
+        // Show delete button (edit mode only) and reset its confirm state
+        deleteBtn.classList.remove('hidden');
+        deleteBtnLabel.textContent = 'Delete';
+        deleteBtn.dataset.confirm = '';
+
         modal.classList.remove('hidden');
         resetMobileTabs();
     };
@@ -657,6 +671,51 @@
     if (triggerBtn) triggerBtn.addEventListener('click', function (e) { e.stopPropagation(); openModal(); });
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
     if (backdrop)  backdrop.addEventListener('click', closeModal);
+
+    // ── Delete bucket (two-tap confirm: first tap → "Confirm?", second → delete)
+    deleteBtn.addEventListener('click', async function () {
+        if (!state._editBucket) return;
+
+        if (deleteBtn.dataset.confirm !== 'yes') {
+            // First tap — ask for confirmation
+            deleteBtn.dataset.confirm = 'yes';
+            deleteBtnLabel.textContent = 'Confirm?';
+            deleteBtn.classList.add('bg-red-500', 'text-white', 'border-red-500');
+            // Auto-reset after 4 s if user does nothing
+            setTimeout(function () {
+                if (deleteBtn.dataset.confirm === 'yes') {
+                    deleteBtn.dataset.confirm = '';
+                    deleteBtnLabel.textContent = 'Delete';
+                    deleteBtn.classList.remove('bg-red-500', 'text-white', 'border-red-500');
+                }
+            }, 4000);
+            return;
+        }
+
+        // Second tap — proceed with deletion
+        deleteBtn.disabled = true;
+        deleteBtnLabel.textContent = 'Deleting…';
+        try {
+            var res = await fetch('/api/buckets/' + encodeURIComponent(state._editBucket.name), { method: 'DELETE', credentials: 'include' });
+            if (res.ok) {
+                closeModal();
+                window.location.reload();
+            } else {
+                var data = await res.json().catch(function () { return {}; });
+                showError(data.error || 'Failed to delete bucket.');
+                deleteBtn.disabled = false;
+                deleteBtn.dataset.confirm = '';
+                deleteBtnLabel.textContent = 'Delete';
+                deleteBtn.classList.remove('bg-red-500', 'text-white', 'border-red-500');
+            }
+        } catch {
+            showError('Network error. Please try again.');
+            deleteBtn.disabled = false;
+            deleteBtn.dataset.confirm = '';
+            deleteBtnLabel.textContent = 'Delete';
+            deleteBtn.classList.remove('bg-red-500', 'text-white', 'border-red-500');
+        }
+    });
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
     });
