@@ -196,7 +196,7 @@ app.get('/api/buckets', requireAuth, requireVerification, async (req, res) => {
 // Create a new bucket
 app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links } = req.body;
 
         if (!name || typeof name !== 'string') {
             return res.status(400).json({ error: 'Bucket name is required' });
@@ -218,8 +218,22 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
         }
 
         const bucket = await Bucket.create({
-            userId: req.user._id,
-            name
+            userId:      req.user._id,
+            name,
+            description: String(description || '').slice(0, 256),
+            hashtags:    Array.isArray(tags) ? tags.slice(0, 8) : [],
+            isPublic:    visibility !== 'private',
+            isPaywalled: !!monetized,
+            price:       Number(price) || 0,
+            mature:      !!mature,
+            sourceUrl:   sourceUrl || '',
+            thumbnail:   thumbnail || '',
+            links:       Array.isArray(links) ? links.map(l => ({
+                href:   l.url   || '',
+                text:   l.title || '',
+                isFree: !l.monetized,
+                image:  l.thumb || null,
+            })) : [],
         });
 
         res.status(201).json({ name: bucket.name });
