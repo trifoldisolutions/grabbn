@@ -31,6 +31,14 @@ const bucketSchema = new mongoose.Schema(
       default: '',
       maxlength: 256
     },
+    hashtags: {
+      type: [String],
+      default: []
+    },
+    mature: {
+      type: Boolean,
+      default: false
+    },
     sourceUrl: {
       type: String,
       default: ''

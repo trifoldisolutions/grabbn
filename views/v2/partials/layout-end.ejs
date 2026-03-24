@@ -555,7 +555,7 @@
         state.links        = (bucket.links || []).map(function (l) {
             return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: false };
         });
-        state.tags         = bucket.tags || [];
+        state.tags         = bucket.hashtags || [];
         state.visibility   = bucket.isPublic ? 'public' : 'private';
         state.monetization = !!bucket.isPaywalled;
         state.mature       = !!bucket.mature;
@@ -573,6 +573,7 @@
         if (state.monetization) monetizationAmountInput.value = bucket.price
             ? formatPriceDisplay(sanitisePriceRaw(String(bucket.price)))
             : '';
+        setToggle(matureToggle, state.mature);
 
         // Set bucket name, description and source URL (resetUI clears them)
         nameInput.value = bucket.name;

@@ -5,104 +5,168 @@
 <%- include('partials/layout') %>
 
 <div class="flex justify-center px-4 md:px-6 py-6">
-    <div class="w-full max-w-3xl flex flex-col gap-5">
+    <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-5 md:max-h-[70vh] md:items-stretch">
 
-        <!-- ── Row 1 · Header ──────────────────────────────────────────────── -->
-        <div class="flex gap-5">
+        <!-- ── Column 1 · Meta ────────────────────────────────────────────── -->
+        <div class="flex flex-col gap-4">
 
-            <!-- Left · Thumbnail + Source URL -->
-            <div class="w-44 shrink-0 flex flex-col gap-3">
-
-                <!-- Thumbnail -->
-                <div class="relative w-full aspect-square bg-silver-50 rounded-xl overflow-hidden border border-silver-100">
-                    <% if (thumbnailUrl) { %>
-                        <img src="<%= thumbnailUrl %>" alt="<%= bucket.name %>" class="absolute inset-0 w-full h-full object-cover">
-                    <% } else { %>
-                        <div class="absolute inset-0 flex items-center justify-center text-silver-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>
-                        </div>
-                    <% } %>
-                </div>
-
-                <!-- Source URL -->
-                <% if (bucket.sourceUrl) { %>
-                <div class="flex flex-col gap-1">
-                    <span class="text-[10px] font-semibold uppercase tracking-wide text-woodsmoke-400">Source</span>
-                    <div class="flex items-center gap-1 px-2.5 py-2 rounded-lg border border-silver-200 bg-silver-50">
-                        <a href="<%= bucket.sourceUrl %>" target="_blank" rel="noopener noreferrer"
-                           class="flex-1 min-w-0 text-xs text-orchid-600 hover:underline truncate">
-                            <%= bucket.sourceUrl %>
-                        </a>
-                        <button
-                            class="shrink-0 w-6 h-6 flex items-center justify-center rounded text-woodsmoke-400 hover:text-orchid-600 transition-colors"
-                            title="Copy source URL"
-                            onclick="(function(btn){var url='<%= bucket.sourceUrl.replace(/'/g, "\\'") %>';navigator.clipboard.writeText(url).then(function(){btn.title='Copied!';setTimeout(function(){btn.title='Copy source URL';},2000);});})(this)"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <% } %>
-
-            </div>
-
-            <!-- Right · Title, badges, actions -->
-            <div class="flex-1 flex flex-col gap-3 min-w-0">
-
+            <div class="flex flex-col gap-2">
                 <!-- Title -->
                 <h1 class="text-2xl font-bold text-woodsmoke-950 leading-snug break-words"><%= bucket.name %></h1>
 
-                <!-- Curator + badges -->
+                <!-- Curator row -->
+                <div class="flex items-center gap-2">
+                    <% if (curatorAvatar) { %>
+                    <img src="<%= curatorAvatar %>" alt="<%= curatorName %>" class="w-8 h-8 rounded-full object-cover shrink-0 border border-silver-100">
+                    <% } else { %>
+                    <div class="w-8 h-8 rounded-full bg-orchid-100 flex items-center justify-center shrink-0 border border-silver-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="text-orchid-500"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>
+                    </div>
+                    <% } %>
+                    <div class="flex flex-col leading-tight min-w-0 flex-1">
+                        <a href="/v2/profile/<%= curatorName %>" class="text-sm font-medium text-woodsmoke-800 hover:text-orchid-600 transition-colors truncate">@<%= curatorName %></a>
+                        <span class="text-[11px] text-woodsmoke-400" id="bvTimeAgo"></span>
+                    </div>
+                    <% if (!isOwner) { %>
+                    <% if (!user || user.isAnonymous) { %>
+                    <a href="/?openAuth=true" class="shrink-0 h-8 px-3 text-xs font-semibold rounded-md bg-orchid-700 hover:bg-orchid-800 text-white transition-colors flex items-center">Follow</a>
+                    <% } else if (isFollowing) { %>
+                    <button id="bvFollowBtn" data-following="true" data-anon-id="<%= curatorAnonymousId %>"
+                        class="shrink-0 h-8 px-3 text-xs font-semibold rounded-md border border-silver-200 text-woodsmoke-500 hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        Following
+                    </button>
+                    <% } else { %>
+                    <button id="bvFollowBtn" data-following="false" data-anon-id="<%= curatorAnonymousId %>"
+                        class="shrink-0 h-8 px-3 text-xs font-semibold rounded-md bg-orchid-700 hover:bg-orchid-800 text-white transition-colors">
+                        Follow
+                    </button>
+                    <% } %>
+                    <% } %>
+                </div>
+
+                <!-- Badges -->
                 <div class="flex items-center flex-wrap gap-2">
-                    <span class="text-sm text-woodsmoke-400">by <span class="font-medium text-woodsmoke-700">@<%= curatorName %></span></span>
                     <span class="inline-flex items-center bg-orchid-50 text-orchid-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-orchid-200">
                         <%= bucket.links.length %> link<%= bucket.links.length !== 1 ? 's' : '' %>
                     </span>
                     <% if (bucket.isPaywalled) { %>
                     <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-200">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        <%= bucket.price %> CRD
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
+                        <%= (bucket.price || 0).toLocaleString('en-US') %> EWL
                     </span>
                     <% } else { %>
                     <span class="inline-flex items-center bg-green-50 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200">Free</span>
                     <% } %>
                 </div>
+            </div>
 
-                <!-- Spacer -->
-                <div class="flex-1"></div>
+            <!-- Thumbnail (full width) -->
+            <div class="relative w-full aspect-square bg-silver-50 rounded-xl overflow-hidden border border-silver-100">
+                <% if (thumbnailUrl) { %>
+                    <img src="<%= thumbnailUrl %>" alt="<%= bucket.name %>" class="absolute inset-0 w-full h-full object-cover">
+                <% } else { %>
+                    <div class="absolute inset-0 flex items-center justify-center text-silver-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>
+                    </div>
+                <% } %>
+            </div>
 
-                <!-- Action buttons -->
-                <div class="flex items-center gap-2">
-                    <button id="bvShareBtn"
-                        class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-gray-600 hover:bg-silver-50 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
-                        <span id="bvShareLabel">Share</span>
-                    </button>
-                    <button id="bvCopyLinksBtn"
-                        class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-gray-600 hover:bg-silver-50 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
-                        <span id="bvCopyLinksLabel">Copy all links</span>
-                    </button>
-                    <button id="bvReportBtn"
-                        class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-red-400 hover:bg-red-50 hover:border-red-200 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2a1 1 0 0 1 .894.553l9 18A1 1 0 0 1 21 22H3a1 1 0 0 1-.894-1.447l9-18A1 1 0 0 1 12 2m0 3.236L4.763 20H19.24zM12 17a1 1 0 1 1 0 2 1 1 0 0 1 0-2m0-7a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0v-4a1 1 0 0 1 1-1"/></g></svg>
-                        <span id="bvReportLabel">Report</span>
-                    </button>
+            <!-- Source URL row -->
+            <% if (bucket.sourceUrl) { %>
+            <% const sourceBlurred = bucket.isPaywalled && !hasAccess; %>
+            <div class="flex items-center gap-1 px-2.5 py-2 rounded-lg border border-silver-200 bg-silver-50">
+                <% if (sourceBlurred) { %>
+                <span class="flex-1 min-w-0 text-xs text-woodsmoke-300 truncate select-none pointer-events-none italic">Unlock to reveal source</span>
+                <span class="shrink-0 w-6 h-6 flex items-center justify-center rounded text-silver-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
+                </span>
+                <% } else { %>
+                <a href="<%= bucket.sourceUrl %>" target="_blank" rel="noopener noreferrer"
+                   class="flex-1 min-w-0 text-xs text-orchid-600 hover:underline truncate">
+                    <%= bucket.sourceUrl %>
+                </a>
+                <button
+                    class="shrink-0 w-6 h-6 flex items-center justify-center rounded text-woodsmoke-400 hover:text-orchid-600 transition-colors"
+                    title="Copy source URL"
+                    onclick="(function(btn){var url='<%= bucket.sourceUrl.replace(/'/g, "\\'") %>';navigator.clipboard.writeText(url).then(function(){btn.title='Copied!';setTimeout(function(){btn.title='Copy source URL';},2000);});})(this)"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
+                </button>
+                <% } %>
+            </div>
+            <% } %>
+
+            <!-- Description + Tags -->
+            <% if (bucket.description || (bucket.hashtags && bucket.hashtags.length > 0)) { %>
+            <div class="flex flex-col gap-4">
+
+                <% if (bucket.description) { %>
+                <div class="flex flex-col gap-1.5">
+                    <p class="text-sm text-woodsmoke-700 leading-relaxed whitespace-pre-wrap"><%= bucket.description %></p>
                 </div>
+                <% } %>
+
+                <% if (bucket.hashtags && bucket.hashtags.length > 0) { %>
+                <div class="flex flex-col gap-2">
+                    <div class="flex flex-wrap gap-1.5">
+                        <% bucket.hashtags.forEach(function(tag) { %>
+                        <span class="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full bg-silver-100 text-woodsmoke-600"><%= tag %></span>
+                        <% }); %>
+                    </div>
+                </div>
+                <% } %>
 
             </div>
-        </div>
+            <% } %>
 
-        <!-- ── Row 2 · Links list ──────────────────────────────────────────── -->
-        <div class="bg-white rounded-md border border-silver-100 overflow-hidden">
+            <!-- Grab Bucket button (non-owners only) -->
+            <% if (!isOwner) { %>
+            <% if (!user || user.isAnonymous) { %>
+            <a href="/?openAuth=true"
+               class="flex items-center justify-center gap-2 w-full h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
+                Sign in to grab
+            </a>
+            <% } else if (hasGrabbed) { %>
+            <button id="bvGrabBtn" data-grabbed="true"
+                class="flex items-center justify-center gap-2 w-full h-10 bg-orchid-50 hover:bg-red-50 text-orchid-700 hover:text-red-500 font-semibold text-sm rounded-md border border-orchid-200 hover:border-red-200 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                <span id="bvGrabLabel">Grabbed</span>
+            </button>
+            <% } else { %>
+            <button id="bvGrabBtn" data-grabbed="false"
+                class="flex items-center justify-center gap-2 w-full h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span id="bvGrabLabel">Grab Bucket</span>
+            </button>
+            <% } %>
+            <% } %>
 
-            <!-- Section header -->
-            <div class="px-5 py-3 border-b border-silver-100 flex items-center gap-2">
-                <span class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Content</span>
-                <span class="ml-auto text-xs text-woodsmoke-400"><%= bucket.links.length %> link<%= bucket.links.length !== 1 ? 's' : '' %></span>
-                <span class="text-xs font-medium text-woodsmoke-400 bg-silver-100 px-2 py-0.5 rounded-full">View only</span>
+            <!-- Action buttons row -->
+            <div class="flex items-center gap-2">
+                <button id="bvShareBtn"
+                    class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-gray-600 hover:bg-silver-50 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
+                    <span id="bvShareLabel">Share</span>
+                </button>
+                <button id="bvCopyLinksBtn"
+                    class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-gray-600 hover:bg-silver-50 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
+                    <span id="bvCopyLinksLabel">Copy all links</span>
+                </button>
+                <button id="bvReportBtn"
+                    class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-red-400 hover:bg-red-50 hover:border-red-200 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2a1 1 0 0 1 .894.553l9 18A1 1 0 0 1 21 22H3a1 1 0 0 1-.894-1.447l9-18A1 1 0 0 1 12 2m0 3.236L4.763 20H19.24zM12 17a1 1 0 1 1 0 2 1 1 0 0 1 0-2m0-7a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0v-4a1 1 0 0 1 1-1"/></g></svg>
+                    <span id="bvReportLabel">Report</span>
+                </button>
             </div>
 
+        </div><!-- /Column 1 -->
+
+        <!-- ── Column 2 · Links ───────────────────────────────────────────── -->
+        <div class="overflow-hidden flex flex-col">
+
+<div class="flex-1 overflow-y-auto scrollbar-hide">
 <%
     const freeLinks   = bucket.isPaywalled ? bucket.links.filter(function(l){ return l.isFree; })  : bucket.links;
     const lockedLinks = bucket.isPaywalled ? bucket.links.filter(function(l){ return !l.isFree; }) : [];
@@ -147,9 +211,7 @@
                                 <%= link.text || 'Untitled Link' %>
                             </p>
                         </div>
-                        <svg class="w-4 h-4 shrink-0 text-silver-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 text-silver-200" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
                     </div>
                     <% }); %>
                     <% if (lockedLinks.length > 5) { %>
@@ -162,13 +224,13 @@
                         <p class="text-xs text-woodsmoke-400 mb-4">One-time purchase · Access forever</p>
                         <% if (user.isAnonymous) { %>
                         <a href="/?openAuth=true" class="inline-flex items-center justify-center gap-2 w-full max-w-xs h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors mx-auto">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
                             Sign in to unlock
                         </a>
                         <% } else { %>
                         <button id="bvUnlockBtn" class="inline-flex items-center justify-center gap-2 w-full max-w-xs h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors mx-auto">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                            Unlock for <%= bucket.price %> credits ($<%= (bucket.price / 100).toFixed(2) %>)
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
+                            Unlock for <%= (bucket.price || 0).toLocaleString('en-US') %> EWL
                         </button>
                         <% } %>
                     </div>
@@ -176,32 +238,8 @@
 
             <% } %>
 
+            </div><!-- /scrollable -->
         </div>
-
-        <!-- ── Row 3 · Description + Tags ─────────────────────────────────── -->
-        <% if (bucket.description || (bucket.tags && bucket.tags.length > 0)) { %>
-        <div class="bg-white rounded-md border border-silver-100 p-5 flex flex-col gap-4">
-
-            <% if (bucket.description) { %>
-            <div class="flex flex-col gap-1.5">
-                <span class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Description</span>
-                <p class="text-sm text-woodsmoke-700 leading-relaxed whitespace-pre-wrap"><%= bucket.description %></p>
-            </div>
-            <% } %>
-
-            <% if (bucket.tags && bucket.tags.length > 0) { %>
-            <div class="flex flex-col gap-2">
-                <span class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Tags</span>
-                <div class="flex flex-wrap gap-1.5">
-                    <% bucket.tags.forEach(function(tag) { %>
-                    <span class="inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full bg-silver-100 text-woodsmoke-600"><%= tag %></span>
-                    <% }); %>
-                </div>
-            </div>
-            <% } %>
-
-        </div>
-        <% } %>
 
     </div>
 </div>
@@ -209,6 +247,22 @@
 <script>
 (function () {
     const bucketId  = '<%= bucketId %>';
+
+    // TimeAgo
+    (function () {
+        const date = new Date('<%= (bucket.updatedAt || bucket.createdAt).toISOString() %>');
+        const now  = Date.now();
+        const diff = Math.floor((now - date) / 1000);
+        let label;
+        if (diff < 60)               label = 'just now';
+        else if (diff < 3600)        label = Math.floor(diff / 60) + 'm ago';
+        else if (diff < 86400)       label = Math.floor(diff / 3600) + 'h ago';
+        else if (diff < 2592000)     label = Math.floor(diff / 86400) + 'd ago';
+        else if (diff < 31536000)    label = Math.floor(diff / 2592000) + 'mo ago';
+        else                         label = Math.floor(diff / 31536000) + 'y ago';
+        const el = document.getElementById('bvTimeAgo');
+        if (el) el.textContent = label;
+    })();
     const shareUrl  = '<%= `${shareBaseUrl}/share/bucket/${bucketId}` %>';
     const linkHrefs = <%- JSON.stringify(visibleLinks.map(function(l){ return l.href; })) %>;
 
@@ -257,6 +311,96 @@
         fetch('/api/buckets/' + bucketId + '/report', { method: 'POST', credentials: 'include' }).catch(() => {});
     });
 
+    // Follow / Unfollow button
+    const followBtn = document.getElementById('bvFollowBtn');
+    if (followBtn) {
+        followBtn.addEventListener('click', async function () {
+            const following = followBtn.dataset.following === 'true';
+            const anonId    = followBtn.dataset.anonId;
+            followBtn.disabled = true;
+            try {
+                const res = await fetch('/api/users/' + anonId + '/subscribe', {
+                    method: following ? 'DELETE' : 'POST',
+                    credentials: 'include'
+                });
+                if (res.ok) {
+                    if (following) {
+                        followBtn.dataset.following = 'false';
+                        followBtn.textContent = 'Follow';
+                        followBtn.className = 'shrink-0 h-8 px-3 text-xs font-semibold rounded-md bg-orchid-700 hover:bg-orchid-800 text-white transition-colors';
+                    } else {
+                        followBtn.dataset.following = 'true';
+                        followBtn.textContent = 'Following';
+                        followBtn.className = 'shrink-0 h-8 px-3 text-xs font-semibold rounded-md border border-silver-200 text-woodsmoke-500 hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-colors';
+                    }
+                } else {
+                    const data = await res.json();
+                    followBtn.textContent = data.error || 'Failed';
+                    setTimeout(function () {
+                        followBtn.textContent = following ? 'Following' : 'Follow';
+                    }, 2000);
+                }
+            } catch (_) {
+                followBtn.textContent = 'Error';
+                setTimeout(function () {
+                    followBtn.textContent = following ? 'Following' : 'Follow';
+                }, 2000);
+            }
+            followBtn.disabled = false;
+        });
+    }
+
+    // Grab / Ungrab button
+    const grabBtn = document.getElementById('bvGrabBtn');
+    if (grabBtn) {
+        grabBtn.addEventListener('click', async function () {
+            const grabbed = grabBtn.dataset.grabbed === 'true';
+            const label = document.getElementById('bvGrabLabel');
+            grabBtn.disabled = true;
+            label.textContent = grabbed ? 'Removing…' : 'Grabbing…';
+            try {
+                let res;
+                if (grabbed) {
+                    res = await fetch('/api/buckets/grab/' + bucketId, { method: 'DELETE', credentials: 'include' });
+                } else {
+                    res = await fetch('/api/buckets/grab', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sourceBucketId: bucketId })
+                    });
+                }
+                const data = await res.json();
+                if (res.ok) {
+                    if (grabbed) {
+                        grabBtn.dataset.grabbed = 'false';
+                        grabBtn.className = 'flex items-center justify-center gap-2 w-full h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors';
+                        grabBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg><span id="bvGrabLabel">Grab Bucket</span>';
+                    } else {
+                        grabBtn.dataset.grabbed = 'true';
+                        grabBtn.className = 'flex items-center justify-center gap-2 w-full h-10 bg-orchid-50 hover:bg-red-50 text-orchid-700 hover:text-red-500 font-semibold text-sm rounded-md border border-orchid-200 hover:border-red-200 transition-colors';
+                        grabBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg><span id="bvGrabLabel">Grabbed</span>';
+                    }
+                } else {
+                    label.textContent = data.error || 'Failed';
+                    setTimeout(function () {
+                        label.textContent = grabbed ? 'Grabbed' : 'Grab Bucket';
+                        grabBtn.disabled = false;
+                    }, 2500);
+                    return;
+                }
+            } catch (_) {
+                label.textContent = 'Network error';
+                setTimeout(function () {
+                    label.textContent = grabbed ? 'Grabbed' : 'Grab Bucket';
+                    grabBtn.disabled = false;
+                }, 2500);
+                return;
+            }
+            grabBtn.disabled = false;
+        });
+    }
+
     // Unlock button (paywalled, logged-in user without access)
     const unlockBtn = document.getElementById('bvUnlockBtn');
     if (unlockBtn) {
@@ -272,7 +416,7 @@
                     unlockBtn.textContent = data.error || 'Failed';
                     setTimeout(function () {
                         unlockBtn.disabled = false;
-                        unlockBtn.textContent = 'Unlock for <%= bucket.price %> credits ($<%= (bucket.price / 100).toFixed(2) %>)';
+                        unlockBtn.textContent = 'Unlock for <%= (bucket.price || 0).toLocaleString("en-US") %> EWL';
                     }, 2500);
                 }
             } catch (_) {

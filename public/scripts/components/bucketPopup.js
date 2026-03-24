@@ -172,7 +172,7 @@ function updatePaywallUI(isPaywalled, price) {
         if (isPaywalled && currentBucketPrice > 0) {
             bucketPriceDollarHint.textContent = priceInputMode === 'crd'
                 ? `This bucket is valued at $${(currentBucketPrice / 100).toFixed(2)}`
-                : `This bucket is valued at ${currentBucketPrice} CRD`;
+                : `This bucket is valued at ${currentBucketPrice} EWL`;
             bucketPriceDollarHint.classList.remove('hidden');
         } else {
             bucketPriceDollarHint.textContent = '';
@@ -182,10 +182,10 @@ function updatePaywallUI(isPaywalled, price) {
 
     if (bucketFooterPrice && bucketFooterPriceText) {
         if (isPaywalled && price > 0) {
-            bucketFooterPriceText.textContent = `${price} CRD`;
+            bucketFooterPriceText.textContent = `${price} EWL`;
             if (bucketFooterPriceDollar) bucketFooterPriceDollar.textContent = `$${(price / 100).toFixed(2)}`;
         } else {
-            bucketFooterPriceText.textContent = '0 CRD';
+            bucketFooterPriceText.textContent = '0 EWL';
             if (bucketFooterPriceDollar) bucketFooterPriceDollar.textContent = '$0.00';
         }
     }
@@ -745,7 +745,7 @@ export function closeBucketPopup() {
         currentBucketIsPaywalled = false;
         currentBucketPrice = 0;
         priceInputMode = 'crd';
-        if (bucketPriceCurrencyToggle) bucketPriceCurrencyToggle.textContent = 'CRD';
+        if (bucketPriceCurrencyToggle) bucketPriceCurrencyToggle.textContent = 'EWL';
         if (bucketPriceInput) { bucketPriceInput.step = '1'; bucketPriceInput.placeholder = '0'; }
 
         // Restore read-only hidden elements
@@ -1297,12 +1297,12 @@ export function initBucketPopup() {
         });
     }
 
-    // Currency toggle — switch between CRD and USD input modes
+    // Currency toggle — switch between EWL and USD input modes
     if (bucketPriceCurrencyToggle) {
         bucketPriceCurrencyToggle.addEventListener('click', () => {
             priceInputMode = priceInputMode === 'crd' ? 'usd' : 'crd';
             const isCrd = priceInputMode === 'crd';
-            bucketPriceCurrencyToggle.textContent = isCrd ? 'CRD' : 'USD';
+            bucketPriceCurrencyToggle.textContent = isCrd ? 'EWL' : 'USD';
             if (bucketPriceInput) {
                 bucketPriceInput.step = isCrd ? '1' : '0.01';
                 bucketPriceInput.placeholder = isCrd ? '0' : '0.00';
@@ -1325,7 +1325,7 @@ export function initBucketPopup() {
             if (priceInputMode === 'crd') {
                 bucketPriceDollarHint.textContent = `Access to this bucket will be valued at $${(raw / 100).toFixed(2)}`;
             } else {
-                bucketPriceDollarHint.textContent = `Access to this bucket will be valued at ${Math.round(raw * 100)} CRD`;
+                bucketPriceDollarHint.textContent = `Access to this bucket will be valued at ${Math.round(raw * 100)} EWL`;
             }
             bucketPriceDollarHint.classList.remove('hidden');
         });

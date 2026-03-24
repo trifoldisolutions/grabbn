@@ -54,3 +54,13 @@
 #cardView::-webkit-scrollbar, #showroom-grid::-webkit-scrollbar, #main-feed::-webkit-scrollbar{
     display: none;
 }
+
+@layer utilities {
+    .scrollbar-hide {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+}

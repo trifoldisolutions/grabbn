@@ -28,7 +28,7 @@
                 <%= linkCount %> link<%= linkCount !== 1 ? 's' : '' %>
             </div>
             <div class="px-2 py-0.5 rounded-md text-xs font-bold backdrop-blur-sm <%= b.isPaywalled ? 'bg-orchid-600 text-white' : 'bg-white/80 text-gray-500' %>">
-                <%= b.isPaywalled ? `${b.price} CRD` : 'Free' %>
+                <%= b.isPaywalled ? `${b.price} EWL` : 'Free' %>
             </div>
         </div>
 
@@ -61,6 +61,16 @@
                 </span>
             <% } %>
         </div>
+        <% if (b.description) { %>
+            <p class="text-xs text-gray-500 line-clamp-2 leading-relaxed"><%= b.description %></p>
+        <% } %>
+        <% if (b.hashtags && b.hashtags.length > 0) { %>
+            <div class="flex flex-wrap gap-1">
+                <% b.hashtags.slice(0, 4).forEach(function(tag) { %>
+                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-orchid-50 text-orchid-500">#<%= tag %></span>
+                <% }); %>
+            </div>
+        <% } %>
         <!-- Action row: grab count + share count -->
         <div class="flex items-center gap-4 pt-0.5 text-gray-500">
             <!-- Grab count -->

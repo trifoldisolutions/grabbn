@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Top Up Credits — Grabbn</title>
     <meta name="description" content="Buy credits to unlock paywalled buckets curated by others. No subscription, no expiry.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./tailwind/output.css">
 </head>
 
@@ -214,7 +217,7 @@
                                 class="flex-1 min-w-0 px-4 py-3 text-sm text-woodsmoke-950 outline-none bg-transparent" />
                             <button id="customModeToggle"
                                 class="px-4 py-3 bg-gray-50 hover:bg-gray-100 text-xs font-bold text-gray-500 border-l border-gray-200 transition-colors whitespace-nowrap tracking-wide">
-                                CRD
+                                EWL
                             </button>
                         </div>
                         <!-- Buy -->
@@ -229,7 +232,7 @@
                     <!-- Validation error -->
                     <p id="customAmountError" class="hidden text-xs text-red-500 mt-2 px-1"></p>
                     <!-- Range note -->
-                    <p class="text-xs text-gray-400 mt-3 px-1">Min 100 CRD ($1.00) &nbsp;·&nbsp; Max 50,000 CRD ($500.00)</p>
+                    <p class="text-xs text-gray-400 mt-3 px-1">Min 100 EWL ($1.00) &nbsp;·&nbsp; Max 50,000 EWL ($500.00)</p>
                 </div>
             </div>
 
@@ -260,7 +263,7 @@
                             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                         </svg>
                     </div>
-                    <h3 class="text-sm font-semibold text-woodsmoke-950 mb-2">Credits (CRD)</h3>
+                    <h3 class="text-sm font-semibold text-woodsmoke-950 mb-2">Credits (EWL)</h3>
                     <p class="text-sm text-gray-500 leading-relaxed">
                         Spend credits to unlock paywalled buckets shared by other curators. 100 credits = $1.00. They
                         accumulate and never expire — top up anytime.
@@ -584,7 +587,7 @@
         customModeToggle.addEventListener('click', () => {
             customMode = customMode === 'crd' ? 'usd' : 'crd';
             const isCrd = customMode === 'crd';
-            customModeToggle.textContent = isCrd ? 'CRD' : 'USD';
+            customModeToggle.textContent = isCrd ? 'EWL' : 'USD';
             customAmountInput.step        = isCrd ? '1'    : '0.01';
             customAmountInput.placeholder = isCrd ? '0'    : '0.00';
             customAmountInput.value = '';
@@ -608,7 +611,7 @@
                 : Math.round(raw * 100);
 
             if (credits < 100 || credits > 50000) {
-                customAmountError.textContent = 'Enter an amount between 100 CRD ($1.00) and 50,000 CRD ($500.00).';
+                customAmountError.textContent = 'Enter an amount between 100 EWL ($1.00) and 50,000 EWL ($500.00).';
                 customAmountError.classList.remove('hidden');
                 return;
             }

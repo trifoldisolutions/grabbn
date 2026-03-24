@@ -847,7 +847,7 @@ function setupCreditsModal() {
         customCreditsModeToggle.addEventListener('click', () => {
             customCreditsMode = customCreditsMode === 'crd' ? 'usd' : 'crd';
             const isCrd = customCreditsMode === 'crd';
-            customCreditsModeToggle.textContent = isCrd ? 'CRD' : 'USD';
+            customCreditsModeToggle.textContent = isCrd ? 'EWL' : 'USD';
             if (customCreditsInput) {
                 customCreditsInput.step = isCrd ? '1' : '0.01';
                 customCreditsInput.placeholder = isCrd ? '0' : '0.00';
@@ -924,7 +924,7 @@ let customCreditsMode = 'crd'; // 'crd' | 'usd'
 
 function resetCustomCreditsInput() {
     if (customCreditsInput) { customCreditsInput.value = ''; customCreditsInput.step = '1'; customCreditsInput.placeholder = '0'; }
-    if (customCreditsModeToggle) customCreditsModeToggle.textContent = 'CRD';
+    if (customCreditsModeToggle) customCreditsModeToggle.textContent = 'EWL';
     if (customCreditsHint) { customCreditsHint.textContent = ''; customCreditsHint.classList.add('hidden'); }
     customCreditsMode = 'crd';
 }

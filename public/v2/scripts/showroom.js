@@ -126,7 +126,7 @@
                         ${b.linkCount} link${b.linkCount !== 1 ? 's' : ''}
                     </div>
                     <div class="px-2 py-0.5 rounded-md text-xs font-bold backdrop-blur-sm ${b.isPaywalled ? 'bg-orchid-600 text-white' : 'bg-white/80 text-gray-500'}">
-                        ${b.isPaywalled ? `${formatNum(b.price)} CRD` : 'Free'}
+                        ${b.isPaywalled ? `${formatNum(b.price)} EWL` : 'Free'}
                     </div>
                 </div>
                 <!-- Grabbers avatar stack — straddles the bottom edge of the thumbnail -->
@@ -149,6 +149,8 @@
                         </div>
                     </div>
                 </div>
+                ${b.description ? `<p class="text-xs text-gray-500 line-clamp-2 leading-relaxed">${escHtml(b.description)}</p>` : ''}
+                ${b.hashtags && b.hashtags.length > 0 ? `<div class="flex flex-wrap gap-1">${b.hashtags.slice(0, 4).map(tag => `<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-orchid-50 text-orchid-500">#${escHtml(tag)}</span>`).join('')}</div>` : ''}
                 <!-- Action row -->
                 <div class="flex items-center gap-4 pt-0.5" onclick="event.preventDefault();event.stopPropagation()">
                     ${grabActionBtn}

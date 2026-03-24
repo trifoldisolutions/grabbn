@@ -263,11 +263,13 @@ app.put('/api/buckets/:oldName', requireAuth, requireVerification, async (req, r
 // Full bucket update (used by profile edit modal)
 app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, visibility, monetized, price, mature, sourceUrl, thumbnail, links } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links } = req.body;
 
         const update = {};
         if (name        !== undefined) update.name        = name;
         if (description !== undefined) update.description = String(description || '').slice(0, 256);
+        if (tags        !== undefined) update.hashtags    = Array.isArray(tags) ? tags.slice(0, 8) : [];
+        if (mature      !== undefined) update.mature      = !!mature;
         if (visibility  !== undefined) update.isPublic    = visibility === 'public';
         if (monetized   !== undefined) update.isPaywalled = !!monetized;
         if (price       !== undefined) update.price       = Number(price) || 0;
@@ -1072,7 +1074,7 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
             .skip(skip)
             .limit(limit + 1)
             .populate('userId', 'username anonymousId avatar')
-            .select('name thumbnail links isPaywalled price viewCount shareCount createdAt userId grabbedBy');
+            .select('name thumbnail links isPaywalled price viewCount shareCount createdAt userId grabbedBy description hashtags');
 
         const hasMore = buckets.length > limit;
         const items   = hasMore ? buckets.slice(0, limit) : buckets;
@@ -1105,9 +1107,11 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
                 isPaywalled: b.isPaywalled || false,
                 price:      b.price || 0,
                 viewCount:  b.viewCount  || 0,
-                shareCount: b.shareCount || 0,
-                createdAt:  b.createdAt,
-                isGrabbed:  grabbedSet.has(String(b._id)),
+                shareCount:  b.shareCount || 0,
+                createdAt:   b.createdAt,
+                description: b.description || '',
+                hashtags:    b.hashtags    || [],
+                isGrabbed:   grabbedSet.has(String(b._id)),
                 grabCount:  (b.grabbedBy || []).length,
                 grabbers:   (b.grabbedBy || [])
                     .filter(g => g.avatar)
@@ -1313,7 +1317,7 @@ app.get('/v2/@:username', anonymousAuth, async (req, res) => {
 
     const [allBuckets, subscriberCount, followingCount] = await Promise.all([
         Bucket.find(bucketFilter)
-            .select('name description thumbnail isPublic isPaywalled price links viewCount shareCount grabbedBy sourceBucketId sourceUrl originalCuratorName createdAt updatedAt')
+            .select('name description thumbnail isPublic isPaywalled price links viewCount shareCount grabbedBy sourceBucketId sourceUrl originalCuratorName hashtags mature createdAt updatedAt')
             .sort({ order: 1, createdAt: -1 })
             .lean(),
         Subscription.countDocuments({ followeeId: profileUser._id }),
@@ -1354,8 +1358,10 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
         const bucket = await Bucket.findById(bucketId).lean();
         if (!bucket) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
 
-        const curator = await User.findById(bucket.userId).select('username').lean();
-        const curatorName = curator?.username || 'Anonymous';
+        const curator = await User.findById(bucket.userId).select('username avatar anonymousId').lean();
+        const curatorName        = curator?.username    || 'Anonymous';
+        const curatorAvatar      = curator?.avatar      || null;
+        const curatorAnonymousId = curator?.anonymousId || null;
 
         // Thumbnail: use raw stored value (data URL or URL) directly, fall back to first link image
         const thumbnailUrl = bucket.thumbnail || bucket.links?.find(l => l.image)?.image || null;
@@ -1366,6 +1372,15 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
         const hasAccess = isOwner
             || !bucket.isPaywalled
             || (!req.user.isAnonymous && !!(await BucketAccess.findOne({ userId: req.user._id, bucketId: bucket._id })));
+
+        // Check follow + grab state (non-owners only)
+        const isFollowing = !isOwner && req.user && !req.user.isAnonymous && curatorAnonymousId
+            ? !!(await Subscription.exists({ followerId: req.user._id, followeeId: curator._id }))
+            : false;
+
+        const hasGrabbed = !isOwner && req.user && !req.user.isAnonymous
+            ? !!(await Bucket.findOne({ userId: req.user._id, sourceBucketId: bucket._id }).select('_id').lean())
+            : false;
 
         // Track view (fire-and-forget, skip owner)
         if (!isOwner) {
@@ -1394,10 +1409,14 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
             bucket,
             bucketId,
             curatorName,
+            curatorAvatar,
+            curatorAnonymousId,
+            isFollowing,
             thumbnailUrl,
             shareBaseUrl,
             isOwner,
             hasAccess,
+            hasGrabbed,
         });
     } catch (err) {
         console.error('Error loading bucket view:', err);

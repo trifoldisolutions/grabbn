@@ -12,7 +12,7 @@
     window.__PROFILE_VIEWER_AUTHED__ = <%- JSON.stringify(!!(user && !user.isAnonymous)) %>;
 </script>
 
-<div class="w-full max-w-3xl mx-auto px-4 py-8">
+<div class="w-full max-w-5xl mx-auto px-4 md:px-6 py-8">
 
     <!-- ── Profile header ─────────────────────────────────────────────── -->
     <div class="flex flex-col items-center gap-4 mb-8">
@@ -70,7 +70,6 @@
                     Edit Profile
                 </a>
             <% } else { %>
-                <!-- Follow button for visitors -->
                 <button id="followBtn" class="px-5 py-2 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors">
                     Follow
                 </button>
@@ -107,7 +106,7 @@
                 <p class="text-sm text-gray-400"><%= isOwner ? "No buckets yet. Start curating!" : "No public buckets yet." %></p>
             </div>
         <% } else { %>
-            <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-2 gap-4">
                 <% ownBuckets.forEach(function(b) { %>
                     <%- include('partials/bucket-card', { b, isOwn: isOwner }) %>
                 <% }); %>
@@ -124,7 +123,7 @@
                     <p class="text-sm text-gray-400">You haven't grabbed any buckets yet.</p>
                 </div>
             <% } else { %>
-                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="grid grid-cols-2 gap-4">
                     <% grabbedBuckets.forEach(function(b) { %>
                         <%- include('partials/bucket-card', { b, isOwn: false }) %>
                     <% }); %>
@@ -353,7 +352,7 @@
             grabSection.classList.remove('hidden');
             if (bucket.isPaywalled) {
                 priceTag.classList.remove('hidden');
-                priceValue.textContent = `${bucket.price ?? 0} CRD`;
+                priceValue.textContent = `${bucket.price ?? 0} EWL`;
             } else {
                 priceTag.classList.add('hidden');
             }
