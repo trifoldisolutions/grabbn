@@ -113,12 +113,71 @@ app.use(cookieParser());
 // Apply anonymous auth to all routes (must be before auth router)
 app.use(anonymousAuth);
 
+// ── EJS helper: route external image URLs through the proxy ─────────────────
+// Base64 data URLs and relative paths pass through unchanged; anything that
+// starts with http/https is proxied so CDN hotlink blocks / Varnish errors on
+// external sites never reach the end user.
+app.use((req, res, next) => {
+    res.locals.imgSrc = (url) => {
+        if (!url) return '';
+        if (url.startsWith('data:') || url.startsWith('/')) return url;
+        return '/api/img-proxy?url=' + encodeURIComponent(url);
+    };
+    next();
+});
+
 app.use('/api/auth', authRouter);
 app.use('/api/credits', creditsRouter);
 app.use('/api/connect', connectRouter);
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── Image proxy ─────────────────────────────────────────────────────────────
+// Fetches external link thumbnail URLs server-side so that CDN hotlink
+// protection / Varnish restrictions on the source site don't affect the user.
+// Usage: /api/img-proxy?url=https://cdn.example.com/img/abc
+const ALLOWED_IMG_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif']);
+app.get('/api/img-proxy', async (req, res) => {
+    const raw = req.query.url;
+    if (!raw) return res.status(400).end();
+
+    let target;
+    try {
+        target = new URL(raw);
+        if (!['http:', 'https:'].includes(target.protocol)) throw new Error('bad protocol');
+    } catch {
+        return res.status(400).end();
+    }
+
+    // Block requests back to our own origin to prevent SSRF loops
+    const selfHostnames = ['localhost', '127.0.0.1', 'grabbn.com', 'app.grabbn.com'];
+    if (selfHostnames.includes(target.hostname)) return res.status(403).end();
+
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        const upstream = await fetch(target.href, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; Grabbn/1.0)',
+                // Deliberately omit Referer so hotlink-protected CDNs don't block us
+            },
+            redirect: 'follow',
+        });
+        clearTimeout(timer);
+
+        const type = (upstream.headers.get('content-type') || '').split(';')[0].trim();
+        if (!upstream.ok || !ALLOWED_IMG_TYPES.has(type)) return res.status(502).end();
+
+        res.set('Content-Type', type);
+        res.set('Cache-Control', 'public, max-age=86400'); // cache 24 h on CDN / browser
+        res.set('X-Content-Type-Options', 'nosniff');
+        upstream.body.pipe(res);
+    } catch {
+        res.status(502).end();
+    }
+});
 
 app.use('/share', bucketShareRouter);
 
