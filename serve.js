@@ -205,6 +205,42 @@ async function connectMongo() {
 }
 
 // ====================
+// HELPERS
+// ====================
+
+/**
+ * Downloads an external image URL server-side and returns a base64 data URL.
+ *   - Already-base64 (data:) or relative (/) strings pass through unchanged.
+ *   - Returns null if the fetch fails, the MIME type isn't an image,
+ *     or the file is larger than MAX_LINK_IMG_BYTES (avoids bloating Mongo docs).
+ */
+const MAX_LINK_IMG_BYTES = 800 * 1024; // 800 KB raw → ~1.1 MB as base64
+const ALLOWED_LINK_IMG_MIME = new Set(['image/jpeg','image/png','image/webp','image/gif','image/avif']);
+
+async function fetchImageAsBase64(url) {
+    if (!url) return null;
+    if (url.startsWith('data:') || url.startsWith('/')) return url;
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        const upstream = await fetch(url, {
+            signal: controller.signal,
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Grabbn/1.0)' },
+            redirect: 'follow',
+        });
+        clearTimeout(timer);
+        if (!upstream.ok) return null;
+        const type = (upstream.headers.get('content-type') || '').split(';')[0].trim();
+        if (!ALLOWED_LINK_IMG_MIME.has(type)) return null;
+        const buf = await upstream.arrayBuffer();
+        if (buf.byteLength > MAX_LINK_IMG_BYTES) return null; // too large, skip
+        return `data:${type};base64,${Buffer.from(buf).toString('base64')}`;
+    } catch {
+        return null;
+    }
+}
+
+// ====================
 // API ENDPOINTS
 // ====================
 
@@ -287,12 +323,12 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             mature:      !!mature,
             sourceUrl:   sourceUrl || '',
             thumbnail:   thumbnail || '',
-            links:       Array.isArray(links) ? links.map(l => ({
+            links:       Array.isArray(links) ? await Promise.all(links.map(async l => ({
                 href:   l.url   || '',
                 text:   l.title || '',
                 isFree: !l.monetized,
-                image:  l.thumb || null,
-            })) : [],
+                image:  await fetchImageAsBase64(l.thumb || null),
+            }))) : [],
         });
 
         res.status(201).json({ name: bucket.name });
@@ -349,12 +385,12 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         if (sourceUrl   !== undefined) update.sourceUrl   = sourceUrl || '';
         if (thumbnail   !== undefined) update.thumbnail   = thumbnail || '';
         if (links       !== undefined) {
-            update.links = links.map(l => ({
+            update.links = await Promise.all(links.map(async l => ({
                 href:    l.url   || '',
                 text:    l.title || '',
                 isFree:  !l.monetized,
-                image:   l.thumb || null,
-            }));
+                image:   await fetchImageAsBase64(l.thumb || null),
+            })));
         }
 
         const bucket = await Bucket.findOneAndUpdate(
