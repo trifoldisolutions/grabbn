@@ -21,6 +21,33 @@ import connectRouter, { handleConnectWebhook } from './server/routes/stripeConne
 
 dotenv.config();
 
+// ---------------------------------------------------------------------------
+// Visibility helpers — handle both new docs (visibility string) and old docs
+// (isPublic boolean) so the migration is seamless.
+// ---------------------------------------------------------------------------
+
+// Derives the effective visibility string from a bucket document.
+function bucketVisibility(bucket) {
+  if (bucket.visibility) return bucket.visibility;
+  return bucket.isPublic ? 'public' : 'private';
+}
+
+// MongoDB filter that matches "publicly discoverable" buckets (public only).
+const FILTER_PUBLIC = {
+  $or: [
+    { visibility: 'public' },
+    { visibility: { $exists: false }, isPublic: true },
+  ]
+};
+
+// MongoDB filter that matches "link-accessible" buckets (public + unlisted).
+const FILTER_ACCESSIBLE = {
+  $or: [
+    { visibility: { $in: ['public', 'unlisted'] } },
+    { visibility: { $exists: false }, isPublic: true },
+  ]
+};
+
 // Required for ES modules (__dirname equivalent)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -312,23 +339,32 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             return res.status(409).json({ error: 'Bucket already exists' });
         }
 
+        const resolvedLinks = Array.isArray(links) ? await Promise.all(links.map(async l => ({
+            href:   l.url   || '',
+            text:   l.title || '',
+            isFree: !l.monetized,
+            image:  await fetchImageAsBase64(l.thumb || null) ?? l.thumb ?? null,
+        }))) : [];
+
+        const resolvedThumb = await fetchImageAsBase64(thumbnail || null) || '';
+
+        // Auto-set thumbnail from first link image if no explicit thumbnail provided
+        const effectiveThumb = resolvedThumb || resolvedLinks.find(l => l.image)?.image || '';
+
+        const vis = ['public', 'unlisted', 'private'].includes(visibility) ? visibility : 'private';
         const bucket = await Bucket.create({
             userId:      req.user._id,
             name,
             description: String(description || '').slice(0, 256),
             hashtags:    Array.isArray(tags) ? tags.slice(0, 8) : [],
-            isPublic:    visibility !== 'private',
+            visibility:  vis,
+            isPublic:    vis === 'public',
             isPaywalled: !!monetized,
             price:       Number(price) || 0,
             mature:      !!mature,
             sourceUrl:   sourceUrl || '',
-            thumbnail:   thumbnail || '',
-            links:       Array.isArray(links) ? await Promise.all(links.map(async l => ({
-                href:   l.url   || '',
-                text:   l.title || '',
-                isFree: !l.monetized,
-                image:  await fetchImageAsBase64(l.thumb || null),
-            }))) : [],
+            thumbnail:   effectiveThumb,
+            links:       resolvedLinks,
         });
 
         res.status(201).json({ name: bucket.name });
@@ -379,18 +415,29 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         if (description !== undefined) update.description = String(description || '').slice(0, 256);
         if (tags        !== undefined) update.hashtags    = Array.isArray(tags) ? tags.slice(0, 8) : [];
         if (mature      !== undefined) update.mature      = !!mature;
-        if (visibility  !== undefined) update.isPublic    = visibility === 'public';
+        if (visibility !== undefined) {
+            const vis = ['public', 'unlisted', 'private'].includes(visibility) ? visibility : 'private';
+            update.visibility = vis;
+            update.isPublic   = vis === 'public';
+        }
         if (monetized   !== undefined) update.isPaywalled = !!monetized;
         if (price       !== undefined) update.price       = Number(price) || 0;
         if (sourceUrl   !== undefined) update.sourceUrl   = sourceUrl || '';
-        if (thumbnail   !== undefined) update.thumbnail   = thumbnail || '';
+        if (thumbnail   !== undefined) update.thumbnail   = await fetchImageAsBase64(thumbnail || null) || '';
         if (links       !== undefined) {
             update.links = await Promise.all(links.map(async l => ({
                 href:    l.url   || '',
                 text:    l.title || '',
                 isFree:  !l.monetized,
-                image:   await fetchImageAsBase64(l.thumb || null),
+                // Fall back to the original URL if base64 conversion fails — never wipe a thumbnail
+                image:   await fetchImageAsBase64(l.thumb || null) ?? l.thumb ?? null,
             })));
+        }
+
+        // Auto-set thumbnail from first link image if still empty after update
+        if (!update.thumbnail && update.links) {
+            const firstWithImage = update.links.find(l => l.image);
+            if (firstWithImage) update.thumbnail = firstWithImage.image;
         }
 
         const bucket = await Bucket.findOneAndUpdate(
@@ -596,6 +643,7 @@ app.get('/api/buckets/:name/metadata', requireAuth, requireVerification, async (
 
         res.json({
             name: bucket.name,
+            visibility: bucketVisibility(bucket),
             isPublic: bucket.isPublic,
             isPaywalled: bucket.isPaywalled || false,
             price: bucket.price || 0,
@@ -660,23 +708,23 @@ app.post('/api/buckets/:name/paywall', requireAuth, requireVerification, async (
     }
 });
 
-// Toggle bucket public/private visibility
+// Update bucket visibility (public / unlisted / private)
 app.patch('/api/buckets/:name/visibility', requireAuth, requireVerification, async (req, res) => {
     try {
         const { name } = req.params;
-        const { isPublic } = req.body;
+        const { visibility } = req.body;
 
         if (name === 'Singletons') {
             return res.status(403).json({ error: 'Singletons bucket cannot be made public' });
         }
 
-        if (typeof isPublic !== 'boolean') {
-            return res.status(400).json({ error: 'isPublic must be a boolean' });
+        if (!['public', 'unlisted', 'private'].includes(visibility)) {
+            return res.status(400).json({ error: 'visibility must be "public", "unlisted", or "private"' });
         }
 
         const bucket = await Bucket.findOneAndUpdate(
             { userId: req.user._id, name },
-            { isPublic },
+            { visibility, isPublic: visibility === 'public' },
             { new: true }
         );
 
@@ -684,7 +732,7 @@ app.patch('/api/buckets/:name/visibility', requireAuth, requireVerification, asy
             return res.status(404).json({ error: 'Bucket not found' });
         }
 
-        res.json({ name: bucket.name, isPublic: bucket.isPublic });
+        res.json({ name: bucket.name, visibility: bucket.visibility, isPublic: bucket.isPublic });
     } catch (error) {
         console.error('Error updating bucket visibility:', error);
         res.status(500).json({ error: 'Failed to update bucket visibility' });
@@ -711,7 +759,7 @@ app.get('/api/buckets/lookup', requireAuth, requireVerification, async (req, res
             const bucket = await Bucket.findById(shareMatch[1]).populate('userId', 'username anonymousId');
             if (bucket) {
                 const isOwner = bucket.userId._id.equals(req.user._id);
-                if (isOwner || bucket.isPublic) buckets = [bucket];
+                if (isOwner || bucketVisibility(bucket) !== 'private') buckets = [bucket];
             }
         }
 
@@ -720,16 +768,16 @@ app.get('/api/buckets/lookup', requireAuth, requireVerification, async (req, res
             const bucket = await Bucket.findById(q).populate('userId', 'username anonymousId');
             if (bucket) {
                 const isOwner = bucket.userId._id.equals(req.user._id);
-                if (isOwner || bucket.isPublic) buckets = [bucket];
+                if (isOwner || bucketVisibility(bucket) !== 'private') buckets = [bucket];
             }
         }
 
-        // 3. Name search (case-insensitive, partial match, paginated — public only for non-owners)
+        // 3. Name search — only publicly discoverable buckets (public, not unlisted)
         if (!buckets.length) {
             const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             buckets = await Bucket.find({
                 name: new RegExp(escaped, 'i'),
-                $or: [{ userId: req.user._id }, { isPublic: true }]
+                $or: [{ userId: req.user._id }, ...FILTER_PUBLIC.$or]
             }).skip(skip).limit(PAGE_SIZE + 1).populate('userId', 'username anonymousId');
 
             if (buckets.length > PAGE_SIZE) {
@@ -772,6 +820,7 @@ app.get('/api/buckets/lookup', requireAuth, requireVerification, async (req, res
             return {
                 _id: bucket._id,
                 name: bucket.name,
+                visibility: bucketVisibility(bucket),
                 isPublic: bucket.isPublic,
                 isPaywalled: bucket.isPaywalled || false,
                 price: bucket.price || 0,
@@ -833,9 +882,9 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
             return res.status(404).json({ error: 'Source bucket not found' });
         }
 
-        // Only public buckets can be grabbed
-        if (!source.isPublic) {
-            return res.status(403).json({ error: 'This bucket is private and cannot be grabbed' });
+        // Only public buckets can be grabbed (unlisted and private cannot)
+        if (bucketVisibility(source) !== 'public') {
+            return res.status(403).json({ error: 'Only public buckets can be grabbed' });
         }
 
         // Paywalled buckets require the user to have unlocked them first
@@ -1105,18 +1154,23 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
                 });
             }
 
-            // Add links to bucket (avoid duplicates)
-            for (const link of links) {
-                const exists = bucket.links.some(l => l.href === link.href);
-
-                if (!exists) {
-                    bucket.links.push({
-                        href: link.href,
-                        text: link.text || '',
+            // Convert all new link images to base64 in parallel (avoids hotlink failures later)
+            const newLinks = await Promise.all(
+                links
+                    .filter(link => !bucket.links.some(l => l.href === link.href))
+                    .map(async link => ({
+                        href:     link.href,
+                        text:     link.text || '',
                         duration: link.duration || '',
-                        image: link.image || null
-                    });
-                }
+                        image:    await fetchImageAsBase64(link.image || null) ?? link.image ?? null,
+                    }))
+            );
+            bucket.links.push(...newLinks);
+
+            // Auto-set bucket thumbnail from first link image if not already set
+            if (!bucket.thumbnail) {
+                const firstWithImage = bucket.links.find(l => l.image);
+                if (firstWithImage) bucket.thumbnail = firstWithImage.image;
             }
 
             // Update sourceUrl if provided
@@ -1178,7 +1232,7 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
         const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
         const skip  = (page - 1) * limit;
 
-        const buckets = await Bucket.find({ isPublic: true, name: { $ne: 'Singletons' } })
+        const buckets = await Bucket.find({ ...FILTER_PUBLIC, name: { $ne: 'Singletons' } })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit + 1)
@@ -1201,7 +1255,7 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
         // Build a public bucket count per curator in one aggregation
         const curatorIds = [...new Set(items.map(b => b.userId?._id).filter(Boolean))];
         const bucketCounts = await Bucket.aggregate([
-            { $match: { userId: { $in: curatorIds }, isPublic: true, name: { $ne: 'Singletons' } } },
+            { $match: { userId: { $in: curatorIds }, ...FILTER_PUBLIC, name: { $ne: 'Singletons' } } },
             { $group: { _id: '$userId', count: { $sum: 1 } } }
         ]);
         const bucketCountMap = Object.fromEntries(bucketCounts.map(r => [String(r._id), r.count]));
@@ -1419,14 +1473,14 @@ app.get('/v2/@:username', anonymousAuth, async (req, res) => {
         displayThumb: b.thumbnail || b.links?.find(l => l.image)?.image || null,
     });
 
-    // Owners see all their buckets; visitors only see public ones
+    // Owners see all their buckets; visitors only see public ones (not unlisted)
     const bucketFilter = isOwner
         ? { userId: profileUser._id }
-        : { userId: profileUser._id, isPublic: true };
+        : { userId: profileUser._id, ...FILTER_PUBLIC };
 
     const [allBuckets, subscriberCount, followingCount] = await Promise.all([
         Bucket.find(bucketFilter)
-            .select('name description thumbnail isPublic isPaywalled price links viewCount shareCount grabbedBy sourceBucketId sourceUrl originalCuratorName hashtags mature createdAt updatedAt')
+            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceBucketId sourceUrl originalCuratorName hashtags mature createdAt updatedAt')
             .sort({ order: 1, createdAt: -1 })
             .lean(),
         Subscription.countDocuments({ followeeId: profileUser._id }),
@@ -1476,8 +1530,15 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
         const thumbnailUrl = bucket.thumbnail || bucket.links?.find(l => l.image)?.image || null;
         const shareBaseUrl = `${req.protocol}://${req.get('host')}`;
 
-        // Paywall access check
+        const vis = bucketVisibility(bucket);
+
+        // Private buckets are owner-only
         const isOwner = !!(req.user && !req.user.isAnonymous && bucket.userId.toString() === req.user._id.toString());
+        if (vis === 'private' && !isOwner) {
+            return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+        }
+
+        // Paywall access check
         const hasAccess = isOwner
             || !bucket.isPaywalled
             || (!req.user.isAnonymous && !!(await BucketAccess.findOne({ userId: req.user._id, bucketId: bucket._id })));
@@ -1526,6 +1587,7 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
             isOwner,
             hasAccess,
             hasGrabbed,
+            isUnlisted: vis === 'unlisted',
         });
     } catch (err) {
         console.error('Error loading bucket view:', err);

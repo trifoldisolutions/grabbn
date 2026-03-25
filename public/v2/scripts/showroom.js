@@ -166,6 +166,10 @@
         const grabBtn = card.querySelector('.grab-btn');
         if (grabBtn) grabBtn.addEventListener('click', onGrabClick);
 
+        // Attach share click
+        const shareBtn = card.querySelector('.share-btn');
+        if (shareBtn) shareBtn.addEventListener('click', onShareClick);
+
         // Attach context menu toggle
         const menuBtn = card.querySelector('.menu-btn');
         if (menuBtn) menuBtn.addEventListener('click', onMenuClick);
@@ -222,6 +226,39 @@
         }
 
         btn.dataset.busy = 'false';
+    }
+
+    // ── Share button handler ──────────────────────────────────────────────────
+
+    async function onShareClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const btn = e.currentTarget;
+        if (btn.dataset.busy) return;
+        btn.dataset.busy = '1';
+
+        const bucketId = btn.dataset.bucketId;
+        const url      = `${window.location.origin}/v2/${bucketId}`;
+        const origHtml = btn.innerHTML;
+
+        const showFeedback = () => {
+            btn.innerHTML = '<span>Link copied!</span>';
+            setTimeout(() => { btn.innerHTML = origHtml; delete btn.dataset.busy; }, 2000);
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ url });
+                delete btn.dataset.busy;
+            } catch (_) {
+                await navigator.clipboard.writeText(url).catch(() => {});
+                showFeedback();
+            }
+        } else {
+            await navigator.clipboard.writeText(url).catch(() => {});
+            showFeedback();
+        }
+        fetch(`/api/buckets/${bucketId}/share`, { method: 'POST', credentials: 'include' }).catch(() => {});
     }
 
     // ── Context menu handler ──────────────────────────────────────────────────

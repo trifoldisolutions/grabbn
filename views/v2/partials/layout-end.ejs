@@ -71,8 +71,7 @@
                                 <svg id="thumbEyeClosedIcon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M2.293 2.293a1 1 0 0 1 1.414 0l3.53 3.53A10.96 10.96 0 0 1 12 4c4.713 0 8.8 2.895 10.732 7.08a1 1 0 0 1 0 .84 11.17 11.17 0 0 1-3.255 4.329l2.93 2.929a1 1 0 0 1-1.414 1.414L2.293 3.707a1 1 0 0 1 0-1.414zM12 8a4 4 0 0 1 3.968 3.554l-4.522-4.522A4 4 0 0 1 12 8zm-1.432-1.012 1.988 1.988A4 4 0 0 0 8.024 13.42l-2.19-2.19A8.977 8.977 0 0 1 12 6a9 9 0 0 1 0 0 10.96 10.96 0 0 0-1.432 0.988zm-5.321-1.737 1.92 1.92A10.96 10.96 0 0 0 4.268 12C5.884 15.44 8.74 18 12 18a9 9 0 0 0 4.04-.95l1.493 1.492A10.97 10.97 0 0 1 12 20C7.286 20 3.201 17.104 1.268 12.92a1 1 0 0 1 0-.84 11.18 11.18 0 0 1 3.979-4.829z"/></svg>
                             </button>
                             <button id="thumbDeleteBtn" title="Delete thumbnail" class="w-10 h-10 rounded-lg bg-woodsmoke-950/50 text-white flex items-center justify-center hover:bg-red-500/80 transition-colors">
-                                <!-- mingcute:delete-2-fill -->
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M14.28 2a2 2 0 0 1 1.897 1.368L16.72 5H20a1 1 0 1 1 0 2h-.28l-.982 10.803A2 2 0 0 1 16.743 19H7.257a2 2 0 0 1-1.995-1.197L4.28 7H4a1 1 0 0 1 0-2h3.28l.543-1.632A2 2 0 0 1 9.72 2h4.56zM9 10a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-4a1 1 0 0 0-1-1zm6 0a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-4a1 1 0 0 0-1-1z"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M14.28 2a2 2 0 0 1 1.897 1.368L16.72 5H20a1 1 0 1 1 0 2l-.003.071l-.867 12.143A3 3 0 0 1 16.138 22H7.862a3 3 0 0 1-2.992-2.786L4.003 7.07L4 7a1 1 0 0 1 0-2h3.28l.543-1.632A2 2 0 0 1 9.721 2zM9 10a1 1 0 0 0-.993.883L8 11v6a1 1 0 0 0 1.993.117L10 17v-6a1 1 0 0 0-1-1m6 0a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1m-.72-6H9.72l-.333 1h5.226z"/></g></svg>
                             </button>
                         </div>
                     </div>
@@ -203,10 +202,15 @@
                     </div>
                 </div>
 
-                <!-- Bookmarklet btn · absolute bottom-right -->
-                <button id="bookmarkletToolBtn2" title="Grabbn Bookmarklet Tool" class="absolute bottom-4 right-4 md:bottom-7 md:right-7 w-12 h-12 flex items-center justify-center rounded-full bg-orchid-100 text-orchid-600 hover:bg-orchid-200 shadow-sm transition-colors z-10">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M5 5a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6a1 1 0 1 1-2 0V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v14.131l4.168-2.778a1.5 1.5 0 0 1 1.664 0l.723.482a1 1 0 0 1-1.11 1.664L12 18.202l-4.668 3.112C6.335 21.978 5 21.264 5 20.066zm14 10a1 1 0 0 1 1 1v2h2a1 1 0 1 1 0 2h-2v2a1 1 0 1 1-2 0v-2h-2a1 1 0 1 1 0-2h2v-2a1 1 0 0 1 1-1"/></svg>
-                </button>
+                <!-- Refresh + Bookmarklet btn stack · absolute bottom-right -->
+                <div class="absolute bottom-4 right-4 md:bottom-7 md:right-7 flex flex-col items-center gap-1.5 z-10">
+                    <button id="refreshLinksBtn" title="Refresh links from bookmarklet" class="w-12 h-12 flex items-center justify-center rounded-full bg-silver-100 text-woodsmoke-500 hover:bg-silver-200 shadow-sm transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 4a8 8 0 1 0 8 8 1 1 0 0 1 2 0 10 10 0 1 1-10-10 1 1 0 0 1 0 2"/><path fill="currentColor" d="M14.293 2.293a1 1 0 0 1 1.414 0l3 3a1 1 0 0 1 0 1.414l-3 3a1 1 0 0 1-1.414-1.414L15.586 7H15a1 1 0 0 1 0-2h.586l-1.293-1.293a1 1 0 0 1 0-1.414"/></g></svg>
+                    </button>
+                    <button id="bookmarkletToolBtn2" title="Grabbn Bookmarklet Tool" class="w-12 h-12 flex items-center justify-center rounded-full bg-orchid-100 text-orchid-600 hover:bg-orchid-200 shadow-sm transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M5 5a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6a1 1 0 1 1-2 0V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v14.131l4.168-2.778a1.5 1.5 0 0 1 1.664 0l.723.482a1 1 0 0 1-1.11 1.664L12 18.202l-4.668 3.112C6.335 21.978 5 21.264 5 20.066zm14 10a1 1 0 0 1 1 1v2h2a1 1 0 1 1 0 2h-2v2a1 1 0 1 1-2 0v-2h-2a1 1 0 1 1 0-2h2v-2a1 1 0 0 1 1-1"/></svg>
+                    </button>
+                </div>
 
             </div><!-- /col-2 -->
 
@@ -246,13 +250,15 @@
 
                     <!-- Visibility -->
                     <div class="flex items-center justify-between py-3.5 border-b border-silver-100">
-                        <div>
-                            <p class="text-base font-medium text-woodsmoke-800">Public</p>
+                        <div class="min-w-0 flex-1 pr-3">
+                            <p class="text-base font-medium text-woodsmoke-800">Visibility</p>
                             <p id="visibilityLabel" class="text-sm text-woodsmoke-400 mt-0.5">Anyone can find this bucket</p>
                         </div>
-                        <button id="visibilityToggle" data-state="public" class="relative w-14 h-7 rounded-full bg-orchid-500 transition-colors shrink-0 focus:outline-none">
-                            <span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform translate-x-7"></span>
-                        </button>
+                        <div id="visibilitySegment" class="flex items-center justify-center rounded-lg border border-orchid-400 bg-orchid-100 overflow-hidden text-xs font-semibold shrink-0">
+                            <button data-vis="public"   class="vis-seg h-8 px-3 flex items-center justify-center transition-colors">Public</button>
+                            <button data-vis="unlisted" class="vis-seg h-8 px-3 flex items-center justify-center transition-colors border-l border-orchid-400">Unlisted</button>
+                            <button data-vis="private"  class="vis-seg h-8 px-3 flex items-center justify-center transition-colors border-l border-orchid-400">Private</button>
+                        </div>
                     </div>
 
                     <!-- Monetization -->
@@ -295,18 +301,16 @@
 
         </div><!-- /3-col body -->
 
-        <!-- ── Cancel / Save · always visible ───────────────────────────────── -->
-        <div class="px-4 md:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-5 flex items-center gap-3 shrink-0 border-t border-silver-100">
-            <!-- Delete bucket (edit mode only) — hidden when creating -->
-            <button type="button" id="newBucketDeleteBtn" class="hidden h-12 px-4 flex items-center justify-center gap-1.5 text-sm font-medium text-red-500 hover:text-white hover:bg-red-500 border border-red-200 hover:border-red-500 rounded-lg transition-colors shrink-0">
-                <!-- mingcute:delete-2-fill -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M14.28 2a2 2 0 0 1 1.897 1.368L16.72 5H20a1 1 0 1 1 0 2h-.28l-.982 10.803A2 2 0 0 1 16.743 19H7.257a2 2 0 0 1-1.995-1.197L4.28 7H4a1 1 0 0 1 0-2h3.28l.543-1.632A2 2 0 0 1 9.72 2h4.56zM9 10a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-4a1 1 0 0 0-1-1zm6 0a1 1 0 0 0-1 1v4a1 1 0 1 0 2 0v-4a1 1 0 0 0-1-1z"/></svg>
-                <span id="newBucketDeleteLabel">Delete</span>
-            </button>
-            <button type="button" id="newBucketCancelBtn" class="flex-1 h-12 flex items-center justify-center text-base font-medium text-woodsmoke-600 hover:text-woodsmoke-950 hover:bg-silver-100 rounded-lg transition-colors">
+        <!-- ── Cancel / Delete / Save · always visible ──────────────────────── -->
+        <div class="px-4 md:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-5 flex items-center justify-end gap-3 shrink-0 border-t border-silver-100">
+            <button type="button" id="newBucketCancelBtn" class="w-auto px-5 md:px-8 h-12 flex items-center justify-center text-base font-medium text-woodsmoke-600 hover:text-woodsmoke-950 hover:bg-silver-100 rounded-lg transition-colors">
                 Cancel
             </button>
-            <button type="button" id="newBucketSubmitBtn" class="flex-1 h-12 flex items-center justify-center gap-2 text-base font-semibold text-white bg-orchid-600 hover:bg-orchid-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <!-- Delete bucket — always visible, disabled in create mode -->
+            <button type="button" id="newBucketDeleteBtn" disabled class="h-12 px-5 md:px-8 flex items-center justify-center text-sm font-medium text-red-500 hover:text-white hover:bg-red-500 border border-red-200 hover:border-red-500 rounded-lg transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none">
+                <span id="newBucketDeleteLabel">Delete</span>
+            </button>
+            <button type="button" id="newBucketSubmitBtn" class="w-auto px-5 md:px-8 h-12 flex items-center justify-center gap-2 text-base font-semibold text-white bg-orchid-600 hover:bg-orchid-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <span id="newBucketSubmitLabel">Save</span>
                 <svg id="newBucketSpinner" class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><circle cx="4" cy="12" r="3" fill="currentColor"><animate id="a" attributeName="r" begin="0;b.end-0.25s" dur="0.75s" values="3;.2;3"/></circle><circle cx="12" cy="12" r="3" fill="currentColor"><animate attributeName="r" begin="a.end-0.6s" dur="0.75s" values="3;.2;3"/></circle><circle cx="20" cy="12" r="3" fill="currentColor"><animate id="b" attributeName="r" begin="a.end-0.45s" dur="0.75s" values="3;.2;3"/></circle></svg>
             </button>
@@ -415,7 +419,7 @@
     var tagInput         = document.getElementById('tagInput');
 
     // Toggles
-    var visibilityToggle    = document.getElementById('visibilityToggle');
+    var visibilitySegment   = document.getElementById('visibilitySegment');
     var visibilityLabel     = document.getElementById('visibilityLabel');
     var monetizationToggle      = document.getElementById('monetizationToggle');
     var monetizationLabel       = document.getElementById('monetizationLabel');
@@ -489,7 +493,7 @@
     }
 
     function resetState() {
-        state.links        = [{ id: uid(), title: 'Example Article', url: 'https://example.com/article', thumb: null, monetized: false, checked: false }];
+        state.links        = [];
         state.tags         = [];
         state.visibility   = 'public';
         state.monetization = false;
@@ -537,9 +541,10 @@
         renderTags();
 
         // Toggles
-        setToggle(visibilityToggle,   true);
-        visibilityLabel.textContent = 'Anyone can find this bucket';
+        setVisSegment('public');
         setToggle(monetizationToggle, false);
+        monetizationToggle.disabled = false;
+        monetizationToggle.classList.remove('opacity-40', 'cursor-not-allowed');
         monetizationLabel.textContent = 'Disabled';
         monetizationAmountPanel.classList.add('hidden');
         monetizationAmountInput.value = '';
@@ -604,7 +609,7 @@
     function openModal() {
         resetState();
         resetUI();
-        deleteBtn.classList.add('hidden');       // not shown when creating
+        deleteBtn.disabled = true;               // not available in create mode
         modal.classList.remove('hidden');
         resetMobileTabs();
         newLinkUrl.focus();
@@ -622,7 +627,7 @@
             return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: false };
         });
         state.tags         = bucket.hashtags || [];
-        state.visibility   = bucket.isPublic ? 'public' : 'private';
+        state.visibility   = bucket.visibility || (bucket.isPublic ? 'public' : 'private');
         state.monetization = !!bucket.isPaywalled;
         state.mature       = !!bucket.mature;
         state.thumbnail    = bucket.thumbnail ? { dataUrl: bucket.thumbnail, visible: true } : null;
@@ -631,9 +636,11 @@
         resetUI();
 
         // resetUI hardcodes toggles — fix them to match the bucket's actual settings
-        setToggle(visibilityToggle, state.visibility === 'public');
-        visibilityLabel.textContent = state.visibility === 'public' ? 'Anyone can find this bucket' : 'Only you can see this';
+        setVisSegment(state.visibility);
         setToggle(monetizationToggle, state.monetization);
+        monetizationToggle.disabled = state.visibility !== 'public';
+        monetizationToggle.classList.toggle('opacity-40', state.visibility !== 'public');
+        monetizationToggle.classList.toggle('cursor-not-allowed', state.visibility !== 'public');
         monetizationLabel.textContent = state.monetization ? 'Enabled' : 'Disabled';
         monetizationAmountPanel.classList.toggle('hidden', !state.monetization);
         if (state.monetization) monetizationAmountInput.value = bucket.price
@@ -659,8 +666,8 @@
         // Switch submit label to Update
         submitLabel.textContent = 'Update';
 
-        // Show delete button (edit mode only) and reset its confirm state
-        deleteBtn.classList.remove('hidden');
+        // Enable delete button (edit mode) and reset its confirm state
+        deleteBtn.disabled = false;
         deleteBtnLabel.textContent = 'Delete';
         deleteBtn.dataset.confirm = '';
 
@@ -856,11 +863,40 @@
         }
     }
 
-    visibilityToggle.addEventListener('click', function () {
-        state.visibility = state.visibility === 'public' ? 'private' : 'public';
-        var isPublic = state.visibility === 'public';
-        setToggle(this, isPublic);
-        visibilityLabel.textContent = isPublic ? 'Anyone can find this bucket' : 'Only you can see this';
+    // ── Visibility segment helper ─────────────────────────────────────────────
+    var VIS_LABELS = {
+        public:   'Discoverable',
+        unlisted: 'Link only',
+        private:  'Curator only'
+    };
+    function setVisSegment(vis) {
+        state.visibility = vis;
+        visibilityLabel.textContent = VIS_LABELS[vis] || VIS_LABELS.private;
+        visibilitySegment.querySelectorAll('.vis-seg').forEach(function (btn) {
+            var active = btn.dataset.vis === vis;
+            btn.classList.remove('bg-orchid-600', 'text-orchid-200', 'text-orchid-700', 'hover:bg-orchid-200');
+            if (active) {
+                btn.classList.add('bg-orchid-600', 'text-orchid-200');
+            } else {
+                btn.classList.add('text-orchid-700', 'hover:bg-orchid-200');
+            }
+        });
+        // Monetization is only available for public buckets
+        var canMonetize = vis === 'public';
+        if (!canMonetize && state.monetization) {
+            state.monetization = false;
+            setToggle(monetizationToggle, false);
+            monetizationLabel.textContent = 'Disabled';
+            monetizationAmountPanel.classList.add('hidden');
+            renderLinks();
+        }
+        monetizationToggle.disabled = !canMonetize;
+        monetizationToggle.classList.toggle('opacity-40', !canMonetize);
+        monetizationToggle.classList.toggle('cursor-not-allowed', !canMonetize);
+    }
+
+    visibilitySegment.querySelectorAll('.vis-seg').forEach(function (btn) {
+        btn.addEventListener('click', function () { setVisSegment(this.dataset.vis); });
     });
 
     monetizationToggle.addEventListener('click', function () {
@@ -873,6 +909,39 @@
         }
         renderLinks();
     });
+
+    // ── Refresh links from bookmarklet (reads localStorage set by popup.html) ──
+    var refreshLinksBtn = document.getElementById('refreshLinksBtn');
+    if (refreshLinksBtn) {
+        refreshLinksBtn.addEventListener('click', function () {
+            var raw = null;
+            try { raw = localStorage.getItem('grabbn:parsedLinks'); } catch (_) {}
+            if (!raw) {
+                refreshLinksBtn.classList.add('text-red-400');
+                setTimeout(function () { refreshLinksBtn.classList.remove('text-red-400'); }, 1500);
+                return;
+            }
+            var parsed = null;
+            try { parsed = JSON.parse(raw); } catch (_) {}
+            if (!Array.isArray(parsed) || parsed.length === 0) return;
+            var existing = new Set(state.links.map(function (l) { return l.url; }));
+            var added = 0;
+            parsed.forEach(function (l) {
+                if (l.href && !existing.has(l.href)) {
+                    state.links.push({ id: uid(), title: l.text || l.href, url: l.href, thumb: l.image || null, monetized: false, checked: false });
+                    existing.add(l.href);
+                    added++;
+                }
+            });
+            if (added > 0) {
+                try { localStorage.removeItem('grabbn:parsedLinks'); } catch (_) {}
+                renderLinks();
+                // Flash green to confirm
+                refreshLinksBtn.classList.add('text-green-600', 'bg-green-100');
+                setTimeout(function () { refreshLinksBtn.classList.remove('text-green-600', 'bg-green-100'); }, 1500);
+            }
+        });
+    }
 
     monetizationAmountInput.addEventListener('input', function () {
         var cursor = this.selectionStart;
@@ -1289,7 +1358,7 @@
             if (res.ok) {
                 closeModal();
                 // Reload the profile page to reflect changes
-                if (isEdit && window.location.pathname.startsWith('/v2/@')) {
+                if (window.location.pathname.startsWith('/v2/@')) {
                     window.location.reload();
                 }
             } else if (res.status === 409) {

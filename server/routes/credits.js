@@ -202,8 +202,9 @@ router.post('/unlock/:bucketId', requireAuth, async (req, res) => {
         if (!bucket) {
             return res.status(404).json({ error: 'Bucket not found' });
         }
-        if (!bucket.isPublic) {
-            return res.status(403).json({ error: 'Bucket is not public' });
+        const vis = bucket.visibility || (bucket.isPublic ? 'public' : 'private');
+        if (vis === 'private') {
+            return res.status(403).json({ error: 'Bucket is not accessible' });
         }
         if (!bucket.isPaywalled) {
             return res.status(400).json({ error: 'Bucket is not paywalled' });

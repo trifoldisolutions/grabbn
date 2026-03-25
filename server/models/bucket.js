@@ -68,6 +68,11 @@ const bucketSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: null
     },
+    visibility: {
+      type: String,
+      enum: ['public', 'unlisted', 'private'],
+      default: undefined
+    },
     isPublic: {
       type: Boolean,
       default: false
@@ -107,5 +112,15 @@ const bucketSchema = new mongoose.Schema(
 
 // Compound index for userId + name to ensure unique bucket names per user
 bucketSchema.index({ userId: 1, name: 1 }, { unique: true });
+
+// Keep visibility and isPublic in sync on every save
+bucketSchema.pre('save', function (next) {
+  if (this.visibility) {
+    this.isPublic = this.visibility === 'public';
+  } else {
+    this.visibility = this.isPublic ? 'public' : 'private';
+  }
+  next();
+});
 
 export default mongoose.model('Bucket', bucketSchema);

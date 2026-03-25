@@ -345,7 +345,7 @@ router.get('/bucket/:bucketId', async (req, res) => {
     <title>${ogTitle}</title>
     <meta name="title" content="${ogTitle}">
     <meta name="description" content="${ogDescription}">
-    ${!bucket.isPublic ? '<meta name="robots" content="noindex, nofollow">' : ''}
+    ${(bucket.visibility || (bucket.isPublic ? 'public' : 'private')) !== 'public' ? '<meta name="robots" content="noindex, nofollow">' : ''}
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -398,7 +398,7 @@ router.get('/bucket/:bucketId', async (req, res) => {
                     <span class="inline-flex items-center bg-orchid-50 text-orchid-700 text-xs font-semibold px-3 py-1 rounded-full border border-orchid-200">
                         ${bucket.links.length} link${bucket.links.length !== 1 ? 's' : ''}
                     </span>
-                    ${!bucket.isPublic ? '<span class="inline-flex items-center bg-gray-100 text-gray-500 text-xs font-semibold px-3 py-1 rounded-full">Unlisted</span>' : ''}
+                    ${{unlisted: '<span class="inline-flex items-center bg-amber-50 text-amber-600 text-xs font-semibold px-3 py-1 rounded-full">Unlisted</span>', private: '<span class="inline-flex items-center bg-gray-100 text-gray-500 text-xs font-semibold px-3 py-1 rounded-full">Private</span>'}[(bucket.visibility || (bucket.isPublic ? 'public' : 'private'))] || ''}
                     <span class="text-sm text-gray-400">by ${curatorName}</span>
                 </div>
                 ${bucket.sourceUrl ? `

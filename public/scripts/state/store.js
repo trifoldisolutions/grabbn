@@ -492,8 +492,8 @@ export async function requestCashout() {
     return await response.json();
 }
 
-// Toggle bucket public/private visibility
-export async function toggleBucketVisibility(bucketName, isPublic) {
+// Update bucket visibility ('public' | 'unlisted' | 'private')
+export async function toggleBucketVisibility(bucketName, visibility) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/buckets/${encodeURIComponent(bucketName)}/visibility`, {
             method: 'PATCH',
@@ -501,7 +501,7 @@ export async function toggleBucketVisibility(bucketName, isPublic) {
                 'Content-Type': 'application/json'
             },
             credentials: 'include',
-            body: JSON.stringify({ isPublic })
+            body: JSON.stringify({ visibility })
         });
 
         if (!response.ok) {

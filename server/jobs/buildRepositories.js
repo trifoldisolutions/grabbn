@@ -98,7 +98,7 @@ export async function buildRepositories() {
     const allHrefs = [...new Set(clickData.flatMap(d => d.links.map(l => l.href)))];
 
     const linkMeta = await Bucket.aggregate([
-        { $match: { 'links.href': { $in: allHrefs }, isPublic: true } },
+        { $match: { 'links.href': { $in: allHrefs }, $or: [{ visibility: 'public' }, { visibility: { $exists: false }, isPublic: true }] } },
         { $unwind: '$links' },
         { $match: { 'links.href': { $in: allHrefs } } },
         {

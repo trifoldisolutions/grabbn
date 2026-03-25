@@ -64,6 +64,7 @@ const bulkSelectCloseBtn = document.getElementById('bulkSelectCloseBtn');
 let currentBucketLinks = [];
 let currentBucketName = '';
 let currentBucketIsPublic = false;
+let currentBucketVisibility = 'private';
 let currentBucketIsPaywalled = false;
 let currentBucketPrice = 0;
 let currentLinkMode = 'add';
@@ -107,18 +108,25 @@ function formatDate(dateString) {
 
 // ========== VISIBILITY UI ==========
 
-// Update the visibility button and gate the share button based on isPublic
-function updateVisibilityUI(isPublic) {
-    currentBucketIsPublic = isPublic;
+// Update the visibility button to reflect the current visibility state
+function updateVisibilityUI(visibility) {
+    // Accept legacy boolean for backwards compat
+    if (typeof visibility === 'boolean') visibility = visibility ? 'public' : 'private';
+    currentBucketVisibility = visibility;
+    currentBucketIsPublic   = visibility === 'public';
 
     if (bucketVisibilityBtn) {
         const span = bucketVisibilityBtn.querySelector('span');
-        const svg = bucketVisibilityBtn.querySelector('svg');
+        const svg  = bucketVisibilityBtn.querySelector('svg');
 
-        if (isPublic) {
+        if (visibility === 'public') {
             if (span) span.textContent = 'Public';
             if (svg) svg.innerHTML = '<path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5M12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5s5 2.24 5 5s-2.24 5-5 5m0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3s3-1.34 3-3s-1.34-3-3-3"/>';
             bucketVisibilityBtn.className = 'h-10 w-auto px-3 rounded-md flex items-center justify-center gap-x-1 font-medium bg-green-50 text-green-700';
+        } else if (visibility === 'unlisted') {
+            if (span) span.textContent = 'Unlisted';
+            if (svg) svg.innerHTML = '<path fill="currentColor" d="M13.5 6a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13M5 12.5a8.5 8.5 0 1 1 17 0 8.5 8.5 0 0 1-17 0m8.5-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6m-5 3a5 5 0 1 1 10 0 5 5 0 0 1-10 0"/>';
+            bucketVisibilityBtn.className = 'h-10 w-auto px-3 rounded-md flex items-center justify-center gap-x-1 font-medium bg-amber-50 text-amber-600';
         } else {
             if (span) span.textContent = 'Private';
             if (svg) svg.innerHTML = '<path fill="currentColor" d="M17 9V7A5 5 0 0 0 7 7v2a3 3 0 0 0-3 3v7a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-7a3 3 0 0 0-3-3M9 7a3 3 0 0 1 6 0v2H9Zm9 12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1Z"/>';
@@ -126,27 +134,27 @@ function updateVisibilityUI(isPublic) {
         }
     }
 
-    // Share is always enabled; private buckets are unlisted (direct link only, not indexed)
+    // Share is always enabled; show a hint for non-public buckets
     if (bucketShareBtn) {
         bucketShareBtn.disabled = false;
         bucketShareBtn.style.opacity = '1';
-        bucketShareBtn.title = isPublic ? '' : 'Share link (unlisted — not visible in searches)';
+        bucketShareBtn.title = visibility === 'public' ? '' : 'Share link (not visible in search or showroom)';
     }
 
-    // Always show paywall section (unless hideForm mode); disable it visually when private
+    // Paywall is only available for public buckets
+    const canMonetize = visibility === 'public';
     if (bucketPaywallBtnContainer) {
         if (!isFormHidden) {
             bucketPaywallBtnContainer.classList.remove('hidden');
             bucketPaywallBtnContainer.classList.add('flex');
         }
 
-        if (isPublic) {
+        if (canMonetize) {
             bucketPaywallBtnContainer.style.opacity = '1';
             bucketPaywallBtnContainer.style.pointerEvents = 'auto';
         } else {
             bucketPaywallBtnContainer.style.opacity = '0.4';
             bucketPaywallBtnContainer.style.pointerEvents = 'none';
-            // If bucket is being made private while paywalled, silently disable paywall
             if (currentBucketIsPaywalled && currentBucketName && currentBucketName !== 'Singletons') {
                 currentBucketIsPaywalled = false;
                 updatePaywallUI(false, currentBucketPrice);
@@ -422,7 +430,7 @@ export async function openBucketPopup(bucketName, options = {}) {
         const metadata = await fetchBucketMetadata(bucketName);
 
         if (metadata) {
-            updateVisibilityUI(!!metadata.isPublic);
+            updateVisibilityUI(metadata.visibility || (metadata.isPublic ? 'public' : 'private'));
             updatePaywallUI(!!metadata.isPaywalled, metadata.price ?? 0);
             // Display username if available, otherwise fallback to formatted user ID
             const curatorDisplay = metadata.curator?.username
@@ -772,6 +780,7 @@ export function closeBucketPopup() {
         }
 
         currentBucketIsPublic = false;
+        currentBucketVisibility = 'private';
 
         // Restore body scroll
         document.body.style.overflow = '';
@@ -808,12 +817,12 @@ function renderPopupLinks(links, highlightLabel = '', highlightUrl = '') {
             ? highlightMatch(link.href, highlightUrl)
             : escapeHtml(link.href);
 
-        const monetizeBtnClass = !currentBucketIsPublic
+        const monetizeBtnClass = currentBucketVisibility !== 'public'
             ? 'text-gray-300 cursor-not-allowed'
             : link.isFree
                 ? 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50'
                 : 'bg-orchid-600 text-white hover:bg-orchid-700';
-        const monetizeBtnTitle = !currentBucketIsPublic
+        const monetizeBtnTitle = currentBucketVisibility !== 'public'
             ? 'Make bucket public to monetize'
             : link.isFree
                 ? 'Free access — click to put under paywall'
@@ -834,7 +843,7 @@ function renderPopupLinks(links, highlightLabel = '', highlightUrl = '') {
                             <path fill="currentColor" d="M9.116 17q-.691 0-1.153-.462T7.5 15.385V4.615q0-.69.463-1.153T9.116 3h7.769q.69 0 1.153.462t.462 1.153v10.77q0 .69-.462 1.152T16.884 17zm0-1h7.769q.23 0 .423-.192t.192-.423V4.615q0-.23-.192-.423T16.884 4H9.116q-.231 0-.424.192t-.192.423v10.77q0 .23.192.423t.423.192m-3 4q-.69 0-1.153-.462T4.5 18.385V6.615h1v11.77q0 .23.192.423t.423.192h8.77v1zM8.5 16V4z"/>
                         </svg>
                     </button>
-                    <button class="popupMonetizeToggleBtn h-8 w-8 flex items-center justify-center rounded transition-colors ${monetizeBtnClass}" data-href="${link.href}" title="${monetizeBtnTitle}" ${!currentBucketIsPublic ? 'disabled' : ''}>
+                    <button class="popupMonetizeToggleBtn h-8 w-8 flex items-center justify-center rounded transition-colors ${monetizeBtnClass}" data-href="${link.href}" title="${monetizeBtnTitle}" ${currentBucketVisibility !== 'public' ? 'disabled' : ''}>
                         <span class="text-sm font-semibold">$</span>
                     </button>
                     <button class="popupDeleteLinkBtn h-8 w-8 flex items-center justify-center hover:bg-red-100 hover:text-red-600 rounded transition-colors" data-href="${link.href}" title="Delete link">
@@ -1085,7 +1094,7 @@ function setupPopupMonetizeButtons() {
     monetizeButtons.forEach(button => {
         button.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (!currentBucketIsPublic) return;
+            if (currentBucketVisibility !== 'public') return;
 
             const href = button.dataset.href;
             const link = currentBucketLinks.find(l => l.href === href);
@@ -1125,8 +1134,8 @@ function updateLinkMonetizationToggles() {
     if (!toggles) return;
 
     toggles.forEach(btn => {
-        btn.disabled = !currentBucketIsPublic;
-        if (!currentBucketIsPublic) {
+        btn.disabled = currentBucketVisibility !== 'public';
+        if (currentBucketVisibility !== 'public') {
             btn.className = 'popupMonetizeToggleBtn h-8 w-8 flex items-center justify-center rounded transition-colors text-gray-300 cursor-not-allowed';
             btn.title = 'Make bucket public to monetize';
         } else {
@@ -1274,20 +1283,18 @@ export function initBucketPopup() {
         bucketVisibilityBtn.addEventListener('click', async () => {
             if (!currentBucketName || currentBucketName === 'Singletons') return;
 
-            const newIsPublic = !currentBucketIsPublic;
+            const cycle = { public: 'unlisted', unlisted: 'private', private: 'public' };
+            const newVis = cycle[currentBucketVisibility] || 'public';
+            const labels = { public: 'Bucket is now public.', unlisted: 'Bucket is unlisted — share the link to grant access.', private: 'Bucket set to private.' };
 
             try {
                 bucketVisibilityBtn.disabled = true;
                 bucketVisibilityBtn.style.opacity = '0.5';
 
-                await toggleBucketVisibility(currentBucketName, newIsPublic);
-                updateVisibilityUI(newIsPublic);
+                await toggleBucketVisibility(currentBucketName, newVis);
+                updateVisibilityUI(newVis);
 
-                showNotification(
-                    newIsPublic ? 'Bucket published — share link is now active.' : 'Bucket set to private.',
-                    'success',
-                    3000
-                );
+                showNotification(labels[newVis], 'success', 3000);
             } catch (error) {
                 showNotification(`Failed to update visibility: ${error.message}`, 'error');
             } finally {
