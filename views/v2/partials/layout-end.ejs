@@ -130,6 +130,12 @@
                     </div>
                 </div>
 
+                <!-- View as viewer link (edit mode only) -->
+                <a id="modalViewAsViewerLink" href="#" target="_blank" rel="noopener noreferrer"
+                   class="hidden text-xs text-orchid-500 hover:text-orchid-700 hover:underline transition-colors">
+                    Navigate to bucket as a viewer →
+                </a>
+
             </div><!-- /col-1 -->
 
             <!-- ── Column 2 · Links ───────────────────────────────────────── -->
@@ -374,10 +380,11 @@
 
     // ── Element refs ─────────────────────────────────────────────────────────
     var modal          = document.getElementById('newBucketModal');
-    var modalStats     = document.getElementById('modalBucketStats');
-    var modalStatGrabs = document.getElementById('modalStatGrabs');
-    var modalStatViews = document.getElementById('modalStatViews');
-    var modalStatShares= document.getElementById('modalStatShares');
+    var modalStats          = document.getElementById('modalBucketStats');
+    var modalStatGrabs      = document.getElementById('modalStatGrabs');
+    var modalStatViews      = document.getElementById('modalStatViews');
+    var modalStatShares     = document.getElementById('modalStatShares');
+    var modalViewerLink     = document.getElementById('modalViewAsViewerLink');
     var backdrop       = document.getElementById('newBucketBackdrop');
     var nameInput      = document.getElementById('newBucketNameInput');
     var charCount      = document.getElementById('newBucketCharCount');
@@ -633,7 +640,8 @@
         resetState();
         resetUI();
         deleteBtn.disabled = true;               // not available in create mode
-        if (modalStats) modalStats.classList.add('hidden');
+        if (modalStats)      modalStats.classList.add('hidden');
+        if (modalViewerLink) modalViewerLink.classList.add('hidden');
         modal.classList.remove('hidden');
         resetMobileTabs();
         newLinkUrl.focus();
@@ -687,6 +695,12 @@
             thumbPreview.src = state.thumbnail.dataUrl;
             thumbPreview.classList.remove('hidden');
             thumbActionBtns.classList.remove('hidden');
+        }
+
+        // Viewer link
+        if (modalViewerLink) {
+            modalViewerLink.href = '/v2/' + bucket._id;
+            modalViewerLink.classList.remove('hidden');
         }
 
         // Populate + show stats block
