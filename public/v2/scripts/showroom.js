@@ -306,11 +306,11 @@
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    // 7200 → "7.2K",  325 → "325",  1500000 → "1.5M"
+    // 325 → "325",  1234 → "1.23K",  10567343 → "10.5M"
     function formatNum(n) {
         n = Number(n) || 0;
-        if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
-        if (n >= 1_000)     return (n / 1_000).toFixed(2).replace(/\.?0+$/, '')   + 'K';
+        if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '')    + 'M';
+        if (n >= 1_000)     return (n / 1_000).toFixed(2).replace(/\.?0+$/, '')      + 'K';
         return String(n);
     }
 
