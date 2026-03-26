@@ -25,7 +25,7 @@
                     <% } %>
                     <div class="flex flex-col leading-tight min-w-0 flex-1">
                         <a href="/v2/profile/<%= curatorName %>" class="text-sm font-medium text-woodsmoke-800 hover:text-orchid-600 transition-colors truncate">@<%= curatorName %></a>
-                        <span class="text-[11px] text-woodsmoke-400" id="bvTimeAgo"></span>
+                        <span class="text-[11px] text-woodsmoke-400 truncate" id="bvTimeAgo"></span>
                     </div>
                     <% if (!isOwner) { %>
                     <% if (!user || user.isAnonymous) { %>
@@ -253,16 +253,22 @@
 
     // TimeAgo
     (function () {
-        const date = new Date('<%= (bucket.updatedAt || bucket.createdAt).toISOString() %>');
-        const now  = Date.now();
-        const diff = Math.floor((now - date) / 1000);
-        let label;
-        if (diff < 60)               label = 'just now';
-        else if (diff < 3600)        label = Math.floor(diff / 60) + 'm ago';
-        else if (diff < 86400)       label = Math.floor(diff / 3600) + 'h ago';
-        else if (diff < 2592000)     label = Math.floor(diff / 86400) + 'd ago';
-        else if (diff < 31536000)    label = Math.floor(diff / 2592000) + 'mo ago';
-        else                         label = Math.floor(diff / 31536000) + 'y ago';
+        function relativeTime(date) {
+            const diff = Math.floor((Date.now() - date) / 1000);
+            if (diff < 60)            return 'just now';
+            if (diff < 3600)          return Math.floor(diff / 60) + 'm ago';
+            if (diff < 86400)         return Math.floor(diff / 3600) + 'h ago';
+            if (diff < 2592000)       return Math.floor(diff / 86400) + 'd ago';
+            if (diff < 31536000)      return Math.floor(diff / 2592000) + 'mo ago';
+            return Math.floor(diff / 31536000) + 'y ago';
+        }
+        const created = new Date('<%= bucket.createdAt.toISOString() %>');
+        const updated = new Date('<%= (bucket.updatedAt || bucket.createdAt).toISOString() %>');
+        const createdLabel = relativeTime(created);
+        const updatedLabel = relativeTime(updated);
+        const label = created.getTime() === updated.getTime()
+            ? createdLabel
+            : createdLabel + ' \u2022 updated ' + updatedLabel;
         const el = document.getElementById('bvTimeAgo');
         if (el) el.textContent = label;
     })();

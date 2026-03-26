@@ -1237,7 +1237,7 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
             .skip(skip)
             .limit(limit + 1)
             .populate('userId', 'username anonymousId avatar')
-            .select('name thumbnail links isPaywalled price viewCount shareCount createdAt userId grabbedBy description hashtags');
+            .select('name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags');
 
         const hasMore = buckets.length > limit;
         const items   = hasMore ? buckets.slice(0, limit) : buckets;
@@ -1272,6 +1272,7 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
                 viewCount:  b.viewCount  || 0,
                 shareCount:  b.shareCount || 0,
                 createdAt:   b.createdAt,
+                updatedAt:   b.updatedAt,
                 description: b.description || '',
                 hashtags:    b.hashtags    || [],
                 isGrabbed:   grabbedSet.has(String(b._id)),

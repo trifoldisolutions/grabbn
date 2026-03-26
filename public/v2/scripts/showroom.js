@@ -109,7 +109,7 @@
                     }
                     <div class="flex flex-col leading-tight min-w-0">
                         <span class="text-sm font-semibold text-woodsmoke-950 group-hover:text-orchid-600 transition-colors truncate">@${escHtml(b.curator.username || 'Unknown')}</span>
-                        <span class="text-xs text-gray-400">${timeAgo(b.createdAt)}</span>
+                        <span class="text-xs text-gray-400 truncate">${dateLabel(b.createdAt, b.updatedAt)}</span>
                     </div>
                 </a>
                 <button class="follow-btn shrink-0 text-sm font-semibold px-5 py-1 rounded-md bg-orchid-100 text-orchid-600" onclick="event.preventDefault();event.stopPropagation()">
@@ -305,6 +305,15 @@
         if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
         if (n >= 1_000)     return (n / 1_000).toFixed(2).replace(/\.?0+$/, '')   + 'K';
         return String(n);
+    }
+
+    function dateLabel(createdAt, updatedAt) {
+        const created = timeAgo(createdAt);
+        if (!updatedAt) return created;
+        const cTime = new Date(createdAt).getTime();
+        const uTime = new Date(updatedAt).getTime();
+        if (cTime === uTime) return created;
+        return created + ' \u2022 updated ' + timeAgo(updatedAt);
     }
 
     // "just now" / "3m ago" / "2h ago" / "1w ago" / "3mo ago" / "2y ago"
