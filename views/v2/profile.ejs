@@ -139,6 +139,27 @@
 
 </div>
 
+<!-- ── Bucket edit modal (owner only) ────────────────────────────────── -->
+<% if (isOwner) { %>
+<div id="editBucketModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 flex flex-col gap-y-4">
+        <div class="flex items-center justify-between">
+            <h3 id="editBucketModalTitle" class="font-bold text-gray-900 text-base">Edit Bucket</h3>
+            <button id="closeEditBucketModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M6.4 19L5 17.6l5.6-5.6L5 6.4L6.4 5l5.6 5.6L17.6 5L19 6.4L13.4 12l5.6 5.6l-1.4 1.4l-5.6-5.6z"/></svg>
+            </button>
+        </div>
+        <input id="editBucketNameInput" type="text" placeholder="Bucket name…" maxlength="80"
+            class="w-full h-11 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-orchid-400 transition-colors">
+        <p id="editBucketError" class="hidden text-xs text-red-500"></p>
+        <button id="editBucketConfirmBtn"
+            class="h-11 w-full rounded-lg bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
+            Save Changes
+        </button>
+    </div>
+</div>
+<% } %>
+
 <!-- ── Bucket viewer modal (view-only, used for grabbed + visitor views) ── -->
 <div id="bucketViewerModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center" aria-modal="true" role="dialog">
     <div id="bucketViewerBackdrop" class="absolute inset-0 bg-woodsmoke-950/40"></div>
@@ -223,6 +244,79 @@
 (function () {
     const isOwner     = window.__PROFILE_IS_OWNER__;
     const viewerAuthed = window.__PROFILE_VIEWER_AUTHED__;
+
+    // ── Bucket edit modal (owner only) ───────────────────────────────────────
+    const editModal      = document.getElementById('editBucketModal');
+    const editInput      = document.getElementById('editBucketNameInput');
+    const editConfirmBtn = document.getElementById('editBucketConfirmBtn');
+    const editErrorEl    = document.getElementById('editBucketError');
+    const closeEditBtn   = document.getElementById('closeEditBucketModal');
+
+    let _editingBucket = null; // bucket object currently being edited
+
+    function openEditModal(bucket) {
+        _editingBucket = bucket;
+        if (editInput)  { editInput.value = bucket.name; editInput.disabled = false; }
+        if (editConfirmBtn) { editConfirmBtn.disabled = false; editConfirmBtn.textContent = 'Save Changes'; }
+        if (editErrorEl) { editErrorEl.textContent = ''; editErrorEl.classList.add('hidden'); }
+        editModal?.classList.remove('hidden');
+        setTimeout(() => { editInput?.select(); }, 50);
+    }
+
+    function closeEditModal() {
+        editModal?.classList.add('hidden');
+        _editingBucket = null;
+    }
+
+    if (editModal) {
+        closeEditBtn?.addEventListener('click', closeEditModal);
+        editModal.addEventListener('click', e => { if (e.target === editModal) closeEditModal(); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && !editModal.classList.contains('hidden')) closeEditModal();
+        });
+
+        async function handleEditSave() {
+            if (!_editingBucket) return;
+            const newName = editInput?.value.trim();
+            if (!newName) { editInput?.focus(); return; }
+
+            if (editConfirmBtn) { editConfirmBtn.disabled = true; editConfirmBtn.textContent = 'Saving…'; }
+            if (editInput) editInput.disabled = true;
+            if (editErrorEl) editErrorEl.classList.add('hidden');
+
+            try {
+                const res = await fetch(`/api/buckets/${encodeURIComponent(_editingBucket.name)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ newName })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to save');
+
+                // Update embedded data so subsequent opens use the new name
+                const pool = window.__PROFILE_OWN__;
+                const entry = pool?.find(b => b._id === _editingBucket._id);
+                if (entry) entry.name = data.name;
+
+                // Update the card's visual name on the page
+                const card = document.querySelector(`[data-bucket-id="${_editingBucket._id}"]`);
+                if (card) {
+                    const nameEl = card.querySelector('p.font-medium');
+                    if (nameEl) nameEl.textContent = data.name;
+                }
+
+                closeEditModal();
+            } catch (err) {
+                if (editErrorEl) { editErrorEl.textContent = err.message; editErrorEl.classList.remove('hidden'); }
+                if (editConfirmBtn) { editConfirmBtn.disabled = false; editConfirmBtn.textContent = 'Save Changes'; }
+                if (editInput) { editInput.disabled = false; editInput.focus(); }
+            }
+        }
+
+        editConfirmBtn?.addEventListener('click', handleEditSave);
+        editInput?.addEventListener('keydown', e => { if (e.key === 'Enter') handleEditSave(); });
+    }
 
     // ── Tab switching ────────────────────────────────────────────────────────
     const tabs   = document.querySelectorAll('.profile-tab');
@@ -549,7 +643,7 @@
     backdrop.addEventListener('click', closeViewer);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeViewer(); });
 
-    // ── Card click → navigate to bucket page ────────────────────────────────
+    // ── Card click → open viewer modal for owners, navigate to bucket page for visitors ─
     ['panelBuckets', 'panelGrabbed'].forEach(id => {
         const panel = document.getElementById(id);
         if (!panel) return;
@@ -560,6 +654,11 @@
             card.addEventListener('click', e => {
                 if (e.target.closest('.card-share-btn')) return;
                 if (e.target.closest('a[href]')) return;
+                if (isOwner) {
+                    const pool = id === 'panelBuckets' ? window.__PROFILE_OWN__ : window.__PROFILE_GRABBED__;
+                    const bucket = pool?.find(b => b._id === card.dataset.bucketId);
+                    if (bucket && window.openBucketModal) { window.openBucketModal(bucket); return; }
+                }
                 window.location.href = `/v2/${card.dataset.bucketId}`;
             });
         });

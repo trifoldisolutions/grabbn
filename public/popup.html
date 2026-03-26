@@ -343,6 +343,8 @@
                 }
 
                 allLinks = links;
+                // Persist parsed links so the bucket creation modal can import them via the Refresh button
+                try { localStorage.setItem('grabbn:parsedLinks', JSON.stringify(links)); } catch (_) {}
                 setView('list');
                 renderLinks();
                 updatePagesBanner();

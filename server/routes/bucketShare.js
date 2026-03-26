@@ -12,15 +12,22 @@ router.get('/bucket/:bucketId/thumbnail.jpg', async (req, res) => {
 
         const bucket = await Bucket.findById(bucketId);
 
-        if (!bucket || !bucket.thumbnail) {
+        if (!bucket) {
+            return res.status(404).send('Thumbnail not found');
+        }
+
+        // Use bucket thumbnail, or fall back to first link image
+        const rawImage = bucket.thumbnail || bucket.links?.find(l => l.image)?.image || null;
+
+        if (!rawImage) {
             return res.status(404).send('Thumbnail not found');
         }
 
         // Parse base64 data
-        const mimeMatch = bucket.thumbnail.match(/^data:(image\/\w+);base64,/);
+        const mimeMatch = rawImage.match(/^data:(image\/\w+);base64,/);
         const base64Data = mimeMatch
-            ? bucket.thumbnail.slice(mimeMatch[0].length)
-            : bucket.thumbnail;
+            ? rawImage.slice(mimeMatch[0].length)
+            : rawImage;
         const imageBuffer = Buffer.from(base64Data, 'base64');
 
         // Send as actual image
@@ -315,24 +322,23 @@ router.get('/bucket/:bucketId', async (req, res) => {
             }
         }
 
-        // Generate Open Graph metadata
-        const ogTitle = `${bucket.name} - Shared Link Collection`;
-        const ogDescription = `A collection of ${bucket.links.length} link(s) shared via Grabbn`;
-        
-        // Use thumbnail endpoint URL instead of base64 for Open Graph
-        const ogImage = bucket.thumbnail 
-            ? `${req.protocol}://${req.get('host')}/share/bucket/${bucketId}/thumbnail.jpg`
-            : 'https://via.placeholder.com/1200x630?text=Grabbn+Shared+Collection';
-        
-        const shareUrl = `${req.protocol}://${req.get('host')}/share/bucket/${bucketId}`;
-
         const curator = await import('../models/user.js').then(m =>
             m.default.findById(bucket.userId).select('username')
         );
         const curatorName = curator?.username || 'Anonymous';
-        const thumbnailUrl = bucket.thumbnail
-            ? `${req.protocol}://${req.get('host')}/share/bucket/${bucketId}/thumbnail.jpg`
+
+        // Generate Open Graph metadata
+        const ogTitle = `${bucket.name} - Shared Link Collection`;
+        const ogDescription = `${curatorName} is sharing this bucket with you. Have a look at it!`;
+
+        // Use thumbnail endpoint if bucket has a thumbnail or any link has an image
+        const hasThumbnail = bucket.thumbnail || bucket.links?.some(l => l.image);
+        const shareUrl = `${req.protocol}://${req.get('host')}/share/bucket/${bucketId}`;
+        const ogImage = hasThumbnail
+            ? `${shareUrl}/thumbnail.jpg`
             : null;
+
+        const thumbnailUrl = hasThumbnail ? `${shareUrl}/thumbnail.jpg` : null;
 
         // Generate HTML page with Open Graph meta tags
         const html = `<!DOCTYPE html>
@@ -352,16 +358,16 @@ router.get('/bucket/:bucketId', async (req, res) => {
     <meta property="og:url" content="${shareUrl}">
     <meta property="og:title" content="${ogTitle}">
     <meta property="og:description" content="${ogDescription}">
-    <meta property="og:image" content="${ogImage}">
+    ${ogImage ? `<meta property="og:image" content="${ogImage}">
     <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
+    <meta property="og:image:height" content="630">` : ''}
 
     <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:card" content="${ogImage ? 'summary_large_image' : 'summary'}">
     <meta property="twitter:url" content="${shareUrl}">
     <meta property="twitter:title" content="${ogTitle}">
     <meta property="twitter:description" content="${ogDescription}">
-    <meta property="twitter:image" content="${ogImage}">
+    ${ogImage ? `<meta property="twitter:image" content="${ogImage}">` : ''}
 
     <link rel="stylesheet" href="/tailwind/output.css">
     <style>

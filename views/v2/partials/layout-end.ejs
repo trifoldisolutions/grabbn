@@ -627,20 +627,22 @@
             return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: false };
         });
         state.tags         = bucket.hashtags || [];
-        state.visibility   = bucket.visibility || (bucket.isPublic ? 'public' : 'private');
         state.monetization = !!bucket.isPaywalled;
         state.mature       = !!bucket.mature;
         state.thumbnail    = bucket.thumbnail ? { dataUrl: bucket.thumbnail, visible: true } : null;
+
+        // Capture visibility before resetUI overwrites state.visibility to 'public'
+        var bucketVisibility = bucket.visibility || (bucket.isPublic ? 'public' : 'private');
 
         // Reset the UI using the populated state
         resetUI();
 
         // resetUI hardcodes toggles — fix them to match the bucket's actual settings
-        setVisSegment(state.visibility);
+        setVisSegment(bucketVisibility);
         setToggle(monetizationToggle, state.monetization);
-        monetizationToggle.disabled = state.visibility !== 'public';
-        monetizationToggle.classList.toggle('opacity-40', state.visibility !== 'public');
-        monetizationToggle.classList.toggle('cursor-not-allowed', state.visibility !== 'public');
+        monetizationToggle.disabled = bucketVisibility !== 'public';
+        monetizationToggle.classList.toggle('opacity-40', bucketVisibility !== 'public');
+        monetizationToggle.classList.toggle('cursor-not-allowed', bucketVisibility !== 'public');
         monetizationLabel.textContent = state.monetization ? 'Enabled' : 'Disabled';
         monetizationAmountPanel.classList.toggle('hidden', !state.monetization);
         if (state.monetization) monetizationAmountInput.value = bucket.price
