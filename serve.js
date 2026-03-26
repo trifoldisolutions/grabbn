@@ -1212,12 +1212,13 @@ app.post('/api/links/click', async (req, res) => {
         let domain;
         try { domain = new URL(href).hostname; } catch { return; }
 
-        await LinkClick.create({
-            href,
-            domain,
-            bucketId,
-            userId: req.user?._id ?? null
-        });
+        await Promise.all([
+            LinkClick.create({ href, domain, bucketId, userId: req.user?._id ?? null }),
+            Bucket.updateOne(
+                { _id: bucketId, 'links.href': href },
+                { $inc: { 'links.$.clickCount': 1 } }
+            ),
+        ]);
     } catch (err) {
         console.error('LinkClick record error:', err);
     }
