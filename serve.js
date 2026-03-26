@@ -1491,7 +1491,8 @@ app.get('/v2/@:username', anonymousAuth, async (req, res) => {
     const ownBuckets     = allBuckets.filter(b => !b.sourceBucketId).map(addDisplayThumb);
     // Grabbed tab is only shown to the owner
     const grabbedBuckets = isOwner ? allBuckets.filter(b => b.sourceBucketId).map(addDisplayThumb) : [];
-    const totalViews     = ownBuckets.reduce((sum, b) => sum + (b.viewCount ?? 0), 0);
+    const totalViews     = ownBuckets.reduce((sum, b) => sum + (b.viewCount       ?? 0), 0);
+    const totalGrabs     = ownBuckets.reduce((sum, b) => sum + (b.grabbedBy?.length ?? 0), 0);
     const memberSince    = new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
     res.render('v2/profile', {
@@ -1503,6 +1504,7 @@ app.get('/v2/@:username', anonymousAuth, async (req, res) => {
         ownBuckets,
         grabbedBuckets,
         totalViews,
+        totalGrabs,
         subscriberCount,
         followingCount,
         memberSince,
