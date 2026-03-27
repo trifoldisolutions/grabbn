@@ -1520,6 +1520,23 @@ app.get('/v2/repository/:domain', anonymousAuth, (req, res) => {
     res.render('v2/repository', { title: domain, page: 'repository', user: req.user ?? null, domain });
 });
 
+// Toggle pin state of a single link
+app.patch('/api/buckets/:id/link-pin', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { href, pinned } = req.body;
+        if (!href) return res.status(400).json({ error: 'href required' });
+        const result = await Bucket.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id, 'links.href': href },
+            { $set: { 'links.$.isPinned': !!pinned } }
+        );
+        if (!result) return res.status(404).json({ error: 'Bucket or link not found' });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Error toggling link pin:', err);
+        res.status(500).json({ error: 'Failed to toggle pin' });
+    }
+});
+
 // Report page — /v2/report/:bucketId
 app.get('/v2/report/:bucketId', anonymousAuth, async (req, res) => {
     try {
