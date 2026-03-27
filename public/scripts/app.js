@@ -1195,8 +1195,9 @@ function setupCreateBucketFab() {
     const modal      = document.getElementById('createBucketModal');
     const closeBtn   = document.getElementById('closeCreateBucketModal');
     const input      = document.getElementById('createBucketNameInput');
-    const confirmBtn = document.getElementById('createBucketConfirmBtn');
-    const errorEl    = document.getElementById('createBucketError');
+    const confirmBtn  = document.getElementById('createBucketConfirmBtn');
+    const errorEl     = document.getElementById('createBucketError');
+    const draftStatus = document.getElementById('createBucketDraftStatus');
 
     if (!fab || !modal) return;
 
@@ -1212,6 +1213,12 @@ function setupCreateBucketFab() {
     function clearError() {
         if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
     }
+    function showDraftStatus() {
+        if (draftStatus) { draftStatus.textContent = 'Saved as draft'; draftStatus.classList.remove('hidden'); }
+    }
+    function clearDraftStatus() {
+        if (draftStatus) { draftStatus.textContent = ''; draftStatus.classList.add('hidden'); }
+    }
 
     function openModal() {
         draftBucketName = null;
@@ -1219,6 +1226,7 @@ function setupCreateBucketFab() {
         if (input)      { input.value = ''; input.disabled = false; }
         if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Create Bucket'; }
         clearError();
+        clearDraftStatus();
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         setTimeout(() => input?.focus(), 50);
@@ -1275,6 +1283,7 @@ function setupCreateBucketFab() {
             draftBucketName = name;
             setDraftBucketName(name);
             clearError();
+            showDraftStatus();
         } catch (err) {
             showError(err.message || 'Name already taken.');
         }
@@ -1285,6 +1294,7 @@ function setupCreateBucketFab() {
         input.addEventListener('input', () => {
             clearTimeout(autoSaveTimer);
             clearError();
+            clearDraftStatus();
             const name = input.value.trim();
             autoSaveTimer = setTimeout(() => autoSaveDraft(name), 400);
         });
