@@ -94,6 +94,15 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>
                     </div>
                 <% } %>
+                <!-- Not Interested overlay -->
+                <div id="bvNotInterestedOverlay" class="hidden absolute inset-0 z-10 bg-woodsmoke-950/85 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6">
+                    <p class="text-white text-sm font-semibold text-center">Why aren't you interested?</p>
+                    <div class="flex flex-col gap-2 w-full max-w-[200px]">
+                        <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="not-my-style">Not my style</button>
+                        <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="already-seen">Already seen it</button>
+                        <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="inappropriate">Inappropriate content</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Source URL row -->
@@ -168,7 +177,7 @@
             <% } %>
 
             <!-- Action buttons row -->
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
                 <button id="bvShareBtn"
                     class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-gray-600 hover:bg-silver-50 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
@@ -176,27 +185,45 @@
                 </button>
                 <button id="bvCopyLinksBtn"
                     class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-gray-600 hover:bg-silver-50 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19 2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2V4a2 2 0 0 1 2-2zm-9 13H8a1 1 0 0 0-.117 1.993L8 17h2a1 1 0 0 0 .117-1.993zm9-11H9v2h6a2 2 0 0 1 2 2v8h2zm-7 7H8a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2"/></g></svg>
                     <span id="bvCopyLinksLabel">Copy all links</span>
                 </button>
+                <% if (!isOwner) { %>
                 <button id="bvReportBtn"
                     class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-red-400 hover:bg-red-50 hover:border-red-200 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2a1 1 0 0 1 .894.553l9 18A1 1 0 0 1 21 22H3a1 1 0 0 1-.894-1.447l9-18A1 1 0 0 1 12 2m0 3.236L4.763 20H19.24zM12 17a1 1 0 1 1 0 2 1 1 0 0 1 0-2m0-7a1 1 0 0 1 1 1v4a1 1 0 1 1-2 0v-4a1 1 0 0 1 1-1"/></g></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m13.299 3.148l8.634 14.954a1.5 1.5 0 0 1-1.299 2.25H3.366a1.5 1.5 0 0 1-1.299-2.25l8.634-14.954c.577-1 2.02-1 2.598 0M12 15a1 1 0 1 0 0 2a1 1 0 0 0 0-2m0-7a1 1 0 0 0-.993.883L11 9v4a1 1 0 0 0 1.993.117L13 13V9a1 1 0 0 0-1-1"/></g></svg>
                     <span id="bvReportLabel">Report</span>
                 </button>
+                <button id="bvNotInterestedBtn"
+                    class="flex items-center gap-1.5 h-9 px-4 text-xs font-medium rounded-md border border-silver-200 text-gray-600 hover:bg-silver-50 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12S6.477 2 12 2m2.829 5.757l-7.072 7.071a1 1 0 1 0 1.415 1.415l7.07-7.071a1 1 0 0 0-1.414-1.415Z"/></g></svg>
+                    <span id="bvNotInterestedLabel">Not interested</span>
+                </button>
+                <% } %>
             </div>
 
         </div><!-- /Column 1 -->
 
         <!-- ── Column 2 · Links ───────────────────────────────────────────── -->
-        <div class="overflow-hidden flex flex-col">
+        <div id="bvLinksCol" class="overflow-hidden flex flex-col">
 
 <div class="flex-1 overflow-y-auto scrollbar-hide">
 <%
-    const freeLinks   = bucket.isPaywalled ? bucket.links.filter(function(l){ return l.isFree; })  : bucket.links;
-    const lockedLinks = bucket.isPaywalled ? bucket.links.filter(function(l){ return !l.isFree; }) : [];
-    const visibleLinks = hasAccess ? bucket.links : freeLinks;
+    const sortedLinks = bucket.links.slice().sort(function(a, b) {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return (b.clickCount || 0) - (a.clickCount || 0);
+    });
+    const freeLinks   = bucket.isPaywalled ? sortedLinks.filter(function(l){ return l.isFree; })  : sortedLinks;
+    const lockedLinks = bucket.isPaywalled ? sortedLinks.filter(function(l){ return !l.isFree; }) : [];
+    const visibleLinks = hasAccess ? sortedLinks : freeLinks;
     const showLocked   = bucket.isPaywalled && !hasAccess && lockedLinks.length > 0;
+
+    // Click-count ranks (only links with clicks > 0, ranked across all sorted links)
+    var _ranked = sortedLinks.filter(function(l){ return (l.clickCount || 0) > 0; })
+        .sort(function(a, b){ return (b.clickCount || 0) - (a.clickCount || 0); });
+    var clickRank = {};
+    _ranked.forEach(function(l, i){ clickRank[l.href] = i + 1; });
 %>
             <% if (bucket.links.length === 0) { %>
             <div class="px-5 py-12 text-center text-woodsmoke-400 text-sm italic">No links in this collection.</div>
@@ -204,22 +231,68 @@
 
                 <!-- Visible links -->
                 <% visibleLinks.forEach(function(link) { %>
-                <a href="<%= link.href %>" target="_blank" rel="noopener noreferrer"
-                   data-bucket-id="<%= bucketId %>"
-                   class="bv-link-row flex items-center gap-3 px-5 py-3 border-b border-silver-50 last:border-b-0 hover:bg-orchid-50 transition-colors group">
-                    <% if (link.image) { %>
-                    <img src="<%= link.image %>" alt="" loading="lazy" class="w-12 h-9 object-cover rounded-md shrink-0 bg-silver-100" onerror="this.style.display='none'">
-                    <% } %>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-woodsmoke-950 group-hover:text-orchid-700 transition-colors truncate">
-                            <%= link.text || 'Untitled Link' %><% if (link.duration) { %><span class="text-woodsmoke-400 font-normal"> · <%= link.duration %></span><% } %>
-                        </p>
-                        <p class="text-xs text-woodsmoke-400 truncate mt-0.5"><%= link.href %></p>
+                <%
+                    var rank = clickRank[link.href] || null;
+                    var isTrophy = rank === 1;
+                    var isStar   = rank === 2 || rank === 3;
+                    var hasBadge = link.isPinned || isTrophy || isStar;
+                %>
+                <div class="bv-link-item border-b border-silver-50 last:border-b-0">
+                    <!-- Title row -->
+                    <div class="flex items-center pt-3 <%= hasBadge ? 'pb-1' : 'pb-3' %> hover:bg-orchid-50 transition-colors group">
+                        <a href="<%= link.href %>" target="_blank" rel="noopener noreferrer"
+                           data-bucket-id="<%= bucketId %>"
+                           class="bv-link-row flex items-center gap-3 px-5 flex-1 min-w-0">
+                            <% if (link.image) { %>
+                            <img src="<%= link.image %>" alt="" loading="lazy" class="w-12 h-9 object-cover rounded-md shrink-0 bg-silver-100" onerror="this.style.display='none'">
+                            <% } %>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-woodsmoke-950 group-hover:text-orchid-700 transition-colors truncate">
+                                    <%= link.text || 'Untitled Link' %><% if (link.duration) { %><span class="text-woodsmoke-400 font-normal"> · <%= link.duration %></span><% } %>
+                                </p>
+                                <p class="text-xs text-woodsmoke-400 truncate mt-0.5"><%= link.href %></p>
+                            </div>
+                        </a>
+                        <!-- 3-dots context menu -->
+                        <div class="relative shrink-0 flex items-center pr-3" data-href="<%= link.href %>">
+                            <button class="bv-link-menu-btn w-7 h-7 flex items-center justify-center rounded-md text-silver-300 hover:text-woodsmoke-600 hover:bg-silver-100 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 17a2 2 0 1 1 0 4a2 2 0 0 1 0-4m0-7a2 2 0 1 1 0 4a2 2 0 0 1 0-4m0-7a2 2 0 1 1 0 4a2 2 0 0 1 0-4"/></g></svg>
+                            </button>
+                            <div class="bv-link-menu hidden absolute right-0 top-full z-20 mt-1 w-44 bg-white rounded-lg shadow-lg border border-silver-100 py-1">
+                                <button class="bv-copy-link w-full px-4 py-2 text-left text-xs text-woodsmoke-700 hover:bg-silver-50 transition-colors">Copy Link</button>
+                                <% if (!isOwner) { %>
+                                <button class="bv-request-update w-full px-4 py-2 text-left text-xs text-woodsmoke-700 hover:bg-silver-50 transition-colors">Request Update</button>
+                                <button class="bv-report-link w-full px-4 py-2 text-left text-xs text-red-400 hover:bg-red-50 transition-colors">Report</button>
+                                <% } %>
+                            </div>
+                        </div>
                     </div>
-                    <svg class="w-4 h-4 shrink-0 text-silver-300 group-hover:text-orchid-400 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
-                </a>
+                    <!-- Badges -->
+                    <% if (hasBadge) { %>
+                    <div class="flex items-center gap-1.5 flex-wrap px-5 pb-3">
+                        <% if (link.isPinned) { %>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orchid-100 text-orchid-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M16.735 2.835a2 2 0 0 0-2.615-.186l-2.913 2.185a9 9 0 0 1-4.127 1.71l-2.177.31c-.73.105-1.265.891-.913 1.662c.331.723 1.385 2.629 4.36 5.72l-4.178 4.178a1 1 0 1 0 1.414 1.414l4.178-4.178c3.091 2.975 4.997 4.029 5.72 4.36c.77.352 1.557-.183 1.661-.913l.311-2.177a9 9 0 0 1 1.71-4.127L21.35 9.88a2 2 0 0 0-.186-2.615z"/></g></svg>
+                            Pinned by the curator
+                        </span>
+                        <% } %>
+                        <% if (isTrophy) { %>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M16.617 3a2 2 0 0 1 1.985 1.752L18.758 6h.668a2.29 2.29 0 0 1 2.246 2.74l-.201 1.005a4.05 4.05 0 0 1-2.972 3.13a7.18 7.18 0 0 1-5.5 4.056V19h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2.069a7.18 7.18 0 0 1-5.498-4.056a4.05 4.05 0 0 1-2.972-3.13l-.201-1.006A2.29 2.29 0 0 1 4.574 6h.668l.156-1.248A2 2 0 0 1 7.383 3zm2.81 5h-.42l.117.93q.075.61.05 1.203q.197-.276.294-.61l.042-.17l.2-1.006a.29.29 0 0 0-.217-.34zM4.991 8h-.418a.29.29 0 0 0-.285.347l.201 1.005c.058.289.174.553.336.78q-.025-.592.05-1.202z"/></g></svg>
+                            Top performing
+                        </span>
+                        <% } %>
+                        <% if (isStar) { %>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-silver-100 text-woodsmoke-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176z"/></g></svg>
+                            Rising star
+                        </span>
+                        <% } %>
+                    </div>
+                    <% } else { %>
+                    <div class="pb-1"></div>
+                    <% } %>
+                </div>
                 <% }); %>
 
                 <!-- Blurred locked links -->
@@ -305,6 +378,72 @@
         });
     });
 
+    // Link context menus
+    document.querySelectorAll('.bv-link-menu-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var menu = btn.nextElementSibling;
+            document.querySelectorAll('.bv-link-menu').forEach(function (m) {
+                if (m !== menu) m.classList.add('hidden');
+            });
+            menu.classList.toggle('hidden');
+        });
+    });
+
+    document.querySelectorAll('.bv-copy-link').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var href = btn.closest('[data-href]').dataset.href;
+            navigator.clipboard.writeText(href).catch(function () {});
+            btn.closest('.bv-link-menu').classList.add('hidden');
+            var orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(function () { btn.textContent = orig; }, 2000);
+        });
+    });
+
+    document.querySelectorAll('.bv-request-update').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            btn.textContent = 'Update requested';
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-default');
+            var menu = btn.closest('.bv-link-menu');
+            setTimeout(function () { menu.classList.add('hidden'); }, 2000);
+        });
+    });
+
+    document.querySelectorAll('.bv-report-link').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            window.location.href = '/v2/report/' + bucketId;
+        });
+    });
+
+    // Close all context menus on outside click
+    document.addEventListener('click', function () {
+        document.querySelectorAll('.bv-link-menu').forEach(function (m) { m.classList.add('hidden'); });
+    });
+
+    // Not interested (bucket-level)
+    const bvNotInterestedBtn = document.getElementById('bvNotInterestedBtn');
+    if (bvNotInterestedBtn) {
+        bvNotInterestedBtn.addEventListener('click', function () {
+            document.getElementById('bvNotInterestedOverlay').classList.remove('hidden');
+            document.getElementById('bvLinksCol').classList.add('blur-sm', 'pointer-events-none', 'select-none');
+        });
+        document.querySelectorAll('.bv-ni-reason').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.getElementById('bvNotInterestedOverlay').classList.add('hidden');
+                const label = document.getElementById('bvNotInterestedLabel');
+                label.textContent = 'Noted';
+                bvNotInterestedBtn.disabled = true;
+                bvNotInterestedBtn.classList.add('opacity-60', 'cursor-default');
+            });
+        });
+    }
+
     // Share
     document.getElementById('bvShareBtn').addEventListener('click', async function () {
         const label = document.getElementById('bvShareLabel');
@@ -333,14 +472,12 @@
     });
 
     // Report
-    document.getElementById('bvReportBtn').addEventListener('click', function () {
-        const btn = document.getElementById('bvReportBtn');
-        const label = document.getElementById('bvReportLabel');
-        btn.disabled = true;
-        btn.classList.add('opacity-60', 'cursor-default');
-        label.textContent = 'Reported';
-        fetch('/api/buckets/' + bucketId + '/report', { method: 'POST', credentials: 'include' }).catch(() => {});
-    });
+    const bvReportBtn = document.getElementById('bvReportBtn');
+    if (bvReportBtn) {
+        bvReportBtn.addEventListener('click', function () {
+            window.location.href = '/v2/report/' + bucketId;
+        });
+    }
 
     // Follow / Unfollow button
     const followBtn = document.getElementById('bvFollowBtn');

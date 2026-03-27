@@ -426,11 +426,12 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         if (thumbnail   !== undefined) update.thumbnail   = await fetchImageAsBase64(thumbnail || null) || '';
         if (links       !== undefined) {
             update.links = await Promise.all(links.map(async l => ({
-                href:    l.url   || '',
-                text:    l.title || '',
-                isFree:  !l.monetized,
+                href:     l.url   || '',
+                text:     l.title || '',
+                isFree:   !l.monetized,
+                isPinned: !!l.pinned,
                 // Fall back to the original URL if base64 conversion fails — never wipe a thumbnail
-                image:   await fetchImageAsBase64(l.thumb || null) ?? l.thumb ?? null,
+                image:    await fetchImageAsBase64(l.thumb || null) ?? l.thumb ?? null,
             })));
         }
 
@@ -1516,6 +1517,40 @@ app.get('/v2/@:username', anonymousAuth, async (req, res) => {
 app.get('/v2/repository/:domain', anonymousAuth, (req, res) => {
     const domain = req.params.domain;
     res.render('v2/repository', { title: domain, page: 'repository', user: req.user ?? null, domain });
+});
+
+// Report page — /v2/report/:bucketId
+app.get('/v2/report/:bucketId', anonymousAuth, async (req, res) => {
+    try {
+        const { bucketId } = req.params;
+        const bucket = await Bucket.findById(bucketId).lean();
+        if (!bucket) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+
+        const vis = bucketVisibility(bucket);
+        const isOwner = !!(req.user && !req.user.isAnonymous && bucket.userId.toString() === req.user._id.toString());
+        if (vis === 'private' && !isOwner) {
+            return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+        }
+
+        const curator = await User.findById(bucket.userId).select('username avatar anonymousId').lean();
+        const curatorName   = curator?.username || 'Anonymous';
+        const curatorAvatar = curator?.avatar   || null;
+        const thumbnailUrl  = bucket.thumbnail  || bucket.links?.find(l => l.image)?.image || null;
+
+        res.render('v2/report', {
+            title: 'Report · ' + bucket.name,
+            page: '',
+            user: req.user ?? null,
+            bucket,
+            bucketId,
+            curatorName,
+            curatorAvatar,
+            thumbnailUrl,
+        });
+    } catch (err) {
+        console.error('Error loading report page:', err);
+        res.status(500).send('Error loading report page');
+    }
 });
 
 // Bucket view page — /v2/:bucketId  (accessible to anyone)
