@@ -6,12 +6,15 @@ import {
     loadViewModeFromStorage,
     getIsRunning,
     getFilteredLinks,
+    getStoredLinks,
     getCreditsBalance,
     topupCredits,
     getConnectStatus,
     startConnectOnboarding,
     requestCashout,
-    addBucket
+    addBucket,
+    removeBucket,
+    updateBucket
 } from './state/store.js';
 
 import {
@@ -1187,31 +1190,103 @@ if (reportForm) {
 // ========== CREATE BUCKET FAB ==========
 
 function setupCreateBucketFab() {
-    const fab       = document.getElementById('createBucketFab');
-    const modal     = document.getElementById('createBucketModal');
-    const closeBtn  = document.getElementById('closeCreateBucketModal');
-    const input     = document.getElementById('createBucketNameInput');
+    const fab        = document.getElementById('createBucketFab');
+    const modal      = document.getElementById('createBucketModal');
+    const closeBtn   = document.getElementById('closeCreateBucketModal');
+    const input      = document.getElementById('createBucketNameInput');
     const confirmBtn = document.getElementById('createBucketConfirmBtn');
-    const errorEl   = document.getElementById('createBucketError');
+    const errorEl    = document.getElementById('createBucketError');
 
     if (!fab || !modal) return;
 
-    function openModal() {
-        if (input) { input.value = ''; input.disabled = false; }
-        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Create Bucket'; }
+    // Track the name of any auto-saved draft so we can delete it on cancel.
+    let draftBucketName = null;
+    let autoSaveTimer   = null;
+
+    function showError(msg) {
+        if (!errorEl) return;
+        errorEl.textContent = msg;
+        errorEl.classList.remove('hidden');
+    }
+    function clearError() {
         if (errorEl) { errorEl.textContent = ''; errorEl.classList.add('hidden'); }
+    }
+
+    function openModal() {
+        draftBucketName = null;
+        clearTimeout(autoSaveTimer);
+        if (input)      { input.value = ''; input.disabled = false; }
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Create Bucket'; }
+        clearError();
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         setTimeout(() => input?.focus(), 50);
     }
 
-    function closeModal() {
+    // keepDraft=true when the user confirmed — don't delete what was just saved.
+    function closeModal(keepDraft = false) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+        clearTimeout(autoSaveTimer);
+
+        if (!keepDraft && draftBucketName) {
+            const nameToDelete = draftBucketName;
+            draftBucketName = null;
+            // Only delete the draft if the user hasn't already saved links to it
+            // via the bookmarklet (those links should be preserved).
+            const hasLinks = getStoredLinks().some(
+                l => l.buckets && l.buckets.includes(nameToDelete)
+            );
+            if (!hasLinks) {
+                removeBucket(nameToDelete).catch(() => {});
+            }
+        } else {
+            draftBucketName = null;
+        }
+    }
+
+    // Auto-save the draft bucket to the server after the user pauses typing.
+    async function autoSaveDraft(name) {
+        if (!name) {
+            // Input cleared — delete any existing draft.
+            if (draftBucketName) {
+                const nameToDelete = draftBucketName;
+                draftBucketName = null;
+                removeBucket(nameToDelete).catch(() => {});
+            }
+            return;
+        }
+
+        if (name.toLowerCase() === 'singletons') return;
+        if (draftBucketName === name) return; // already saved with this exact name
+
+        try {
+            if (draftBucketName && draftBucketName !== name) {
+                // Rename the existing draft to the updated name.
+                await updateBucket(draftBucketName, name);
+            } else {
+                // No draft yet — create one.
+                await addBucket(name);
+            }
+            draftBucketName = name;
+            clearError();
+        } catch (err) {
+            showError(err.message || 'Name already taken.');
+        }
+    }
+
+    // Kick off auto-save 800 ms after the user stops typing.
+    if (input) {
+        input.addEventListener('input', () => {
+            clearTimeout(autoSaveTimer);
+            clearError();
+            const name = input.value.trim();
+            autoSaveTimer = setTimeout(() => autoSaveDraft(name), 800);
+        });
     }
 
     fab.addEventListener('click', openModal);
-    closeBtn?.addEventListener('click', closeModal);
+    closeBtn?.addEventListener('click', () => closeModal());
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
@@ -1222,23 +1297,29 @@ function setupCreateBucketFab() {
         if (!name) { input?.focus(); return; }
 
         if (name.toLowerCase() === 'singletons') {
-            if (errorEl) { errorEl.textContent = '"Singletons" is a reserved name.'; errorEl.classList.remove('hidden'); }
+            showError('"Singletons" is a reserved name.');
             return;
         }
 
         if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Creating…'; }
         if (input) input.disabled = true;
-        if (errorEl) errorEl.classList.add('hidden');
+        clearError();
 
         try {
-            await addBucket(name);
-            showNotification(`Bucket "${name}" created.`, 'success', 3000);
-            closeModal();
-        } catch (err) {
-            if (errorEl) {
-                errorEl.textContent = err.message || 'Failed to create bucket.';
-                errorEl.classList.remove('hidden');
+            if (draftBucketName === name) {
+                // Draft already saved with the correct name — nothing more to do.
+            } else if (draftBucketName && draftBucketName !== name) {
+                // Name changed after auto-save fired — rename the draft.
+                await updateBucket(draftBucketName, name);
+            } else {
+                // User confirmed before the debounce fired — create fresh.
+                await addBucket(name);
             }
+            draftBucketName = null;
+            showNotification(`Bucket "${name}" created.`, 'success', 3000);
+            closeModal(true); // keepDraft=true — don't delete what we just saved
+        } catch (err) {
+            showError(err.message || 'Failed to create bucket.');
             if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Create Bucket'; }
             if (input) { input.disabled = false; input.focus(); }
         }
