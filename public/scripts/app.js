@@ -1281,7 +1281,7 @@ function setupCreateBucketFab() {
             clearTimeout(autoSaveTimer);
             clearError();
             const name = input.value.trim();
-            autoSaveTimer = setTimeout(() => autoSaveDraft(name), 800);
+            autoSaveTimer = setTimeout(() => autoSaveDraft(name), 400);
         });
     }
 

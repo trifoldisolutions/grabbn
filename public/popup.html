@@ -456,6 +456,10 @@
         // buckets (added in the main app after the popup was opened) appear immediately.
         bucketSelect.addEventListener('focus', () => { loadBuckets(); });
 
+        // Also re-fetch when the popup window itself regains focus (e.g. user switches
+        // back after auto-saving a draft bucket in the main app tab).
+        window.addEventListener('focus', () => { loadBuckets(); });
+
         // --- Close button ---
         document.getElementById('closeWidgetBtn').addEventListener('click', () => {
             if (window.parent !== window) {
