@@ -158,6 +158,7 @@
         let currentPage     = 1;
         let pagesCollected  = 1;
         let anonId          = null; // resolved from popup session; avoids third-party cookie issues
+        let anchorHref      = null; // range-selection anchor (href of last normally-clicked row)
 
         // Build fetch options, injecting X-Anonymous-Id when available
         function fetchOpts(extra = {}) {
@@ -275,7 +276,7 @@
 
             const frag = document.createDocumentFragment();
 
-            filtered.forEach(link => {
+            filtered.forEach((link, i) => {
                 const row = document.createElement('label');
                 row.className = `link-row flex items-start gap-2.5 px-3 py-2.5 ${selectedUrls.has(link.href) ? 'selected' : ''}`;
                 row.innerHTML = `
@@ -290,6 +291,22 @@
                 `;
 
                 const cb = row.querySelector('input[type=checkbox]');
+
+                row.addEventListener('click', (e) => {
+                    if ((e.shiftKey || e.ctrlKey || e.metaKey) && anchorHref !== null) {
+                        e.preventDefault();
+                        const anchorIndex = filtered.findIndex(l => l.href === anchorHref);
+                        if (anchorIndex !== -1) {
+                            const from = Math.min(anchorIndex, i);
+                            const to   = Math.max(anchorIndex, i);
+                            for (let j = from; j <= to; j++) selectedUrls.add(filtered[j].href);
+                            renderLinks();
+                        }
+                        return;
+                    }
+                    // Normal click — let the checkbox handle toggle; anchor updates in change handler
+                });
+
                 cb.addEventListener('change', () => {
                     if (cb.checked) {
                         selectedUrls.add(link.href);
@@ -298,6 +315,7 @@
                         selectedUrls.delete(link.href);
                         row.classList.remove('selected');
                     }
+                    anchorHref = link.href;
                     updateFooterCounts();
                 });
 
