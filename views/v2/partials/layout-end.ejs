@@ -43,6 +43,7 @@
                     />
                     <div class="flex items-center justify-between">
                         <p id="newBucketError" class="hidden text-sm text-red-500"></p>
+                        <p id="newBucketDraftStatus" class="hidden text-sm text-woodsmoke-400 flex items-center gap-x-1.5"></p>
                         <p id="newBucketCharCount" class="text-sm text-woodsmoke-400 ml-auto">0 / 120</p>
                     </div>
                 </div>
@@ -392,6 +393,7 @@
     var submitBtn      = document.getElementById('newBucketSubmitBtn');
     var submitLabel    = document.getElementById('newBucketSubmitLabel');
     var spinner        = document.getElementById('newBucketSpinner');
+    var draftStatus    = document.getElementById('newBucketDraftStatus');
     var cancelBtn      = document.getElementById('newBucketCancelBtn');
     var deleteBtn      = document.getElementById('newBucketDeleteBtn');
     var deleteBtnLabel = document.getElementById('newBucketDeleteLabel');
@@ -541,7 +543,80 @@
         submitBtn.disabled = len === 0;
     }
 
-    nameInput.addEventListener('input', updateCharCount);
+    // ── Auto-save draft ───────────────────────────────────────────────────────
+    var _draftName     = null;
+    var _draftId       = null;
+    var _autoSaveTimer = null;
+
+    function showDraftStatus(name) {
+        if (!draftStatus) return;
+        draftStatus.innerHTML =
+            '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" style="flex-shrink:0">' +
+            '<path fill="currentColor" d="M20 6h-8l-2-2H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8c0-1.11-.89-2-2-2m-2.06 8.1l-2.72 2.69a.996.996 0 0 1-1.41 0l-1.42-1.42a1 1 0 1 1 1.41-1.41l.72.71l2.01-2a1 1 0 0 1 1.41 1.43"/>' +
+            '</svg>' +
+            '<span>Saved as draft: ' + name + '</span>';
+        draftStatus.classList.remove('hidden');
+    }
+
+    function clearDraftStatus() {
+        if (!draftStatus) return;
+        draftStatus.innerHTML = '';
+        draftStatus.classList.add('hidden');
+    }
+
+    async function autoSaveDraft(name) {
+        if (!name || state._editBucket) return;
+        try {
+            if (_draftName === null) {
+                var res = await fetch('/api/buckets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ name: name })
+                });
+                if (res.ok) {
+                    var data = await res.json();
+                    _draftName = name;
+                    _draftId   = data._id || null;
+                    showDraftStatus(name);
+                }
+            } else if (_draftName !== name) {
+                var res2 = await fetch('/api/buckets/' + encodeURIComponent(_draftName), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ newName: name })
+                });
+                if (res2.ok) {
+                    var res2data = await res2.json();
+                    _draftName = name;
+                    if (res2data._id) _draftId = res2data._id;
+                    showDraftStatus(name);
+                }
+            }
+        } catch (e) { /* silent — draft is best-effort */ }
+    }
+
+    function clearDraft() {
+        clearTimeout(_autoSaveTimer);
+        _autoSaveTimer = null;
+        _draftName = null;
+        _draftId   = null;
+        clearDraftStatus();
+    }
+
+    nameInput.addEventListener('input', function () {
+        updateCharCount();
+        if (!state._editBucket) {
+            clearTimeout(_autoSaveTimer);
+            var val = nameInput.value.trim();
+            if (val) {
+                _autoSaveTimer = setTimeout(function () { autoSaveDraft(val); }, 400);
+            } else {
+                clearDraftStatus();
+            }
+        }
+    });
 
     function resetUI() {
         nameInput.value = '';
@@ -552,6 +627,7 @@
         linksSearchClear.classList.add('hidden');
         linksSearchEmpty.classList.add('hidden');
         hideError();
+        clearDraftStatus();
         updateCharCount();
         setLoading(false);
 
@@ -637,6 +713,7 @@
 
     // ── Open / Close ─────────────────────────────────────────────────────────
     function openModal() {
+        clearDraft();
         resetState();
         resetUI();
         deleteBtn.disabled = true;               // not available in create mode
@@ -648,6 +725,27 @@
     }
 
     function closeModal() {
+        if (!state._editBucket && _draftName) {
+            var nameToDelete = _draftName;
+            clearDraft();
+            // Delete draft only if no BMT links were saved to it
+            fetch('/api/links', { credentials: 'include' })
+                .then(function (r) { return r.ok ? r.json() : []; })
+                .then(function (links) {
+                    var hasLinks = links.some(function (l) {
+                        return l.buckets && l.buckets.indexOf(nameToDelete) !== -1;
+                    });
+                    if (!hasLinks) {
+                        fetch('/api/buckets/' + encodeURIComponent(nameToDelete), {
+                            method: 'DELETE',
+                            credentials: 'include'
+                        }).catch(function () {});
+                    }
+                })
+                .catch(function () {});
+        } else {
+            clearDraft();
+        }
         modal.classList.add('hidden');
     }
 
@@ -1445,14 +1543,25 @@
                 }).map(function (l) { return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: l.pinned }; })
             };
 
-            var isEdit = !!state._editBucket;
-            var url    = isEdit ? '/api/buckets/' + state._editBucket._id + '/full' : '/api/buckets';
-            var method = isEdit ? 'PATCH' : 'POST';
+            var isEdit  = !!state._editBucket;
+            var isDraft = !isEdit && !!_draftId;
+            var url, method;
+            if (isEdit) {
+                url    = '/api/buckets/' + state._editBucket._id + '/full';
+                method = 'PATCH';
+            } else if (isDraft) {
+                url    = '/api/buckets/' + _draftId + '/full';
+                method = 'PATCH';
+            } else {
+                url    = '/api/buckets';
+                method = 'POST';
+            }
 
             var res  = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             var data = await res.json();
 
             if (res.ok) {
+                clearDraft(); // prevent closeModal() from deleting the just-saved bucket
                 closeModal();
                 // Reload the profile page to reflect changes
                 if (window.location.pathname.startsWith('/v2/@')) {
