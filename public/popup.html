@@ -105,10 +105,17 @@
                 <button id="selectAllBtn" class="text-[11px] text-orchid-600 hover:text-orchid-700 shrink-0 font-medium">All</button>
                 <button id="selectNoneBtn" class="text-[11px] text-gray-400 hover:text-gray-600 shrink-0">None</button>
             </div>
-            <select id="bucketSelect"
-                class="text-xs border border-gray-200 rounded-md px-2 py-1 outline-none focus:border-orchid-400 bg-white shrink-0 max-w-[130px]">
-                <option value="">Choose bucket…</option>
-            </select>
+            <div id="bucketSelectWrapper" class="relative shrink-0">
+                <button id="bucketSelectBtn" type="button"
+                    class="text-xs border border-gray-200 rounded-md px-2 py-1 outline-none focus:border-orchid-400 bg-white flex items-center gap-1 min-w-[90px] max-w-[130px]">
+                    <span id="bucketSelectLabel" class="truncate flex-1 text-left text-gray-400">Choose bucket…</span>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-gray-400">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </button>
+                <div id="bucketSelectDropdown" class="hidden absolute bottom-full mb-1 right-0 bg-white border border-gray-200 rounded-md shadow-md z-50 min-w-full max-h-[150px] overflow-y-auto py-1">
+                </div>
+            </div>
             <button id="saveBtn" disabled
                 class="px-3 py-1.5 rounded-lg bg-orchid-600 text-white text-xs font-semibold hover:bg-orchid-700 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
                 Save
@@ -132,7 +139,10 @@
         const loadPagesBtn  = document.getElementById('loadPagesBtn');
         const searchBar     = document.getElementById('searchBar');
         const searchInput   = document.getElementById('searchInput');
-        const bucketSelect  = document.getElementById('bucketSelect');
+        const bucketSelectBtn      = document.getElementById('bucketSelectBtn');
+        const bucketSelectLabel    = document.getElementById('bucketSelectLabel');
+        const bucketSelectDropdown = document.getElementById('bucketSelectDropdown');
+        let bucketValue = '';
         const saveBtn       = document.getElementById('saveBtn');
         const selectedCount = document.getElementById('selectedCount');
         const saveStatus    = document.getElementById('saveStatus');
@@ -217,8 +227,41 @@
 
         function updateFooterCounts() {
             selectedCount.textContent = `${selectedUrls.size} selected`;
-            saveBtn.disabled = selectedUrls.size === 0 || !bucketSelect.value;
+            saveBtn.disabled = selectedUrls.size === 0 || !bucketValue;
         }
+
+        function setBucketValue(val) {
+            bucketValue = val;
+            bucketSelectLabel.textContent = val || 'Choose bucket…';
+            bucketSelectLabel.className = `truncate flex-1 text-left ${val ? 'text-gray-700' : 'text-gray-400'}`;
+            updateFooterCounts();
+        }
+
+        function renderBucketOptions(names) {
+            bucketSelectDropdown.innerHTML = '';
+            names.forEach(name => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = `w-full text-left text-xs px-2.5 py-1.5 hover:bg-orchid-50 hover:text-orchid-700 truncate ${name === bucketValue ? 'text-orchid-600 font-medium' : 'text-gray-700'}`;
+                item.textContent = name;
+                item.addEventListener('click', () => {
+                    setBucketValue(name);
+                    bucketSelectDropdown.classList.add('hidden');
+                });
+                bucketSelectDropdown.appendChild(item);
+            });
+        }
+
+        bucketSelectBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = bucketSelectDropdown.classList.contains('hidden');
+            bucketSelectDropdown.classList.toggle('hidden', !isHidden);
+            if (isHidden) loadBuckets();
+        });
+
+        document.addEventListener('click', () => {
+            bucketSelectDropdown.classList.add('hidden');
+        });
 
         function renderLinks() {
             const filtered = getFiltered();
@@ -284,21 +327,16 @@
                 const res = await fetch(`${API}/api/buckets`, fetchOpts());
                 if (!res.ok) return;
                 const names = await res.json();
-                const prev = bucketSelect.value;
-                bucketSelect.innerHTML = '<option value="">Choose bucket…</option>';
-                names.forEach(name => {
-                    const opt = document.createElement('option');
-                    opt.value = name;
-                    opt.textContent = name;
-                    bucketSelect.appendChild(opt);
-                });
+                const prev = bucketValue;
                 // Restore previous selection if still valid, else pre-select the first
                 if (prev && names.includes(prev)) {
-                    bucketSelect.value = prev;
+                    setBucketValue(prev);
                 } else if (names.length > 0) {
-                    bucketSelect.value = names[0];
+                    setBucketValue(names[0]);
+                } else {
+                    setBucketValue('');
                 }
-                updateFooterCounts();
+                renderBucketOptions(names);
             } catch {} finally {
                 bucketsLoading = false;
             }
@@ -372,7 +410,7 @@
         // --- Save ---
 
         saveBtn.addEventListener('click', async () => {
-            const bucket = bucketSelect.value;
+            const bucket = bucketValue;
             if (!bucket || selectedUrls.size === 0) return;
 
             const linksToSave = allLinks
@@ -450,11 +488,6 @@
             renderLinks();
         });
 
-        bucketSelect.addEventListener('change', updateFooterCounts);
-
-        // Re-fetch bucket list each time the dropdown is focused so newly created
-        // buckets (added in the main app after the popup was opened) appear immediately.
-        bucketSelect.addEventListener('focus', () => { loadBuckets(); });
 
         // Also re-fetch when the popup window itself regains focus (e.g. user switches
         // back after auto-saving a draft bucket in the main app tab).
