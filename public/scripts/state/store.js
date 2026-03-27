@@ -10,6 +10,7 @@ let isRunning = false;
 let currentFilters = [];
 let currentViewMode = 'card';
 let isInitialized = false;
+let draftBucketName = null; // name of the bucket being drafted (auto-saved but not confirmed)
 
 const HARD_PAGE_LIMIT = 50;
 
@@ -57,6 +58,15 @@ export function getCurrentViewMode() {
 
 export function getIsInitialized() {
     return isInitialized;
+}
+
+export function getDraftBucketName() {
+    return draftBucketName;
+}
+
+export function setDraftBucketName(name) {
+    draftBucketName = name ?? null;
+    notifyListeners();
 }
 
 // ========== API CALLS ==========

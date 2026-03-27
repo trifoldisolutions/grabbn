@@ -10,7 +10,8 @@ import {
     setCurrentViewMode,
     getBucketSourceUrl,
     getBucketThumbnail,
-    getBucketOptions
+    getBucketOptions,
+    getDraftBucketName
 } from '../state/store.js';
 import { updateContainers, showStatus, copyToClipboard, showNotification } from '../utils/helpers.js';
 import { initBucketPopup, openBucketPopup } from './bucketPopup.js';
@@ -127,12 +128,27 @@ async function renderCardView(links) {
         }
     }
 
-    // Update link counts on existing cards
+    // Update link counts and draft badge on existing cards
     for (const [name, card] of existingCards) {
         const bucketLinks = bucketGroups[name] || [];
         const countEl = card.querySelector('.shrink-0');
         if (countEl) {
             countEl.textContent = `${bucketLinks.length} link(s)`;
+        }
+
+        const thumb = card.querySelector('.cardThumbnailContainer');
+        if (thumb) {
+            const existingBadge = thumb.querySelector('.draftBadge');
+            if (name === getDraftBucketName()) {
+                if (!existingBadge) {
+                    const badge = document.createElement('span');
+                    badge.className = 'draftBadge absolute top-2 left-2 z-30 bg-gray-800/75 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full pointer-events-none';
+                    badge.textContent = 'Draft';
+                    thumb.appendChild(badge);
+                }
+            } else {
+                existingBadge?.remove();
+            }
         }
     }
 
@@ -154,6 +170,8 @@ async function renderCardView(links) {
 
         card.className = 'bg-white rounded-md border border-gray-200 flex flex-col h-full break-inside-avoid mb-2';
 
+        const isDraft = bucketName === getDraftBucketName();
+
         card.innerHTML = `
             <div class="p-2 border-b border-gray-100 bg-orchid-50 flex flex-col gap-y-1">
                 <div class="flex items-center justify-between">
@@ -174,6 +192,7 @@ async function renderCardView(links) {
                 `<img src="${thumbnail}" alt="${bucketName} thumbnail" class="w-full h-full object-cover">` :
                 `<span class="text-silver-400 text-sm">No thumbnail</span>`
             }
+                ${isDraft ? `<span class="draftBadge absolute top-2 left-2 z-30 bg-gray-800/75 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full pointer-events-none">Draft</span>` : ''}
                 <div class="cardThumbnailEditBtnContainer absolute top-0 left-0 w-full h-full z-25 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 hidden group-hover:flex items-center justify-center">
                     <button class="cardThumbnailEditBtn h-10 w-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M8.27 9.77H4.807q-.348 0-.578-.23T4 8.962V5.5q0-.213.143-.357T4.5 5t.357.143T5 5.5v2.735q1-1.896 2.851-3.066T12 4q2.514 0 4.488 1.383t2.866 3.563q.085.177.016.365t-.245.274t-.378.016q-.2-.068-.286-.245q-.77-1.929-2.509-3.142T12 5Q9.979 5 8.36 6.044T5.909 8.77H8.27q.214 0 .357.143t.143.357t-.143.357t-.357.143m.039 7.731h7.538q.243 0 .354-.217t-.03-.43l-2.02-2.713q-.13-.161-.323-.161q-.192 0-.323.162l-2.292 2.898l-1.427-1.725q-.131-.143-.314-.143q-.182 0-.313.162l-1.154 1.52q-.162.213-.05.43t.354.217M5.616 21q-.672 0-1.144-.472T4 19.385v-6.27q0-.213.143-.356t.357-.143t.357.143t.143.357v6.269q0 .269.173.442t.443.173h12.769q.269 0 .442-.173t.173-.442v-6.27q0-.213.143-.356t.357-.143t.357.143t.143.357v6.269q0 .67-.472 1.143q-.472.472-1.143.472z"/></svg>

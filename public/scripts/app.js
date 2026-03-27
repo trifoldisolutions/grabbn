@@ -14,7 +14,8 @@ import {
     requestCashout,
     addBucket,
     removeBucket,
-    updateBucket
+    updateBucket,
+    setDraftBucketName
 } from './state/store.js';
 
 import {
@@ -1232,6 +1233,7 @@ function setupCreateBucketFab() {
         if (!keepDraft && draftBucketName) {
             const nameToDelete = draftBucketName;
             draftBucketName = null;
+            setDraftBucketName(null);
             // Only delete the draft if the user hasn't already saved links to it
             // via the bookmarklet (those links should be preserved).
             const hasLinks = getStoredLinks().some(
@@ -1242,6 +1244,7 @@ function setupCreateBucketFab() {
             }
         } else {
             draftBucketName = null;
+            setDraftBucketName(null);
         }
     }
 
@@ -1252,6 +1255,7 @@ function setupCreateBucketFab() {
             if (draftBucketName) {
                 const nameToDelete = draftBucketName;
                 draftBucketName = null;
+                setDraftBucketName(null);
                 removeBucket(nameToDelete).catch(() => {});
             }
             return;
@@ -1269,6 +1273,7 @@ function setupCreateBucketFab() {
                 await addBucket(name);
             }
             draftBucketName = name;
+            setDraftBucketName(name);
             clearError();
         } catch (err) {
             showError(err.message || 'Name already taken.');
@@ -1316,6 +1321,7 @@ function setupCreateBucketFab() {
                 await addBucket(name);
             }
             draftBucketName = null;
+            setDraftBucketName(null);
             showNotification(`Bucket "${name}" created.`, 'success', 3000);
             closeModal(true); // keepDraft=true — don't delete what we just saved
         } catch (err) {
