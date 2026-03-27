@@ -287,6 +287,31 @@ router.post('/unlock/:bucketId', requireAuth, async (req, res) => {
     }
 });
 
+// GET /api/credits/summary — balance + 7-day earned/spent totals
+router.get('/summary', requireAuth, async (req, res) => {
+    try {
+        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const [earned, spent] = await Promise.all([
+            Transaction.aggregate([
+                { $match: { userId: req.user._id, type: 'earn', createdAt: { $gte: since } } },
+                { $group: { _id: null, total: { $sum: '$amount' } } }
+            ]),
+            Transaction.aggregate([
+                { $match: { userId: req.user._id, type: 'unlock', createdAt: { $gte: since } } },
+                { $group: { _id: null, total: { $sum: '$amount' } } }
+            ])
+        ]);
+        res.json({
+            balance: req.user.credits ?? 0,
+            earned7d: earned[0]?.total ?? 0,
+            spent7d:  spent[0]?.total ?? 0,
+        });
+    } catch (error) {
+        console.error('Error fetching credit summary:', error);
+        res.status(500).json({ error: 'Failed to fetch credit summary' });
+    }
+});
+
 // GET /api/credits/history?page=1
 router.get('/history', requireAuth, async (req, res) => {
     try {
