@@ -276,20 +276,32 @@
             }
         }
 
+        let bucketsLoading = false;
         async function loadBuckets() {
+            if (bucketsLoading) return;
+            bucketsLoading = true;
             try {
                 const res = await fetch(`${API}/api/buckets`, fetchOpts());
                 if (!res.ok) return;
                 const names = await res.json();
+                const prev = bucketSelect.value;
+                bucketSelect.innerHTML = '<option value="">Choose bucket…</option>';
                 names.forEach(name => {
                     const opt = document.createElement('option');
                     opt.value = name;
                     opt.textContent = name;
                     bucketSelect.appendChild(opt);
                 });
-                // If user has buckets, pre-select the first
-                if (names.length > 0) bucketSelect.value = names[0];
-            } catch {}
+                // Restore previous selection if still valid, else pre-select the first
+                if (prev && names.includes(prev)) {
+                    bucketSelect.value = prev;
+                } else if (names.length > 0) {
+                    bucketSelect.value = names[0];
+                }
+                updateFooterCounts();
+            } catch {} finally {
+                bucketsLoading = false;
+            }
         }
 
         // --- Load session from URL token ---
@@ -439,6 +451,10 @@
         });
 
         bucketSelect.addEventListener('change', updateFooterCounts);
+
+        // Re-fetch bucket list each time the dropdown is focused so newly created
+        // buckets (added in the main app after the popup was opened) appear immediately.
+        bucketSelect.addEventListener('focus', () => { loadBuckets(); });
 
         // --- Close button ---
         document.getElementById('closeWidgetBtn').addEventListener('click', () => {

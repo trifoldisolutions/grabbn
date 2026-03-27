@@ -1,6 +1,6 @@
 // Bucket links popup manager
 
-import { getStoredLinks, deleteLinkFromBucket, removeBucket, getBucketShareId, addLinks, loadBucketsFromStorage, toggleBucketVisibility, setBucketPaywall, setLinkFree } from '../state/store.js';
+import { getStoredLinks, deleteLinkFromBucket, removeBucket, getBucketShareId, addLinks, loadBucketsFromStorage, loadLinksFromStorage, toggleBucketVisibility, setBucketPaywall, setLinkFree } from '../state/store.js';
 import { copyToClipboard, showNotification } from '../utils/helpers.js';
 
 const seeLinksWrapper = document.getElementById('seeLinksWrapper');
@@ -403,6 +403,10 @@ export async function openBucketPopup(bucketName, options = {}) {
     // Store current bucket name
     currentBucketName = bucketName;
     const isSingletons = bucketName === 'Singletons';
+
+    // Always fetch fresh links from the server so changes made in other tabs
+    // (e.g. via the bookmarklet) are reflected immediately without a page reload.
+    await loadLinksFromStorage();
 
     // Get all links for this bucket
     const allLinks = getStoredLinks();
