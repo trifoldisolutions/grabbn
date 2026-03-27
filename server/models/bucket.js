@@ -8,6 +8,7 @@ const linkSchema = new mongoose.Schema({
   isFree: { type: Boolean, default: false },
   image: { type: String, default: null },
   clickCount: { type: Number, default: 0 },
+  isPinned: { type: Boolean, default: false },
   addedAt: { type: Date, default: Date.now }
 }, { _id: false });
 
@@ -115,13 +116,12 @@ const bucketSchema = new mongoose.Schema(
 bucketSchema.index({ userId: 1, name: 1 }, { unique: true });
 
 // Keep visibility and isPublic in sync on every save
-bucketSchema.pre('save', function (next) {
+bucketSchema.pre('save', function () {
   if (this.visibility) {
     this.isPublic = this.visibility === 'public';
   } else {
     this.visibility = this.isPublic ? 'public' : 'private';
   }
-  next();
 });
 
 export default mongoose.model('Bucket', bucketSchema);

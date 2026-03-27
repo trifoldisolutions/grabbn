@@ -340,10 +340,11 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
         }
 
         const resolvedLinks = Array.isArray(links) ? await Promise.all(links.map(async l => ({
-            href:   l.url   || '',
-            text:   l.title || '',
-            isFree: !l.monetized,
-            image:  await fetchImageAsBase64(l.thumb || null) ?? l.thumb ?? null,
+            href:     l.url   || '',
+            text:     l.title || '',
+            isFree:   !l.monetized,
+            isPinned: !!l.pinned,
+            image:    await fetchImageAsBase64(l.thumb || null) ?? l.thumb ?? null,
         }))) : [];
 
         const resolvedThumb = await fetchImageAsBase64(thumbnail || null) || '';
