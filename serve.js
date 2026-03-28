@@ -1650,6 +1650,41 @@ connectMongo()
         setInterval(() => {
             buildRepositories().catch(err => console.error('[repos] Scheduled build failed:', err));
         }, REPO_REBUILD_INTERVAL);
+
+        // Delete anonymous users based on inactivity:
+        //   - no buckets: expire after 1 hour
+        //   - has buckets: expire after 7 days (matches cookie lifetime)
+        async function cleanupAnonUsers() {
+            const oneHourAgo  = new Date(Date.now() - 60 * 60 * 1000);
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+            // Anon users inactive > 7 days (with or without buckets)
+            const staleUsers = await User.find({ isAnonymous: true, lastActive: { $lt: sevenDaysAgo } }, '_id');
+            // Anon users inactive > 1 hour with no buckets
+            const recentUsers = await User.find({ isAnonymous: true, lastActive: { $lt: oneHourAgo, $gte: sevenDaysAgo } }, '_id');
+
+            const recentUserIds = recentUsers.map(u => u._id);
+            const bucketedIds = recentUserIds.length
+                ? (await Bucket.distinct('userId', { userId: { $in: recentUserIds } })).map(id => id.toString())
+                : [];
+            const toDeleteRecent = recentUserIds.filter(id => !bucketedIds.includes(id.toString()));
+
+            const staleIds = staleUsers.map(u => u._id);
+            const allToDelete = [...staleIds, ...toDeleteRecent];
+
+            if (allToDelete.length === 0) return;
+
+            // Delete buckets for stale users (the recent ones without buckets have none)
+            if (staleIds.length > 0) {
+                await Bucket.deleteMany({ userId: { $in: staleIds } });
+            }
+            const result = await User.deleteMany({ _id: { $in: allToDelete } });
+            console.log(`[cleanup] Deleted ${result.deletedCount} anonymous user(s) (${staleIds.length} stale with buckets, ${toDeleteRecent.length} recent without buckets)`);
+        }
+        cleanupAnonUsers().catch(err => console.error('[cleanup] Initial anon cleanup failed:', err));
+        setInterval(() => {
+            cleanupAnonUsers().catch(err => console.error('[cleanup] Anon cleanup failed:', err));
+        }, 60 * 60 * 1000);
     })
     .catch(err => {
         console.error('Failed to connect to MongoDB:', err.message);
