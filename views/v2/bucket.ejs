@@ -101,7 +101,7 @@
                         <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="not-my-style">Not my style</button>
                         <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="already-seen">Already seen it</button>
                         <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="inappropriate">Inappropriate content</button>
-                        <button id="bvNotInterestedCancelBtn" class="w-full h-9 px-4 text-xs font-medium rounded-md bg-transparent hover:bg-white/10 text-white/60 hover:text-white transition-colors flex items-center justify-center">Cancel</button>
+                        <button id="bvNotInterestedCancelBtn" class="w-full h-9 px-4 text-xs font-medium rounded-md bg-transparent hover:bg-white/10 text-white hover:text-white transition-colors flex items-center justify-center">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -456,10 +456,11 @@
     // Share
     document.getElementById('bvShareBtn').addEventListener('click', async function () {
         const label = document.getElementById('bvShareLabel');
+        const shareText = '<% if (user && !user.isAnonymous) { %>@<%= user.username %> is sharing a bucket with you. Have a look at it!<% } else { %>Have a look at this bucket!<% } %>';
         if (navigator.share) {
-            try { await navigator.share({ title: '<%= bucket.name.replace(/'/g, "\\'") %>', url: shareUrl }); } catch (_) {}
+            try { await navigator.share({ title: '<%= bucket.name.replace(/'/g, "\\'") %>', text: shareText, url: shareUrl }); } catch (_) {}
         } else {
-            await navigator.clipboard.writeText(shareUrl).catch(() => {});
+            await navigator.clipboard.writeText(shareText + '\n' + shareUrl).catch(() => {});
             label.textContent = 'Link copied!';
             setTimeout(function () { label.textContent = 'Share'; }, 2000);
         }

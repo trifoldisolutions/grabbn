@@ -329,7 +329,7 @@ router.get('/bucket/:bucketId', async (req, res) => {
 
         // Generate Open Graph metadata
         const ogTitle = `${bucket.name} - Shared Link Collection`;
-        const ogDescription = `${curatorName} is sharing this bucket with you. Have a look at it!`;
+        const ogDescription = `@${curatorName} is sharing a bucket with you. Have a look at it!`;
 
         // Use thumbnail endpoint if bucket has a thumbnail or any link has an image
         const hasThumbnail = bucket.thumbnail || bucket.links?.some(l => l.image);
