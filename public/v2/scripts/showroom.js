@@ -247,6 +247,10 @@
         const bucketId = btn.dataset.bucketId;
         const url      = `${window.location.origin}/v2/${bucketId}`;
         const origHtml = btn.innerHTML;
+        const u = window.__GRABBN_USER__;
+        const shareText = (u && !u.isAnonymous && u.username)
+            ? `@${u.username} is sharing a bucket with you. Have a look at it!`
+            : 'Have a look at this bucket!';
 
         const showFeedback = () => {
             btn.innerHTML = '<span>Link copied!</span>';
@@ -255,14 +259,14 @@
 
         if (navigator.share) {
             try {
-                await navigator.share({ url });
+                await navigator.share({ text: shareText, url });
                 delete btn.dataset.busy;
             } catch (_) {
-                await navigator.clipboard.writeText(url).catch(() => {});
+                await navigator.clipboard.writeText(shareText + '\n' + url).catch(() => {});
                 showFeedback();
             }
         } else {
-            await navigator.clipboard.writeText(url).catch(() => {});
+            await navigator.clipboard.writeText(shareText + '\n' + url).catch(() => {});
             showFeedback();
         }
         fetch(`/api/buckets/${bucketId}/share`, { method: 'POST', credentials: 'include' }).catch(() => {});

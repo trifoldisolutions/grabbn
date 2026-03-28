@@ -1239,14 +1239,21 @@ export function initBucketPopup() {
                     shareUrl = `${window.location.origin}/v2/${bucketId}`;
                 }
                 
+                // Build share text + URL
+                const u = window.__GRABBN_USER__;
+                const shareText = (u && !u.isAnonymous && u.username)
+                    ? `@${u.username} is sharing a bucket with you. Have a look at it!`
+                    : 'Have a look at this bucket!';
+                const sharePayload = shareText + '\n' + shareUrl;
+
                 // Copy to clipboard
-                const success = await copyToClipboard(shareUrl);
-                
+                const success = await copyToClipboard(sharePayload);
+
                 if (success) {
                     showNotification(`Share link copied! Send it to your friends.`, 'success', 3000);
 
                     // Track share (fire-and-forget)
-                    const bucketIdMatch = shareUrl.match(/\/share\/bucket\/([a-f0-9]{24})/i);
+                    const bucketIdMatch = shareUrl.match(/\/v2\/([a-f0-9]{24})/i);
                     if (bucketIdMatch) {
                         fetch(`/api/buckets/${bucketIdMatch[1]}/share`, {
                             method: 'POST',
