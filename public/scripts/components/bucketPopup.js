@@ -532,7 +532,7 @@ export function openBucketPopupReadOnly(data) {
     resetFormState();
 
     isReadOnlyMode = true;
-    readOnlyShareUrl = `${window.location.origin}/share/bucket/${data._id}`;
+    readOnlyShareUrl = `${window.location.origin}/v2/${data._id}`;
     currentBucketName = data.name;
     currentBucketLinks = data.links || [];
     currentBucketData = data;
@@ -1236,7 +1236,7 @@ export function initBucketPopup() {
                     shareUrl = readOnlyShareUrl;
                 } else {
                     const bucketId = await getBucketShareId(currentBucketName);
-                    shareUrl = `${window.location.origin}/share/bucket/${bucketId}`;
+                    shareUrl = `${window.location.origin}/v2/${bucketId}`;
                 }
                 
                 // Copy to clipboard

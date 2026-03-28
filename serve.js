@@ -1554,6 +1554,23 @@ app.get('/v2/report/:bucketId', anonymousAuth, async (req, res) => {
     }
 });
 
+// Bucket thumbnail — /v2/:bucketId/thumbnail.jpg
+app.get('/v2/:bucketId/thumbnail.jpg', async (req, res) => {
+    try {
+        const bucket = await Bucket.findById(req.params.bucketId).lean();
+        if (!bucket) return res.status(404).send('Not found');
+        const rawImage = bucket.thumbnail || bucket.links?.find(l => l.image)?.image || null;
+        if (!rawImage) return res.status(404).send('Not found');
+        const mimeMatch = rawImage.match(/^data:(image\/\w+);base64,/);
+        const base64Data = mimeMatch ? rawImage.slice(mimeMatch[0].length) : rawImage;
+        res.set('Content-Type', mimeMatch ? mimeMatch[1] : 'image/jpeg');
+        res.set('Cache-Control', 'public, max-age=31536000');
+        res.send(Buffer.from(base64Data, 'base64'));
+    } catch {
+        res.status(500).send('Error');
+    }
+});
+
 // Bucket view page — /v2/:bucketId  (accessible to anyone)
 app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
     try {
@@ -1612,6 +1629,10 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
             }
         }
 
+        const bucketUrl = `${shareBaseUrl}/v2/${bucketId}`;
+        const hasThumbnail = !!(bucket.thumbnail || bucket.links?.some(l => l.image));
+        const ogImage = hasThumbnail ? `${shareBaseUrl}/v2/${bucketId}/thumbnail.jpg` : null;
+
         res.render('v2/bucket', {
             title: bucket.name,
             page: '',
@@ -1628,6 +1649,10 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
             hasAccess,
             hasGrabbed,
             isUnlisted: vis === 'unlisted',
+            ogTitle: `${bucket.name} - Shared Link Collection`,
+            ogDescription: `@${curatorName} is sharing a bucket with you. Have a look at it!`,
+            ogUrl: bucketUrl,
+            ogImage,
         });
     } catch (err) {
         console.error('Error loading bucket view:', err);

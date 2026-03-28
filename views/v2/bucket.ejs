@@ -368,7 +368,7 @@
         const el = document.getElementById('bvTimeAgo');
         if (el) el.textContent = label;
     })();
-    const shareUrl  = '<%= `${shareBaseUrl}/share/bucket/${bucketId}` %>';
+    const shareUrl  = '<%= `${shareBaseUrl}/v2/${bucketId}` %>';
     const linkHrefs = <%- JSON.stringify(visibleLinks.map(function(l){ return l.href; })) %>;
 
     // Track link clicks

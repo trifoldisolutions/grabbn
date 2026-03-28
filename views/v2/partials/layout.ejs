@@ -4,6 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %> — Grabbn</title>
+    <% if (typeof ogTitle !== 'undefined' && ogTitle) { %>
+    <meta name="description" content="<%= ogDescription %>">
+    <meta property="og:type" content="website">
+    <% if (typeof ogUrl !== 'undefined' && ogUrl) { %><meta property="og:url" content="<%= ogUrl %>"><% } %>
+    <meta property="og:title" content="<%= ogTitle %>">
+    <meta property="og:description" content="<%= ogDescription %>">
+    <% if (typeof ogImage !== 'undefined' && ogImage) { %>
+    <meta property="og:image" content="<%= ogImage %>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="twitter:card" content="summary_large_image">
+    <% } else { %>
+    <meta property="twitter:card" content="summary">
+    <% } %>
+    <meta property="twitter:title" content="<%= ogTitle %>">
+    <meta property="twitter:description" content="<%= ogDescription %>">
+    <% if (typeof ogImage !== 'undefined' && ogImage) { %><meta property="twitter:image" content="<%= ogImage %>"><% } %>
+    <% } %>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
