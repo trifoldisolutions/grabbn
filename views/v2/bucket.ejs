@@ -101,6 +101,7 @@
                         <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="not-my-style">Not my style</button>
                         <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="already-seen">Already seen it</button>
                         <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="inappropriate">Inappropriate content</button>
+                        <button id="bvNotInterestedCancelBtn" class="w-full h-9 px-4 text-xs font-medium rounded-md bg-transparent hover:bg-white/10 text-white/60 hover:text-white transition-colors flex items-center justify-center">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -434,15 +435,22 @@
             document.getElementById('bvNotInterestedOverlay').classList.remove('hidden');
             document.getElementById('bvLinksCol').classList.add('blur-sm', 'pointer-events-none', 'select-none');
         });
+        function dismissNiOverlay() {
+            document.getElementById('bvNotInterestedOverlay').classList.add('hidden');
+            document.getElementById('bvLinksCol').classList.remove('blur-sm', 'pointer-events-none', 'select-none');
+        }
+
         document.querySelectorAll('.bv-ni-reason').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                document.getElementById('bvNotInterestedOverlay').classList.add('hidden');
+                dismissNiOverlay();
                 const label = document.getElementById('bvNotInterestedLabel');
                 label.textContent = 'Noted';
                 bvNotInterestedBtn.disabled = true;
                 bvNotInterestedBtn.classList.add('opacity-60', 'cursor-default');
             });
         });
+
+        document.getElementById('bvNotInterestedCancelBtn').addEventListener('click', dismissNiOverlay);
     }
 
     // Share
