@@ -36,20 +36,15 @@
             <!-- Notifications -->
             <div id="notificationBtnContainer" class="relative">
             <button id="notificationBtn" class="h-8 w-8 flex items-center justify-center text-woodsmoke-800 relative">
-                <!-- plain bell (no unread) -->
-                <span id="notifIconPlain">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7v3.528a1 1 0 0 1-.105.447l-1.717 3.433A1.1 1.1 0 0 0 4.162 18h15.676a1.1 1.1 0 0 0 .984-1.592l-1.716-3.433a1 1 0 0 1-.106-.447V9a7 7 0 0 0-7-7m0 19a3 3 0 0 1-2.83-2h5.66A3 3 0 0 1 12 21"/></g></svg>
-                </span>
-                <!-- dot bell (has unread) -->
-                <span id="notifIconDot" class="hidden">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2a7 7 0 0 1 2.263.374a4.5 4.5 0 0 0 4.5 7.447L19 9.743v2.784a1 1 0 0 0 .06.34l.046.107l1.716 3.433a1.1 1.1 0 0 1-.869 1.586l-.115.006H4.162a1.1 1.1 0 0 1-1.03-1.487l.046-.105l1.717-3.433a1 1 0 0 0 .098-.331L5 12.528V9a7 7 0 0 1 7-7m5.5 1a2.5 2.5 0 1 1 0 5a2.5 2.5 0 0 1 0-5M12 21a3 3 0 0 1-2.83-2h5.66A3 3 0 0 1 12 21"/></g></svg>
-                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7v3.528a1 1 0 0 1-.105.447l-1.717 3.433A1.1 1.1 0 0 0 4.162 18h15.676a1.1 1.1 0 0 0 .984-1.592l-1.716-3.433a1 1 0 0 1-.106-.447V9a7 7 0 0 0-7-7m0 19a3 3 0 0 1-2.83-2h5.66A3 3 0 0 1 12 21"/></g></svg>
+                <!-- unread dot — shown/hidden by JS -->
+                <span id="notifDot" class="hidden absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-orchid-600 ring-2 ring-white"></span>
             </button>
 
             <!-- Notification modal -->
-            <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50" style="width:425px">
+            <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50" style="width:450px;max-width:calc(100vw - 1rem)">
                 <div class="px-4 py-3 border-b border-silver-100">
-                    <span class="text-sm font-semibold text-woodsmoke-900">Notifications</span>
+                    <span class="font-semibold text-woodsmoke-900">Notifications</span>
                 </div>
                 <div id="notificationList" class="overflow-y-auto max-h-[440px]">
                     <div class="py-8 text-center text-sm text-gray-400">Loading…</div>
@@ -117,18 +112,32 @@
     // ── Notification modal ────────────────────────────────────────────────────
     <% if (user && !user.isAnonymous) { %>
     (function () {
-        const btn          = document.getElementById('notificationBtn');
-        const modal        = document.getElementById('notificationModal');
-        const list         = document.getElementById('notificationList');
-        const iconPlain    = document.getElementById('notifIconPlain');
-        const iconDot      = document.getElementById('notifIconDot');
+        const btn   = document.getElementById('notificationBtn');
+        const modal = document.getElementById('notificationModal');
+        const list  = document.getElementById('notificationList');
+        const dot   = document.getElementById('notifDot');
 
         let loaded = false;
 
         // ── helpers ──────────────────────────────────────────────────────────
         function setUnread(hasUnread) {
-            iconPlain.classList.toggle('hidden',  hasUnread);
-            iconDot.classList.toggle('hidden',   !hasUnread);
+            dot.classList.toggle('hidden', !hasUnread);
+        }
+
+        function positionModal() {
+            if (window.innerWidth < 768) {
+                // Mobile: 70vw, centered horizontally in viewport
+                const w = window.innerWidth * 0.7;
+                modal.style.width  = w + 'px';
+                modal.style.right  = 'auto';
+                modal.style.left   = '50%';
+                modal.style.transform = 'translateX(-50%)';
+            } else {
+                modal.style.width     = '450px';
+                modal.style.left      = 'auto';
+                modal.style.right     = '0';
+                modal.style.transform = 'none';
+            }
         }
 
         function timeAgo(dateStr) {
@@ -145,14 +154,32 @@
 
         const BUCKET_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="text-gray-300"><g fill="none"><path fill="currentColor" d="M13 3a1 1 0 1 0-2 0v1.07A8.002 8.002 0 0 0 4 12v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1a8.002 8.002 0 0 0-7-7.93zm-1 15a3.001 3.001 0 0 0 2.83-2H9.17A3.001 3.001 0 0 0 12 18"/></g></svg>`;
 
-        function avatarHtml(src) {
-            if (src) return `<img src="${escHtml(src)}" class="w-9 h-9 rounded-full object-cover shrink-0" />`;
-            return `<div class="w-9 h-9 rounded-full bg-orchid-50 shrink-0 flex items-center justify-center">${USER_ICON}</div>`;
+        function avatarHtml(src, username) {
+            const href  = username ? `/v2/@${encodeURIComponent(username)}` : null;
+            const inner = src
+                ? `<img src="${escHtml(src)}" class="w-9 h-9 rounded-full object-cover shrink-0" />`
+                : `<div class="w-9 h-9 rounded-full bg-orchid-50 shrink-0 flex items-center justify-center">${USER_ICON}</div>`;
+            if (!href) return inner;
+            return `<a href="${href}" class="shrink-0" onclick="event.stopPropagation()">${inner}</a>`;
         }
 
-        function bucketThumbHtml(src) {
-            if (src) return `<img src="${escHtml(src)}" class="w-11 h-9 rounded-md object-cover shrink-0" />`;
-            return `<div class="w-11 h-9 rounded-md bg-silver-100 shrink-0 flex items-center justify-center">${BUCKET_ICON}</div>`;
+        function bucketThumbHtml(src, bucketId) {
+            const href  = bucketId ? `/v2/${escHtml(bucketId)}` : null;
+            const inner = src
+                ? `<img src="${escHtml(src)}" class="w-11 h-9 rounded-md object-cover shrink-0" />`
+                : `<div class="w-11 h-9 rounded-md bg-silver-100 shrink-0 flex items-center justify-center">${BUCKET_ICON}</div>`;
+            if (!href) return inner;
+            return `<a href="${href}" class="shrink-0" onclick="event.stopPropagation()">${inner}</a>`;
+        }
+
+        function userLink(username) {
+            if (!username) return '<span class="font-semibold">Someone</span>';
+            return `<a href="/v2/@${encodeURIComponent(username)}" class="font-semibold hover:underline" onclick="event.stopPropagation()">@${escHtml(username)}</a>`;
+        }
+
+        function bucketLink(name, bucketId) {
+            if (!bucketId) return `<span class="font-semibold">${escHtml(name || 'a bucket')}</span>`;
+            return `<a href="/v2/${escHtml(bucketId)}" class="font-semibold hover:underline" onclick="event.stopPropagation()">${escHtml(name || 'a bucket')}</a>`;
         }
 
         function renderItem(n) {
@@ -166,35 +193,37 @@
                     data-anon-id="${anonId}">Follow</button>`;
 
                 return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors">
-                    ${avatarHtml(d.followerAvatar)}
+                    ${avatarHtml(d.followerAvatar, d.followerUsername)}
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm text-woodsmoke-800 leading-snug"><span class="font-semibold">@${escHtml(d.followerUsername || 'Someone')}</span> followed you</p>
+                        <p class="text-sm text-woodsmoke-800 leading-snug">${userLink(d.followerUsername)} followed you</p>
                         <p class="text-xs text-gray-400 mt-0.5">${timeAgo(n.createdAt)}</p>
                     </div>
                     ${btnHtml}
                 </div>`;
             }
 
-            let text = '';
+            let text      = '';
+            let bucketId  = d.bucketId || d.sourceBucketId || null;
+
             switch (n.type) {
                 case 'bucket_grabbed':
-                    text = `<span class="font-semibold">@${escHtml(d.grabberUsername || 'Someone')}</span> grabbed <span class="font-semibold">${escHtml(d.bucketName || 'your bucket')}</span>`;
+                    text = `${userLink(d.grabberUsername)} grabbed ${bucketLink(d.bucketName, bucketId)}`;
                     break;
                 case 'bucket_unlocked':
-                    text = `Someone unlocked <span class="font-semibold">${escHtml(d.bucketName || 'your bucket')}</span> · <span class="text-emerald-600 font-semibold">+${d.creditsEarned ?? 0} cr</span>`;
+                    text = `Someone unlocked ${bucketLink(d.bucketName, bucketId)} · <span class="text-emerald-600 font-semibold">+${d.creditsEarned ?? 0} cr</span>`;
                     break;
                 case 'new_bucket_published':
-                    text = `<span class="font-semibold">@${escHtml(d.curatorUsername || 'Someone')}</span> published <span class="font-semibold">${escHtml(d.bucketName || 'a new bucket')}</span>`;
+                    text = `${userLink(d.curatorUsername)} published ${bucketLink(d.bucketName, bucketId)}`;
                     break;
                 case 'grabbed_bucket_updated':
-                    text = `<span class="font-semibold">@${escHtml(d.curatorUsername || 'Someone')}</span> updated <span class="font-semibold">${escHtml(d.bucketName || 'a bucket you grabbed')}</span>`;
+                    text = `${userLink(d.curatorUsername)} updated ${bucketLink(d.bucketName, bucketId)}`;
                     break;
                 default:
                     text = 'New notification';
             }
 
             return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors">
-                ${bucketThumbHtml(d.bucketThumbnail)}
+                ${bucketThumbHtml(d.bucketThumbnail, bucketId)}
                 <div class="flex-1 min-w-0">
                     <p class="text-sm text-woodsmoke-800 leading-snug">${text}</p>
                     <p class="text-xs text-gray-400 mt-0.5">${timeAgo(n.createdAt)}</p>
@@ -268,6 +297,7 @@
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
             const opening = modal.classList.toggle('hidden') === false;
+            if (opening) positionModal();
             if (opening && !loaded) loadNotifications();
         });
 
