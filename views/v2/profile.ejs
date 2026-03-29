@@ -239,6 +239,7 @@
                 <div id="viewerMeta" class="flex items-center gap-2 text-xs text-gray-400"></div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
+                <span id="viewerDraftBadge" class="hidden text-xs font-semibold px-2.5 py-1 rounded-full bg-sky-50 text-sky-500">Draft</span>
                 <span id="viewerVisibilityBadge" class="hidden text-xs font-semibold px-2.5 py-1 rounded-full"></span>
                 <button id="bucketViewerCloseBtn" class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-woodsmoke-950 hover:bg-silver-100 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="m12 13.414 4.243 4.243a1 1 0 0 0 1.414-1.414L13.414 12l4.243-4.243a1 1 0 0 0-1.414-1.414L12 10.586 7.757 6.343a1 1 0 0 0-1.414 1.414L10.586 12l-4.243 4.243a1 1 0 1 0 1.414 1.414z"/></svg>
@@ -443,6 +444,7 @@
     const listEl       = document.getElementById('viewerLinksList');
     const emptyEl      = document.getElementById('viewerLinksEmpty');
     const roEl         = document.getElementById('viewerReadOnlyBadge');
+    const draftBadge   = document.getElementById('viewerDraftBadge');
     const visBadge     = document.getElementById('viewerVisibilityBadge');
     const grabSection  = document.getElementById('viewerGrabSection');
     const priceTag     = document.getElementById('viewerPriceTag');
@@ -496,7 +498,13 @@
         const created = new Date(bucket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         metaEl.innerHTML = `<span>${created}</span>`;
 
-        if (showVisBadge) {
+        if (bucket.isDraft) {
+            draftBadge.classList.remove('hidden');
+        } else {
+            draftBadge.classList.add('hidden');
+        }
+
+        if (showVisBadge && !bucket.isDraft) {
             visBadge.classList.remove('hidden');
             const vis = bucket.visibility || (bucket.isPublic ? 'public' : 'private');
             visBadge.className = vis === 'public'

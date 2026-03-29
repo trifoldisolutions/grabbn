@@ -107,7 +107,11 @@ const bucketSchema = new mongoose.Schema(
       userId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       username: { type: String, default: '' },
       avatar:   { type: String, default: '' }
-    }]
+    }],
+    isDraft: {
+      type: Boolean,
+      default: false
+    }
   },
   { timestamps: true }
 );

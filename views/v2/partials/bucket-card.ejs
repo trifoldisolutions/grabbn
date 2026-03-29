@@ -62,11 +62,15 @@
         <div class="flex items-center gap-1">
             <p class="font-medium leading-snug text-[1.1rem] truncate flex-1"><%= b.name %></p>
             <% if (isOwn) { %>
-                <% const bvis = b.visibility || (b.isPublic ? 'public' : 'private'); %>
-                <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none
-                    <%= bvis === 'public' ? 'bg-orchid-100 text-orchid-600' : bvis === 'unlisted' ? 'bg-amber-50 text-amber-500' : 'bg-gray-100 text-gray-400' %>">
-                    <%= bvis === 'public' ? 'Public' : bvis === 'unlisted' ? 'Unlisted' : 'Private' %>
-                </span>
+                <% if (b.isDraft) { %>
+                    <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none bg-sky-50 text-sky-500">Draft</span>
+                <% } else { %>
+                    <% const bvis = b.visibility || (b.isPublic ? 'public' : 'private'); %>
+                    <span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none
+                        <%= bvis === 'public' ? 'bg-orchid-100 text-orchid-600' : bvis === 'unlisted' ? 'bg-amber-50 text-amber-500' : 'bg-gray-100 text-gray-400' %>">
+                        <%= bvis === 'public' ? 'Public' : bvis === 'unlisted' ? 'Unlisted' : 'Private' %>
+                    </span>
+                <% } %>
             <% } %>
         </div>
         <% if (b.description) { %>

@@ -573,13 +573,26 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ name: name })
+                    body: JSON.stringify({ name: name, draft: true })
                 });
                 if (res.ok) {
                     var data = await res.json();
                     _draftName = name;
                     _draftId   = data._id || null;
                     showDraftStatus(name);
+                } else if (res.status === 409) {
+                    // A bucket with this name already exists — resume it if it's a draft
+                    var lookup = await fetch('/api/buckets/' + encodeURIComponent(name) + '/id', {
+                        credentials: 'include'
+                    });
+                    if (lookup.ok) {
+                        var lookupData = await lookup.json();
+                        if (lookupData.isDraft) {
+                            _draftName = name;
+                            _draftId   = lookupData.bucketId;
+                            showDraftStatus(name);
+                        }
+                    }
                 }
             } else if (_draftName !== name) {
                 var res2 = await fetch('/api/buckets/' + encodeURIComponent(_draftName), {
@@ -728,27 +741,7 @@
     }
 
     function closeModal() {
-        if (!state._editBucket && _draftName) {
-            var nameToDelete = _draftName;
-            clearDraft();
-            // Delete draft only if no BMT links were saved to it
-            fetch('/api/links', { credentials: 'include' })
-                .then(function (r) { return r.ok ? r.json() : []; })
-                .then(function (links) {
-                    var hasLinks = links.some(function (l) {
-                        return l.buckets && l.buckets.indexOf(nameToDelete) !== -1;
-                    });
-                    if (!hasLinks) {
-                        fetch('/api/buckets/' + encodeURIComponent(nameToDelete), {
-                            method: 'DELETE',
-                            credentials: 'include'
-                        }).catch(function () {});
-                    }
-                })
-                .catch(function () {});
-        } else {
-            clearDraft();
-        }
+        clearDraft();
         modal.classList.add('hidden');
     }
 

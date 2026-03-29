@@ -318,7 +318,7 @@ app.get('/api/buckets', requireAuth, requireVerification, async (req, res) => {
 // Create a new bucket
 app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, draft } = req.body;
 
         if (!name || typeof name !== 'string') {
             return res.status(400).json({ error: 'Bucket name is required' });
@@ -366,6 +366,7 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             sourceUrl:   sourceUrl || '',
             thumbnail:   effectiveThumb,
             links:       resolvedLinks,
+            isDraft:     !!draft,
         });
 
         res.status(201).json({ _id: bucket._id, name: bucket.name });
@@ -436,6 +437,9 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
             })));
         }
 
+        // Finalising a bucket always clears the draft flag
+        update.isDraft = false;
+
         // Auto-set thumbnail from first link image if still empty after update
         if (!update.thumbnail && update.links) {
             const firstWithImage = update.links.find(l => l.image);
@@ -470,7 +474,7 @@ app.get('/api/buckets/:name/id', requireAuth, requireVerification, async (req, r
             return res.status(404).json({ error: 'Bucket not found' });
         }
 
-        res.json({ bucketId: bucket._id.toString(), name: bucket.name });
+        res.json({ bucketId: bucket._id.toString(), name: bucket.name, isDraft: !!bucket.isDraft });
     } catch (error) {
         console.error('Error fetching bucket ID:', error);
         res.status(500).json({ error: 'Failed to fetch bucket ID' });
@@ -1484,7 +1488,7 @@ app.get('/v2/@:username', anonymousAuth, async (req, res) => {
 
     const [allBuckets, subscriberCount, followingCount] = await Promise.all([
         Bucket.find(bucketFilter)
-            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceBucketId sourceUrl originalCuratorName hashtags mature createdAt updatedAt')
+            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceBucketId sourceUrl originalCuratorName hashtags mature isDraft createdAt updatedAt')
             .sort({ order: 1, createdAt: -1 })
             .lean(),
         Subscription.countDocuments({ followeeId: profileUser._id }),
