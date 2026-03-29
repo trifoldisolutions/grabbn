@@ -410,7 +410,7 @@ app.put('/api/buckets/:oldName', requireAuth, requireVerification, async (req, r
 // Full bucket update (used by profile edit modal)
 app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, isDraft } = req.body;
 
         const update = {};
         if (name        !== undefined) update.name        = name;
@@ -437,8 +437,7 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
             })));
         }
 
-        // Finalising a bucket always clears the draft flag
-        update.isDraft = false;
+        if (isDraft !== undefined) update.isDraft = !!isDraft;
 
         // Auto-set thumbnail from first link image if still empty after update
         if (!update.thumbnail && update.links) {
