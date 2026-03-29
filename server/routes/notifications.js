@@ -107,4 +107,16 @@ router.post('/read', async (req, res) => {
     }
 });
 
+// ── POST /api/notifications/clear ────────────────────────────────────────────
+// Permanently deletes all notifications for the current user.
+router.post('/clear', async (req, res) => {
+    try {
+        const result = await Notification.deleteMany({ userId: req.user._id });
+        res.json({ deleted: result.deletedCount });
+    } catch (err) {
+        console.error('[notifications] POST /clear:', err);
+        res.status(500).json({ error: 'Failed to clear notifications' });
+    }
+});
+
 export default router;

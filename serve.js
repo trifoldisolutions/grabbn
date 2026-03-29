@@ -1484,17 +1484,20 @@ app.post('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, 
 
         await Subscription.create({ followerId: req.user._id, followeeId: curator._id });
 
-        Notification.create({
-            userId: curator._id,
-            type: 'new_follower',
-            data: {
-                followerId:        req.user._id,
-                followerAnonymousId: req.user.anonymousId || '',
-                followerUsername:  req.user.username || '',
-                followerAvatar:    req.user.avatar   || '',
-            },
-        }).then(n => pushNotification(curator._id, { type: 'new_notification', notification: n }))
-          .catch(err => console.error('[notif] new_follower:', err));
+        // Delete any previous follow notification from this same person before inserting a fresh one
+        Notification.findOneAndDelete({ userId: curator._id, type: 'new_follower', 'data.followerId': req.user._id })
+            .then(() => Notification.create({
+                userId: curator._id,
+                type: 'new_follower',
+                data: {
+                    followerId:          req.user._id,
+                    followerAnonymousId: req.user.anonymousId || '',
+                    followerUsername:    req.user.username || '',
+                    followerAvatar:      req.user.avatar   || '',
+                },
+            }))
+            .then(n => pushNotification(curator._id, { type: 'new_notification', notification: n }))
+            .catch(err => console.error('[notif] new_follower:', err));
 
         res.status(201).json({ success: true });
     } catch (err) {

@@ -43,8 +43,9 @@
 
             <!-- Notification modal -->
             <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50" style="width:450px;max-width:calc(100vw - 1rem)">
-                <div class="px-4 py-3 border-b border-silver-100">
-                    <span class="font-semibold text-woodsmoke-900">Notifications</span>
+                <div class="px-4 py-3 border-b border-silver-100 flex items-center justify-between">
+                    <span class="text-sm font-semibold text-woodsmoke-900">Notifications</span>
+                    <button id="notifClearBtn" class="text-xs text-gray-400 hover:text-red-400 transition-colors">Clear all</button>
                 </div>
                 <div id="notificationList" class="overflow-y-auto max-h-[440px]">
                     <div class="py-8 text-center text-sm text-gray-400">Loading…</div>
@@ -112,10 +113,11 @@
     // ── Notification modal ────────────────────────────────────────────────────
     <% if (user && !user.isAnonymous) { %>
     (function () {
-        const btn   = document.getElementById('notificationBtn');
-        const modal = document.getElementById('notificationModal');
-        const list  = document.getElementById('notificationList');
-        const dot   = document.getElementById('notifDot');
+        const btn       = document.getElementById('notificationBtn');
+        const modal     = document.getElementById('notificationModal');
+        const list      = document.getElementById('notificationList');
+        const dot       = document.getElementById('notifDot');
+        const clearBtn  = document.getElementById('notifClearBtn');
 
         let loaded = false;
 
@@ -291,6 +293,16 @@
                 btn.textContent = 'Follow';
                 btn.disabled = false;
             }
+        });
+
+        // ── Clear all ─────────────────────────────────────────────────────────
+        clearBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            fetch('/api/notifications/clear', { method: 'POST' })
+                .catch(() => {});
+            list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">No notifications yet</p>';
+            setUnread(false);
+            loaded = true; // prevent re-fetch from showing stale data
         });
 
         // ── open / close ──────────────────────────────────────────────────────
