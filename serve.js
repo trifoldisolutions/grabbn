@@ -1488,9 +1488,10 @@ app.post('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, 
             userId: curator._id,
             type: 'new_follower',
             data: {
-                followerId:       req.user._id,
-                followerUsername: req.user.username || '',
-                followerAvatar:   req.user.avatar   || '',
+                followerId:        req.user._id,
+                followerAnonymousId: req.user.anonymousId || '',
+                followerUsername:  req.user.username || '',
+                followerAvatar:    req.user.avatar   || '',
             },
         }).then(n => pushNotification(curator._id, { type: 'new_notification', notification: n }))
           .catch(err => console.error('[notif] new_follower:', err));

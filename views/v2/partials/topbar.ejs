@@ -47,12 +47,12 @@
             </button>
 
             <!-- Notification modal -->
-            <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50 w-80">
+            <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50 w-[340px]">
                 <div class="px-4 py-3 border-b border-silver-100">
                     <span class="text-sm font-semibold text-woodsmoke-900">Notifications</span>
                 </div>
-                <div id="notificationList" class="overflow-y-auto max-h-[420px]">
-                    <div id="notifLoading" class="py-8 text-center text-sm text-gray-400">Loading…</div>
+                <div id="notificationList" class="overflow-y-auto max-h-[440px]">
+                    <div class="py-8 text-center text-sm text-gray-400">Loading…</div>
                 </div>
             </div>
             </div>
@@ -141,40 +141,63 @@
             return Math.floor(h / 24) + 'd ago';
         }
 
-        function renderItem(n) {
-            const d = n.data || {};
-            let text = '';
+        function avatarHtml(src, name, size = 'w-9 h-9') {
+            if (src) return `<img src="${escHtml(src)}" class="${size} rounded-full object-cover shrink-0" />`;
+            const initial = (name || '?')[0].toUpperCase();
+            return `<div class="${size} rounded-full bg-orchid-100 text-orchid-600 text-xs font-bold flex items-center justify-center shrink-0">${initial}</div>`;
+        }
 
+        function bucketThumbHtml() {
+            return `<div class="w-11 h-9 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-gray-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M13 3a1 1 0 1 0-2 0v1.07A8.002 8.002 0 0 0 4 12v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1a8.002 8.002 0 0 0-7-7.93zm-1 15a3.001 3.001 0 0 0 2.83-2H9.17A3.001 3.001 0 0 0 12 18"/></g></svg>
+            </div>`;
+        }
+
+        function renderItem(n) {
+            const d    = n.data || {};
+            const base = n.read ? '' : 'bg-orchid-50/40';
+
+            if (n.type === 'new_follower') {
+                const anonId  = escHtml(d.followerAnonymousId || '');
+                const btnHtml = `<button
+                    class="notif-follow-btn text-xs font-semibold px-3 py-1.5 rounded-md border border-silver-200 text-woodsmoke-700 hover:bg-silver-50 transition-colors shrink-0 whitespace-nowrap"
+                    data-anon-id="${anonId}">Follow</button>`;
+
+                return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-woodsmoke-800 leading-snug"><span class="font-semibold">@${escHtml(d.followerUsername || 'Someone')}</span> followed you</p>
+                        <p class="text-xs text-gray-400 mt-0.5">${timeAgo(n.createdAt)}</p>
+                    </div>
+                    ${btnHtml}
+                    ${avatarHtml(d.followerAvatar, d.followerUsername)}
+                </div>`;
+            }
+
+            let text = '';
             switch (n.type) {
-                case 'new_follower':
-                    text = `<span class="font-semibold">${escHtml(d.followerUsername || 'Someone')}</span> followed you`;
-                    break;
                 case 'bucket_grabbed':
-                    text = `<span class="font-semibold">${escHtml(d.grabberUsername || 'Someone')}</span> grabbed <span class="font-semibold">${escHtml(d.bucketName || 'your bucket')}</span>`;
+                    text = `<span class="font-semibold">@${escHtml(d.grabberUsername || 'Someone')}</span> grabbed <span class="font-semibold">${escHtml(d.bucketName || 'your bucket')}</span>`;
                     break;
                 case 'bucket_unlocked':
                     text = `Someone unlocked <span class="font-semibold">${escHtml(d.bucketName || 'your bucket')}</span> · <span class="text-emerald-600 font-semibold">+${d.creditsEarned ?? 0} cr</span>`;
                     break;
                 case 'new_bucket_published':
-                    text = `<span class="font-semibold">${escHtml(d.curatorUsername || 'Someone')}</span> published <span class="font-semibold">${escHtml(d.bucketName || 'a new bucket')}</span>`;
+                    text = `<span class="font-semibold">@${escHtml(d.curatorUsername || 'Someone')}</span> published <span class="font-semibold">${escHtml(d.bucketName || 'a new bucket')}</span>`;
                     break;
                 case 'grabbed_bucket_updated':
-                    text = `<span class="font-semibold">${escHtml(d.curatorUsername || 'Someone')}</span> updated <span class="font-semibold">${escHtml(d.bucketName || 'a bucket you grabbed')}</span>`;
+                    text = `<span class="font-semibold">@${escHtml(d.curatorUsername || 'Someone')}</span> updated <span class="font-semibold">${escHtml(d.bucketName || 'a bucket you grabbed')}</span>`;
                     break;
                 default:
                     text = 'New notification';
             }
 
-            const unreadDot = n.read ? '' : '<span class="w-1.5 h-1.5 rounded-full bg-orchid-500 shrink-0 mt-1"></span>';
-
-            return `
-                <div class="flex items-start gap-3 px-4 py-3 ${n.read ? '' : 'bg-orchid-50/40'} hover:bg-silver-50 transition-colors">
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm text-woodsmoke-800 leading-snug">${text}</p>
-                        <p class="text-xs text-gray-400 mt-0.5">${timeAgo(n.createdAt)}</p>
-                    </div>
-                    ${unreadDot}
-                </div>`;
+            return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-woodsmoke-800 leading-snug">${text}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">${timeAgo(n.createdAt)}</p>
+                </div>
+                ${bucketThumbHtml()}
+            </div>`;
         }
 
         function escHtml(str) {
@@ -210,6 +233,34 @@
             ws.addEventListener('close',  () => setTimeout(connectWS, 5000));
             ws.addEventListener('error',  () => ws.close());
         })();
+
+        // ── Follow button ─────────────────────────────────────────────────────
+        list.addEventListener('click', async function (e) {
+            const btn = e.target.closest('.notif-follow-btn');
+            if (!btn) return;
+            const anonId = btn.dataset.anonId;
+            if (!anonId) return;
+
+            btn.disabled = true;
+            btn.textContent = '…';
+
+            try {
+                const res = await fetch(`/api/users/${anonId}/subscribe`, { method: 'POST' });
+                if (res.ok || res.status === 409) {
+                    // 409 = already following — both cases show DM
+                    btn.textContent = 'DM';
+                    btn.classList.remove('border-silver-200', 'text-woodsmoke-700');
+                    btn.classList.add('border-orchid-200', 'text-orchid-600');
+                    btn.disabled = false;
+                } else {
+                    btn.textContent = 'Follow';
+                    btn.disabled = false;
+                }
+            } catch (_) {
+                btn.textContent = 'Follow';
+                btn.disabled = false;
+            }
+        });
 
         // ── open / close ──────────────────────────────────────────────────────
         btn.addEventListener('click', function (e) {
