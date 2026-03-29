@@ -38,12 +38,12 @@
                     <a href="/?openAuth=true" class="shrink-0 h-8 px-3 text-xs font-semibold rounded-md bg-orchid-700 hover:bg-orchid-800 text-white transition-colors flex items-center">Follow</a>
                     <% } else if (isFollowing) { %>
                     <button id="bvFollowBtn" data-following="true" data-anon-id="<%= curatorAnonymousId %>"
-                        class="shrink-0 h-8 px-3 text-xs font-semibold rounded-md border border-silver-200 text-woodsmoke-500 hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-colors">
+                        class="shrink-0 h-8 px-3 text-xs font-semibold rounded-md border border-silver-200 text-woodsmoke-500 hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center">
                         Following
                     </button>
                     <% } else { %>
                     <button id="bvFollowBtn" data-following="false" data-anon-id="<%= curatorAnonymousId %>"
-                        class="shrink-0 h-8 px-3 text-xs font-semibold rounded-md bg-orchid-700 hover:bg-orchid-800 text-white transition-colors">
+                        class="shrink-0 h-8 px-3 text-xs font-semibold rounded-md bg-orchid-700 hover:bg-orchid-800 text-white transition-colors flex items-center justify-center">
                         Follow
                     </button>
                     <% } %>
@@ -208,7 +208,7 @@
         <!-- ── Column 2 · Links ───────────────────────────────────────────── -->
         <div id="bvLinksCol" class="overflow-hidden flex flex-col">
 
-<div class="flex-1 overflow-y-auto scrollbar-hide">
+<div class="flex-1 overflow-y-auto scrollbar-hide pb-16 md:pb-0">
 <%
     const sortedLinks = bucket.links.slice().sort(function(a, b) {
         if (a.isPinned && !b.isPinned) return -1;
@@ -456,7 +456,7 @@
     // Share
     document.getElementById('bvShareBtn').addEventListener('click', async function () {
         const label = document.getElementById('bvShareLabel');
-        const shareText = '<% if (user && !user.isAnonymous) { %>@<%= user.username %> is sharing a bucket with you. Have a look at it!<% } else { %>Have a look at this bucket!<% } %>';
+        const shareText = '<% if (user && !user.isAnonymous) { %>@<%= user.username %> is sharing a link collection with you from Grabbn. Have a look at it!<% } else { %>Check out this link collection on Grabbn!<% } %>';
         if (navigator.share) {
             try { await navigator.share({ title: '<%= bucket.name.replace(/'/g, "\\'") %>', text: shareText, url: shareUrl }); } catch (_) {}
         } else {
@@ -505,11 +505,11 @@
                     if (following) {
                         followBtn.dataset.following = 'false';
                         followBtn.textContent = 'Follow';
-                        followBtn.className = 'shrink-0 h-8 px-3 text-xs font-semibold rounded-md bg-orchid-700 hover:bg-orchid-800 text-white transition-colors';
+                        followBtn.className = 'shrink-0 h-8 px-3 text-xs font-semibold rounded-md bg-orchid-700 hover:bg-orchid-800 text-white transition-colors flex items-center justify-center';
                     } else {
                         followBtn.dataset.following = 'true';
                         followBtn.textContent = 'Following';
-                        followBtn.className = 'shrink-0 h-8 px-3 text-xs font-semibold rounded-md border border-silver-200 text-woodsmoke-500 hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-colors';
+                        followBtn.className = 'shrink-0 h-8 px-3 text-xs font-semibold rounded-md border border-silver-200 text-woodsmoke-500 hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center';
                     }
                 } else {
                     const data = await res.json();

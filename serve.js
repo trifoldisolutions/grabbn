@@ -1650,7 +1650,7 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
             hasGrabbed,
             isUnlisted: vis === 'unlisted',
             ogTitle: `${bucket.name} - Shared Link Collection`,
-            ogDescription: `@${curatorName} is sharing a bucket with you. Have a look at it!`,
+            ogDescription: '',
             ogUrl: bucketUrl,
             ogImage,
         });

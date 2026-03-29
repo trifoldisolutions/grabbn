@@ -722,7 +722,7 @@
         if (modalViewerLink) modalViewerLink.classList.add('hidden');
         modal.classList.remove('hidden');
         resetMobileTabs();
-        newLinkUrl.focus();
+        if (!isMobileLayout()) newLinkUrl.focus();
     }
 
     function closeModal() {

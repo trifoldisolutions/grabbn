@@ -1242,8 +1242,8 @@ export function initBucketPopup() {
                 // Build share text + URL
                 const u = window.__GRABBN_USER__;
                 const shareText = (u && !u.isAnonymous && u.username)
-                    ? `@${u.username} is sharing a bucket with you. Have a look at it!`
-                    : 'Have a look at this bucket!';
+                    ? `@${u.username} is sharing a link collection with you from Grabbn. Have a look at it!`
+                    : 'Check out this link collection on Grabbn!';
                 const sharePayload = shareText + '\n' + shareUrl;
 
                 // Copy to clipboard
