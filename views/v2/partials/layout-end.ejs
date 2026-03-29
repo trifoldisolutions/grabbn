@@ -780,8 +780,9 @@
     // Exposed globally so the profile page (and any other page) can open a bucket for editing
     window.openBucketModal = function (bucket) {
         // Populate state from existing bucket data
-        state._editBucket       = { _id: bucket._id, name: bucket.name };
+        state._editBucket        = { _id: bucket._id, name: bucket.name };
         state._editBucketIsDraft = !!bucket.isDraft;
+        if (bucket.isDraft) showDraftStatus(bucket.name);
         state.links        = (bucket.links || []).map(function (l) {
             return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: false, clickCount: l.clickCount || 0, pinned: l.isPinned || false };
         });
