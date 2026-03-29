@@ -782,7 +782,6 @@
         // Populate state from existing bucket data
         state._editBucket        = { _id: bucket._id, name: bucket.name };
         state._editBucketIsDraft = !!bucket.isDraft;
-        if (bucket.isDraft) showDraftStatus(bucket.name);
         state.links        = (bucket.links || []).map(function (l) {
             return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: false, clickCount: l.clickCount || 0, pinned: l.isPinned || false };
         });
@@ -844,6 +843,7 @@
 
         // Draft buckets show 'Save' (first publish); real buckets show 'Update'
         submitLabel.textContent = bucket.isDraft ? 'Save' : 'Update';
+        if (bucket.isDraft) showDraftStatus(bucket.name);
 
         // Enable delete button (edit mode) and reset its confirm state
         deleteBtn.disabled = false;
