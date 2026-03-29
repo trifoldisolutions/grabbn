@@ -8,6 +8,7 @@ import Transaction from '../models/transaction.js';
 import { requireAuth } from '../middleware/anonymousAuth.js';
 import { TOPUP_PACKAGES, PLATFORM_CUT_RATIO, FRAUD_RULES } from '../config.js';
 import Notification from '../models/notification.js';
+import { pushNotification } from '../ws.js';
 
 // Returns the fraud tier for a given user based on account age
 function getAccountTier(user) {
@@ -286,11 +287,12 @@ router.post('/unlock/:bucketId', requireAuth, async (req, res) => {
             userId: bucket.userId,
             type: 'bucket_unlocked',
             data: {
-                bucketId:     bucket._id,
-                bucketName:   bucket.name,
+                bucketId:      bucket._id,
+                bucketName:    bucket.name,
                 creditsEarned: curatorEarns,
             },
-        }).catch(err => console.error('[notif] bucket_unlocked:', err));
+        }).then(n => pushNotification(bucket.userId, { type: 'new_notification', notification: n }))
+          .catch(err => console.error('[notif] bucket_unlocked:', err));
 
         res.json({ success: true });
     } catch (error) {

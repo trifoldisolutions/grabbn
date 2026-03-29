@@ -1,3 +1,5 @@
+import http from 'http';
+import { WebSocketServer } from 'ws';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -20,6 +22,7 @@ import creditsRouter, { handleWebhook } from './server/routes/credits.js';
 import connectRouter, { handleConnectWebhook } from './server/routes/stripeConnect.js';
 import notificationsRouter from './server/routes/notifications.js';
 import Notification from './server/models/notification.js';
+import { wsClients, pushNotification } from './server/ws.js';
 
 dotenv.config();
 
@@ -55,11 +58,34 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const app    = express();
+const server = http.createServer(app);
+const PORT   = process.env.PORT || 3000;
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+
+// ---------------------------------------------------------------------------
+// WebSocket — one persistent connection per logged-in user.
+// Client registry lives in server/ws.js to avoid circular imports.
+// ---------------------------------------------------------------------------
+const wss = new WebSocketServer({ server, path: '/ws' });
+
+wss.on('connection', (ws, req) => {
+    const params = new URL(req.url, 'http://x').searchParams;
+    const userId = params.get('userId');
+    if (!userId) { ws.close(); return; }
+
+    if (!wsClients.has(userId)) wsClients.set(userId, new Set());
+    wsClients.get(userId).add(ws);
+
+    ws.on('close', () => {
+        const set = wsClients.get(userId);
+        if (set) { set.delete(ws); if (!set.size) wsClients.delete(userId); }
+    });
+
+    ws.on('error', () => ws.terminate());
+});
 
 // ---------------------------------------------------------------------------
 // Popup-session — registered BEFORE the global CORS middleware so we can
@@ -337,7 +363,7 @@ async function fanOutGrabbedBucketUpdated(bucket, curatorUsername) {
         const toNotify    = grabberIds.filter(id => !notifiedSet.has(String(id)));
         if (!toNotify.length) return;
 
-        await Notification.insertMany(
+        const docs = await Notification.insertMany(
             toNotify.map(userId => ({
                 userId,
                 type: 'grabbed_bucket_updated',
@@ -350,6 +376,7 @@ async function fanOutGrabbedBucketUpdated(bucket, curatorUsername) {
             })),
             { ordered: false }
         );
+        for (const n of docs) pushNotification(n.userId, { type: 'new_notification', notification: n });
     } catch (err) {
         console.error('[notif] grabbed_bucket_updated fan-out:', err);
     }
@@ -360,7 +387,7 @@ async function fanOutNewBucketPublished(curatorId, curatorUsername, bucketId, bu
     try {
         const followers = await Subscription.find({ followeeId: curatorId }).select('followerId').lean();
         if (!followers.length) return;
-        await Notification.insertMany(
+        const docs = await Notification.insertMany(
             followers.map(f => ({
                 userId: f.followerId,
                 type:   'new_bucket_published',
@@ -368,6 +395,7 @@ async function fanOutNewBucketPublished(curatorId, curatorUsername, bucketId, bu
             })),
             { ordered: false }
         );
+        for (const n of docs) pushNotification(n.userId, { type: 'new_notification', notification: n });
     } catch (err) {
         console.error('[notif] new_bucket_published fan-out:', err);
     }
@@ -1078,7 +1106,8 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
                     bucketId:        source._id,
                     bucketName:      source.name,
                 },
-            }).catch(err => console.error('[notif] bucket_grabbed:', err));
+            }).then(n => pushNotification(curatorId, { type: 'new_notification', notification: n }))
+              .catch(err => console.error('[notif] bucket_grabbed:', err));
         }
 
         res.status(201).json({ bucket: cloned });
@@ -1463,7 +1492,8 @@ app.post('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, 
                 followerUsername: req.user.username || '',
                 followerAvatar:   req.user.avatar   || '',
             },
-        }).catch(err => console.error('[notif] new_follower:', err));
+        }).then(n => pushNotification(curator._id, { type: 'new_notification', notification: n }))
+          .catch(err => console.error('[notif] new_follower:', err));
 
         res.status(201).json({ success: true });
     } catch (err) {
@@ -1818,7 +1848,7 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
 // Start the server
 connectMongo()
     .then(() => {
-        app.listen(PORT, () => {
+        server.listen(PORT, () => {
             console.log(`Server running at http://localhost:${PORT}`);
             console.log(`Scraping endpoint: http://localhost:${PORT}/scrape?url=YOUR_URL`);
             console.log(`Frontend available at http://localhost:${PORT}`);

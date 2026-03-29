@@ -123,8 +123,7 @@
         const iconPlain    = document.getElementById('notifIconPlain');
         const iconDot      = document.getElementById('notifIconDot');
 
-        let loaded   = false;
-        let lastCount = 0;
+        let loaded = false;
 
         // ── helpers ──────────────────────────────────────────────────────────
         function setUnread(hasUnread) {
@@ -186,22 +185,31 @@
                 .replace(/"/g, '&quot;');
         }
 
-        // ── poll unread count ─────────────────────────────────────────────────
-        function pollUnread() {
-            fetch('/api/notifications/unread-count')
-                .then(r => r.ok ? r.json() : null)
-                .then(data => {
-                    if (!data) return;
-                    setUnread(data.count > 0);
-                    // New notifications arrived since last poll — invalidate cache
-                    if (data.count > lastCount) loaded = false;
-                    lastCount = data.count;
-                })
-                .catch(() => {});
-        }
+        // ── initial unread count (first paint) ───────────────────────────────
+        fetch('/api/notifications/unread-count')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data) setUnread(data.count > 0); })
+            .catch(() => {});
 
-        pollUnread();
-        setInterval(pollUnread, 30000);
+        // ── WebSocket — real-time push ────────────────────────────────────────
+        (function connectWS() {
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            const ws    = new WebSocket(`${proto}://${location.host}/ws?userId=<%= user._id %>`);
+
+            ws.addEventListener('message', (e) => {
+                try {
+                    const msg = JSON.parse(e.data);
+                    if (msg.type !== 'new_notification') return;
+                    setUnread(true);
+                    // Invalidate modal cache so next open fetches fresh
+                    loaded = false;
+                } catch (_) {}
+            });
+
+            // Reconnect on drop with a 5s back-off
+            ws.addEventListener('close',  () => setTimeout(connectWS, 5000));
+            ws.addEventListener('error',  () => ws.close());
+        })();
 
         // ── open / close ──────────────────────────────────────────────────────
         btn.addEventListener('click', function (e) {
