@@ -533,7 +533,8 @@
         state.mature       = false;
         state.thumbnail    = null;
         state._linkThumbTargetId = null;
-        state._editBucket  = null;
+        state._editBucket        = null;
+        state._editBucketIsDraft = false;
     }
 
     function updateCharCount() {
@@ -748,6 +749,29 @@
     }
 
     function closeModal() {
+        if (state._editBucket && state._editBucketIsDraft) {
+            // Persist the current form state back to the draft before closing
+            var draftPayload = {
+                name:        nameInput.value.trim() || state._editBucket.name,
+                visibility:  state.visibility,
+                monetized:   state.monetization,
+                price:       priceAsEWL(),
+                mature:      state.mature,
+                tags:        state.tags,
+                description: descInput.value.trim(),
+                sourceUrl:   sourceUrlInput.value.trim(),
+                thumbnail:   state.thumbnail ? state.thumbnail.dataUrl : null,
+                links:       state.links.map(function (l) {
+                    return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: l.pinned };
+                })
+            };
+            fetch('/api/buckets/' + state._editBucket._id + '/full', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(draftPayload)
+            }).catch(function () {});
+        }
         clearDraft();
         modal.classList.add('hidden');
     }
@@ -755,7 +779,8 @@
     // Exposed globally so the profile page (and any other page) can open a bucket for editing
     window.openBucketModal = function (bucket) {
         // Populate state from existing bucket data
-        state._editBucket  = { _id: bucket._id, name: bucket.name };
+        state._editBucket       = { _id: bucket._id, name: bucket.name };
+        state._editBucketIsDraft = !!bucket.isDraft;
         state.links        = (bucket.links || []).map(function (l) {
             return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: false, clickCount: l.clickCount || 0, pinned: l.isPinned || false };
         });
