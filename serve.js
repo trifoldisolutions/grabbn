@@ -368,7 +368,7 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             links:       resolvedLinks,
         });
 
-        res.status(201).json({ name: bucket.name });
+        res.status(201).json({ _id: bucket._id, name: bucket.name });
     } catch (error) {
         console.error('Error creating bucket:', error);
         res.status(500).json({ error: 'Failed to create bucket' });
