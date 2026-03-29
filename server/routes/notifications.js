@@ -3,6 +3,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Notification from '../models/notification.js';
 import Bucket from '../models/bucket.js';
+import User from '../models/user.js';
 import { anonymousAuth, requireAuth } from '../middleware/anonymousAuth.js';
 
 const router = express.Router();
@@ -13,6 +14,16 @@ router.use(anonymousAuth, requireAuth, (req, res, next) => {
     next();
 });
 
+// Builds the base filter for a user's visible notifications,
+// excluding anything created before their last "clear all".
+function visibleFilter(user) {
+    const filter = { userId: user._id };
+    if (user.notificationsClearedAt) {
+        filter.createdAt = { $gt: user.notificationsClearedAt };
+    }
+    return filter;
+}
+
 // ── GET /api/notifications ────────────────────────────────────────────────────
 // Returns paginated notifications for the current user, newest first.
 // Query params: page (default 1), limit (default 20, max 50)
@@ -22,13 +33,15 @@ router.get('/', async (req, res) => {
         const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
         const skip  = (page - 1) * limit;
 
+        const filter = visibleFilter(req.user);
+
         const [notifications, total] = await Promise.all([
-            Notification.find({ userId: req.user._id })
+            Notification.find(filter)
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
                 .lean(),
-            Notification.countDocuments({ userId: req.user._id }),
+            Notification.countDocuments(filter),
         ]);
 
         // Attach bucket thumbnails in one batch query — keeps notification
@@ -67,10 +80,8 @@ router.get('/', async (req, res) => {
 // ── GET /api/notifications/unread-count ──────────────────────────────────────
 router.get('/unread-count', async (req, res) => {
     try {
-        const count = await Notification.countDocuments({
-            userId: req.user._id,
-            read: false,
-        });
+        const filter = { ...visibleFilter(req.user), read: false };
+        const count  = await Notification.countDocuments(filter);
         res.json({ count });
     } catch (err) {
         console.error('[notifications] GET /unread-count:', err);
@@ -108,11 +119,12 @@ router.post('/read', async (req, res) => {
 });
 
 // ── POST /api/notifications/clear ────────────────────────────────────────────
-// Permanently deletes all notifications for the current user.
+// Sets notificationsClearedAt to now — notifications created before this
+// timestamp are excluded from all future queries for this user.
 router.post('/clear', async (req, res) => {
     try {
-        const result = await Notification.deleteMany({ userId: req.user._id });
-        res.json({ deleted: result.deletedCount });
+        await User.findByIdAndUpdate(req.user._id, { notificationsClearedAt: new Date() });
+        res.json({ ok: true });
     } catch (err) {
         console.error('[notifications] POST /clear:', err);
         res.status(500).json({ error: 'Failed to clear notifications' });
