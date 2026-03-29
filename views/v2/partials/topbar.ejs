@@ -45,7 +45,10 @@
             <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50" style="width:450px;max-width:calc(100vw - 1rem)">
                 <div class="px-4 py-3 border-b border-silver-100 flex items-center justify-between">
                     <span class="text-sm font-semibold text-woodsmoke-900">Notifications</span>
-                    <button id="notifClearBtn" class="text-xs text-gray-400 hover:text-red-400 transition-colors">Clear all</button>
+                    <div class="flex items-center gap-3">
+                        <button id="notifMarkReadBtn" class="text-xs text-gray-400 hover:text-woodsmoke-700 transition-colors">Mark all as read</button>
+                        <button id="notifClearBtn" class="text-xs text-gray-400 hover:text-red-400 transition-colors">Clear all</button>
+                    </div>
                 </div>
                 <div id="notificationList" class="overflow-y-auto max-h-[440px]">
                     <div class="py-8 text-center text-sm text-gray-400">Loading…</div>
@@ -117,7 +120,8 @@
         const modal     = document.getElementById('notificationModal');
         const list      = document.getElementById('notificationList');
         const dot       = document.getElementById('notifDot');
-        const clearBtn  = document.getElementById('notifClearBtn');
+        const clearBtn      = document.getElementById('notifClearBtn');
+        const markReadBtn   = document.getElementById('notifMarkReadBtn');
 
         let loaded = false;
 
@@ -186,7 +190,7 @@
 
         function renderItem(n) {
             const d    = n.data || {};
-            const base = n.read ? '' : 'bg-orchid-50/40';
+            const base = n.seen ? '' : 'bg-orchid-100';
 
             if (n.type === 'new_follower') {
                 const anonId  = escHtml(d.followerAnonymousId || '');
@@ -320,6 +324,16 @@
         modal.addEventListener('click', function (e) { e.stopPropagation(); });
 
         // ── load & render ─────────────────────────────────────────────────────
+        // ── Mark all as read ──────────────────────────────────────────────────
+        markReadBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            fetch('/api/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+                .catch(() => {});
+            // Remove orchid bg from every rendered item immediately
+            list.querySelectorAll('.bg-orchid-100').forEach(el => el.classList.remove('bg-orchid-100'));
+            setUnread(false);
+        });
+
         function loadNotifications() {
             loaded = true;
             fetch('/api/notifications?limit=20')
@@ -334,16 +348,9 @@
                             ? '<p class="py-2 text-center text-xs text-gray-400">Showing latest 20</p>'
                             : '');
 
-                    // Mark all as read + clear bell
-                    const unreadIds = notifications.filter(n => !n.read).map(n => n._id);
-                    if (unreadIds.length) {
-                        setUnread(false);
-                        fetch('/api/notifications/read', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ ids: unreadIds }),
-                        }).catch(() => {});
-                    }
+                    // Mark all visible notifications as seen — removes orchid bg on next open.
+                    // Does NOT mark as read; dot stays until "Mark all as read" is clicked.
+                    fetch('/api/notifications/seen', { method: 'POST' }).catch(() => {});
                 })
                 .catch(() => {
                     list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">Failed to load</p>';

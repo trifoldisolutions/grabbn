@@ -89,6 +89,20 @@ router.get('/unread-count', async (req, res) => {
     }
 });
 
+// ── POST /api/notifications/seen ─────────────────────────────────────────────
+// Called when the modal is opened — marks all visible notifications as seen.
+// This removes the orchid bg on the next modal open. Dot stays until /read.
+router.post('/seen', async (req, res) => {
+    try {
+        const filter = { ...visibleFilter(req.user), seen: false };
+        await Notification.updateMany(filter, { $set: { seen: true } });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('[notifications] POST /seen:', err);
+        res.status(500).json({ error: 'Failed to mark notifications as seen' });
+    }
+});
+
 // ── POST /api/notifications/read ─────────────────────────────────────────────
 // Body: { ids: ['...', '...'] }  — mark specific notifications as read
 //       {}                       — mark ALL as read
@@ -110,7 +124,8 @@ router.post('/read', async (req, res) => {
             filter._id = { $in: objectIds };
         }
 
-        const result = await Notification.updateMany(filter, { $set: { read: true } });
+        // read: true also implies seen: true
+        const result = await Notification.updateMany(filter, { $set: { read: true, seen: true } });
         res.json({ updated: result.modifiedCount });
     } catch (err) {
         console.error('[notifications] POST /read:', err);

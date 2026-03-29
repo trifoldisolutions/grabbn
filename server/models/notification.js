@@ -10,7 +10,8 @@ const notificationSchema = new mongoose.Schema({
         'grabbed_bucket_updated',
     ]},
     data:      { type: mongoose.Schema.Types.Mixed, required: true },
-    read:      { type: Boolean, default: false },
+    seen:      { type: Boolean, default: false }, // true after first modal open
+    read:      { type: Boolean, default: false }, // true after explicit "mark as read"
     createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 90 }, // TTL: 90 days
 });
 
