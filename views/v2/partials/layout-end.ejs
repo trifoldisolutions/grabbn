@@ -842,8 +842,8 @@
             modalStats.classList.remove('hidden');
         }
 
-        // Switch submit label to Update
-        submitLabel.textContent = 'Update';
+        // Draft buckets show 'Save' (first publish); real buckets show 'Update'
+        submitLabel.textContent = bucket.isDraft ? 'Save' : 'Update';
 
         // Enable delete button (edit mode) and reset its confirm state
         deleteBtn.disabled = false;
