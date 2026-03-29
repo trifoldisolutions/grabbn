@@ -18,6 +18,8 @@ import bucketShareRouter from './server/routes/bucketShare.js';
 import authRouter from './server/routes/auth.js';
 import creditsRouter, { handleWebhook } from './server/routes/credits.js';
 import connectRouter, { handleConnectWebhook } from './server/routes/stripeConnect.js';
+import notificationsRouter from './server/routes/notifications.js';
+import Notification from './server/models/notification.js';
 
 dotenv.config();
 
@@ -156,6 +158,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRouter);
 app.use('/api/credits', creditsRouter);
 app.use('/api/connect', connectRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -315,6 +318,61 @@ app.get('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     }
 });
 
+// Fan-out a grabbed_bucket_updated notification to all grabbers of a bucket.
+// Dedup: skips grabbers who already received this notification for this bucket today.
+async function fanOutGrabbedBucketUpdated(bucket, curatorUsername) {
+    try {
+        const grabberIds = (bucket.grabbedBy || []).map(g => g.userId);
+        if (!grabberIds.length) return;
+
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const alreadyNotified = await Notification.find({
+            userId:               { $in: grabberIds },
+            type:                 'grabbed_bucket_updated',
+            'data.sourceBucketId': bucket._id,
+            createdAt:            { $gte: oneDayAgo },
+        }).select('userId').lean();
+
+        const notifiedSet = new Set(alreadyNotified.map(n => String(n.userId)));
+        const toNotify    = grabberIds.filter(id => !notifiedSet.has(String(id)));
+        if (!toNotify.length) return;
+
+        await Notification.insertMany(
+            toNotify.map(userId => ({
+                userId,
+                type: 'grabbed_bucket_updated',
+                data: {
+                    curatorId:      bucket.userId,
+                    curatorUsername,
+                    sourceBucketId: bucket._id,
+                    bucketName:     bucket.name,
+                },
+            })),
+            { ordered: false }
+        );
+    } catch (err) {
+        console.error('[notif] grabbed_bucket_updated fan-out:', err);
+    }
+}
+
+// Fan-out a new_bucket_published notification to all followers of a curator
+async function fanOutNewBucketPublished(curatorId, curatorUsername, bucketId, bucketName) {
+    try {
+        const followers = await Subscription.find({ followeeId: curatorId }).select('followerId').lean();
+        if (!followers.length) return;
+        await Notification.insertMany(
+            followers.map(f => ({
+                userId: f.followerId,
+                type:   'new_bucket_published',
+                data:   { curatorId, curatorUsername, bucketId, bucketName },
+            })),
+            { ordered: false }
+        );
+    } catch (err) {
+        console.error('[notif] new_bucket_published fan-out:', err);
+    }
+}
+
 // Create a new bucket
 app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     try {
@@ -369,6 +427,10 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             isDraft:     !!draft,
         });
 
+        if (vis === 'public' && !bucket.isDraft) {
+            fanOutNewBucketPublished(req.user._id, req.user.username || '', bucket._id, bucket.name);
+        }
+
         res.status(201).json({ _id: bucket._id, name: bucket.name });
     } catch (error) {
         console.error('Error creating bucket:', error);
@@ -412,6 +474,10 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
     try {
         const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, isDraft } = req.body;
 
+        // Fetch current state to detect meaningful changes before building the update
+        const current = await Bucket.findOne({ _id: req.params.id, userId: req.user._id });
+        if (!current) return res.status(404).json({ error: 'Bucket not found' });
+
         const update = {};
         if (name        !== undefined) update.name        = name;
         if (description !== undefined) update.description = String(description || '').slice(0, 256);
@@ -445,13 +511,57 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
             if (firstWithImage) update.thumbnail = firstWithImage.image;
         }
 
+        // Only bump updatedAt for meaningful content/audience/monetization changes.
+        // Cosmetic changes (description, thumbnail, tags, sourceUrl, mature) do not count.
+        let meaningfulChange = false;
+        // Separate flag: only link/monetization changes notify grabbers (stricter subset).
+        let notifyGrabbers = false;
+        if (name !== undefined && name !== current.name) meaningfulChange = true;
+        if (visibility !== undefined) {
+            const vis = ['public', 'unlisted', 'private'].includes(visibility) ? visibility : 'private';
+            if (vis !== current.visibility) meaningfulChange = true;
+        }
+        if (monetized !== undefined && !!monetized !== current.isPaywalled) { meaningfulChange = true; notifyGrabbers = true; }
+        if (price !== undefined && (Number(price) || 0) !== current.price)  { meaningfulChange = true; notifyGrabbers = true; }
+        if (isDraft !== undefined && !!isDraft !== current.isDraft) meaningfulChange = true;
+        if (links !== undefined) {
+            if (links.length !== current.links.length) {
+                meaningfulChange = true; notifyGrabbers = true;
+            } else {
+                const incomingHrefs = links.map(l => l.url || '').sort().join(',');
+                const currentHrefs  = current.links.map(l => l.href).sort().join(',');
+                if (incomingHrefs !== currentHrefs) {
+                    meaningfulChange = true; notifyGrabbers = true;
+                } else {
+                    // Same links — check if per-link monetization changed
+                    const currentFreeMap = Object.fromEntries(current.links.map(l => [l.href, l.isFree]));
+                    for (const l of links) {
+                        if (currentFreeMap[l.url || ''] !== !l.monetized) { meaningfulChange = true; notifyGrabbers = true; break; }
+                    }
+                }
+            }
+        }
+
         const bucket = await Bucket.findOneAndUpdate(
             { _id: req.params.id, userId: req.user._id },
             update,
-            { new: true }
+            { new: true, timestamps: meaningfulChange }
         );
 
         if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
+
+        // Fire new_bucket_published if this update transitions the bucket into public+non-draft
+        const wasPublished   = bucketVisibility(current) === 'public' && !current.isDraft;
+        const isNowPublished = bucketVisibility(bucket)  === 'public' && !bucket.isDraft;
+        if (!wasPublished && isNowPublished) {
+            fanOutNewBucketPublished(req.user._id, req.user.username || '', bucket._id, bucket.name);
+        }
+
+        // Notify grabbers of content/monetization changes (only if bucket is already public)
+        if (notifyGrabbers && isNowPublished) {
+            fanOutGrabbedBucketUpdated(bucket, req.user.username || '');
+        }
+
         res.json({ name: bucket.name });
     } catch (error) {
         console.error('Error updating bucket:', error);
@@ -600,7 +710,7 @@ app.put('/api/buckets/:name/thumbnail', requireAuth, requireVerification, async 
         const bucket = await Bucket.findOneAndUpdate(
             { userId: req.user._id, name },
             { thumbnail },
-            { new: true }
+            { new: true, timestamps: false }
         );
 
         if (!bucket) {
@@ -738,17 +848,23 @@ app.patch('/api/buckets/:name/visibility', requireAuth, requireVerification, asy
             return res.status(400).json({ error: 'visibility must be "public", "unlisted", or "private"' });
         }
 
-        const bucket = await Bucket.findOneAndUpdate(
+        // new: false → returns the OLD doc so we can detect the publish transition
+        const oldBucket = await Bucket.findOneAndUpdate(
             { userId: req.user._id, name },
             { visibility, isPublic: visibility === 'public' },
-            { new: true }
         );
 
-        if (!bucket) {
+        if (!oldBucket) {
             return res.status(404).json({ error: 'Bucket not found' });
         }
 
-        res.json({ name: bucket.name, visibility: bucket.visibility, isPublic: bucket.isPublic });
+        const wasPublished = bucketVisibility(oldBucket) === 'public' && !oldBucket.isDraft;
+        const isNowPublished = visibility === 'public' && !oldBucket.isDraft;
+        if (!wasPublished && isNowPublished) {
+            fanOutNewBucketPublished(req.user._id, req.user.username || '', oldBucket._id, oldBucket.name);
+        }
+
+        res.json({ name: oldBucket.name, visibility, isPublic: visibility === 'public' });
     } catch (error) {
         console.error('Error updating bucket visibility:', error);
         res.status(500).json({ error: 'Failed to update bucket visibility' });
@@ -945,11 +1061,25 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
             originalBucketId: source.originalBucketId || source._id
         });
 
-        // Track grabber on the root (original) bucket
+        // Track grabber on the root (original) bucket — no timestamps: grabbing doesn't constitute a content update
         const rootBucketId = source.originalBucketId || source._id;
         await Bucket.findByIdAndUpdate(rootBucketId, {
             $push: { grabbedBy: { userId: req.user._id, username: req.user.username || '', avatar: req.user.avatar || '' } }
-        });
+        }, { timestamps: false });
+
+        // Notify the original curator (skip self-grabs)
+        if (!curatorId.equals(req.user._id)) {
+            Notification.create({
+                userId: curatorId,
+                type: 'bucket_grabbed',
+                data: {
+                    grabberId:       req.user._id,
+                    grabberUsername: req.user.username || '',
+                    bucketId:        source._id,
+                    bucketName:      source.name,
+                },
+            }).catch(err => console.error('[notif] bucket_grabbed:', err));
+        }
 
         res.status(201).json({ bucket: cloned });
     } catch (error) {
@@ -980,12 +1110,12 @@ app.delete('/api/buckets/grab/:sourceBucketId', requireAuth, requireVerification
             return res.json({ success: true });
         }
 
-        // Remove grabber from the root bucket's grabbedBy list
+        // Remove grabber from the root bucket's grabbedBy list — no timestamps: ungrabbing doesn't constitute a content update
         const rootBucketId = cloned.originalBucketId || cloned.sourceBucketId;
         if (rootBucketId) {
             await Bucket.findByIdAndUpdate(rootBucketId, {
                 $pull: { grabbedBy: { userId: req.user._id } }
-            });
+            }, { timestamps: false });
         }
 
         res.json({ success: true });
@@ -1324,6 +1454,17 @@ app.post('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, 
         if (curator._id.equals(req.user._id)) return res.status(400).json({ error: 'Cannot subscribe to yourself' });
 
         await Subscription.create({ followerId: req.user._id, followeeId: curator._id });
+
+        Notification.create({
+            userId: curator._id,
+            type: 'new_follower',
+            data: {
+                followerId:       req.user._id,
+                followerUsername: req.user.username || '',
+                followerAvatar:   req.user.avatar   || '',
+            },
+        }).catch(err => console.error('[notif] new_follower:', err));
+
         res.status(201).json({ success: true });
     } catch (err) {
         if (err.code === 11000) return res.status(409).json({ error: 'Already subscribed' });

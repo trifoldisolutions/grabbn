@@ -34,15 +34,28 @@
     <div class="flex items-center justify-between w-auto md:w-72 shrink-0">
         <div id="headerUserConsoleWrapper" class="flex flex-row gap-x-4 h-auto items-center justify-end flex-1">
             <!-- Notifications -->
-            <button class="h-8 w-8 flex items-center justify-center text-woodsmoke-800 relative">
-                <% if (user?.hasNotifications) { %>
-                    <!-- notification-newdot-fill -->
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2a7 7 0 0 1 2.263.374a4.5 4.5 0 0 0 4.5 7.447L19 9.743v2.784a1 1 0 0 0 .06.34l.046.107l1.716 3.433a1.1 1.1 0 0 1-.869 1.586l-.115.006H4.162a1.1 1.1 0 0 1-1.03-1.487l.046-.105l1.717-3.433a1 1 0 0 0 .098-.331L5 12.528V9a7 7 0 0 1 7-7m5.5 1a2.5 2.5 0 1 1 0 5a2.5 2.5 0 0 1 0-5M12 21a3 3 0 0 1-2.83-2h5.66A3 3 0 0 1 12 21"/></g></svg>
-                <% } else { %>
-                    <!-- notification-fill -->
+            <div id="notificationBtnContainer" class="relative">
+            <button id="notificationBtn" class="h-8 w-8 flex items-center justify-center text-woodsmoke-800 relative">
+                <!-- plain bell (no unread) -->
+                <span id="notifIconPlain">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7v3.528a1 1 0 0 1-.105.447l-1.717 3.433A1.1 1.1 0 0 0 4.162 18h15.676a1.1 1.1 0 0 0 .984-1.592l-1.716-3.433a1 1 0 0 1-.106-.447V9a7 7 0 0 0-7-7m0 19a3 3 0 0 1-2.83-2h5.66A3 3 0 0 1 12 21"/></g></svg>
-                <% } %>
+                </span>
+                <!-- dot bell (has unread) -->
+                <span id="notifIconDot" class="hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2a7 7 0 0 1 2.263.374a4.5 4.5 0 0 0 4.5 7.447L19 9.743v2.784a1 1 0 0 0 .06.34l.046.107l1.716 3.433a1.1 1.1 0 0 1-.869 1.586l-.115.006H4.162a1.1 1.1 0 0 1-1.03-1.487l.046-.105l1.717-3.433a1 1 0 0 0 .098-.331L5 12.528V9a7 7 0 0 1 7-7m5.5 1a2.5 2.5 0 1 1 0 5a2.5 2.5 0 0 1 0-5M12 21a3 3 0 0 1-2.83-2h5.66A3 3 0 0 1 12 21"/></g></svg>
+                </span>
             </button>
+
+            <!-- Notification modal -->
+            <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50 w-80">
+                <div class="px-4 py-3 border-b border-silver-100">
+                    <span class="text-sm font-semibold text-woodsmoke-900">Notifications</span>
+                </div>
+                <div id="notificationList" class="overflow-y-auto max-h-[420px]">
+                    <div id="notifLoading" class="py-8 text-center text-sm text-gray-400">Loading…</div>
+                </div>
+            </div>
+            </div>
 
             <!-- Messages -->
             <button class="h-8 w-8 flex items-center justify-center text-woodsmoke-800">
@@ -100,6 +113,129 @@
     // ── Profile context menu ──────────────────────────────────────────────────
     const userAvatarWrapper   = document.getElementById('userAvatarWrapper');
     const profileContextMenu  = document.getElementById('profileContextMenu');
+
+    // ── Notification modal ────────────────────────────────────────────────────
+    <% if (user && !user.isAnonymous) { %>
+    (function () {
+        const btn          = document.getElementById('notificationBtn');
+        const modal        = document.getElementById('notificationModal');
+        const list         = document.getElementById('notificationList');
+        const iconPlain    = document.getElementById('notifIconPlain');
+        const iconDot      = document.getElementById('notifIconDot');
+
+        let loaded = false;
+
+        // ── helpers ──────────────────────────────────────────────────────────
+        function setUnread(hasUnread) {
+            iconPlain.classList.toggle('hidden',  hasUnread);
+            iconDot.classList.toggle('hidden',   !hasUnread);
+        }
+
+        function timeAgo(dateStr) {
+            const diff = Date.now() - new Date(dateStr).getTime();
+            const m = Math.floor(diff / 60000);
+            if (m < 1)  return 'just now';
+            if (m < 60) return m + 'm ago';
+            const h = Math.floor(m / 60);
+            if (h < 24) return h + 'h ago';
+            return Math.floor(h / 24) + 'd ago';
+        }
+
+        function renderItem(n) {
+            const d = n.data || {};
+            let text = '';
+
+            switch (n.type) {
+                case 'new_follower':
+                    text = `<span class="font-semibold">${escHtml(d.followerUsername || 'Someone')}</span> followed you`;
+                    break;
+                case 'bucket_grabbed':
+                    text = `<span class="font-semibold">${escHtml(d.grabberUsername || 'Someone')}</span> grabbed <span class="font-semibold">${escHtml(d.bucketName || 'your bucket')}</span>`;
+                    break;
+                case 'bucket_unlocked':
+                    text = `Someone unlocked <span class="font-semibold">${escHtml(d.bucketName || 'your bucket')}</span> · <span class="text-emerald-600 font-semibold">+${d.creditsEarned ?? 0} cr</span>`;
+                    break;
+                case 'new_bucket_published':
+                    text = `<span class="font-semibold">${escHtml(d.curatorUsername || 'Someone')}</span> published <span class="font-semibold">${escHtml(d.bucketName || 'a new bucket')}</span>`;
+                    break;
+                case 'grabbed_bucket_updated':
+                    text = `<span class="font-semibold">${escHtml(d.curatorUsername || 'Someone')}</span> updated <span class="font-semibold">${escHtml(d.bucketName || 'a bucket you grabbed')}</span>`;
+                    break;
+                default:
+                    text = 'New notification';
+            }
+
+            const unreadDot = n.read ? '' : '<span class="w-1.5 h-1.5 rounded-full bg-orchid-500 shrink-0 mt-1"></span>';
+
+            return `
+                <div class="flex items-start gap-3 px-4 py-3 ${n.read ? '' : 'bg-orchid-50/40'} hover:bg-silver-50 transition-colors">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-woodsmoke-800 leading-snug">${text}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">${timeAgo(n.createdAt)}</p>
+                    </div>
+                    ${unreadDot}
+                </div>`;
+        }
+
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        // ── fetch unread count on load ────────────────────────────────────────
+        fetch('/api/notifications/unread-count')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data) setUnread(data.count > 0); })
+            .catch(() => {});
+
+        // ── open / close ──────────────────────────────────────────────────────
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const opening = modal.classList.toggle('hidden') === false;
+            if (opening && !loaded) loadNotifications();
+        });
+
+        document.addEventListener('click', function () {
+            modal.classList.add('hidden');
+        });
+
+        modal.addEventListener('click', function (e) { e.stopPropagation(); });
+
+        // ── load & render ─────────────────────────────────────────────────────
+        function loadNotifications() {
+            loaded = true;
+            fetch('/api/notifications?limit=20')
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(({ notifications }) => {
+                    if (!notifications.length) {
+                        list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">No notifications yet</p>';
+                        return;
+                    }
+                    list.innerHTML = notifications.map(renderItem).join('') +
+                        (notifications.length === 20
+                            ? '<p class="py-2 text-center text-xs text-gray-400">Showing latest 20</p>'
+                            : '');
+
+                    // Mark all as read + clear bell
+                    const unreadIds = notifications.filter(n => !n.read).map(n => n._id);
+                    if (unreadIds.length) {
+                        setUnread(false);
+                        fetch('/api/notifications/read', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ids: unreadIds }),
+                        }).catch(() => {});
+                    }
+                })
+                .catch(() => {
+                    list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">Failed to load</p>';
+                });
+        }
+    })();
+    <% } %>
 
     if (userAvatarWrapper && profileContextMenu) {
         userAvatarWrapper.addEventListener('click', function (e) {

@@ -7,6 +7,7 @@ import BucketAccess from '../models/bucketAccess.js';
 import Transaction from '../models/transaction.js';
 import { requireAuth } from '../middleware/anonymousAuth.js';
 import { TOPUP_PACKAGES, PLATFORM_CUT_RATIO, FRAUD_RULES } from '../config.js';
+import Notification from '../models/notification.js';
 
 // Returns the fraud tier for a given user based on account age
 function getAccountTier(user) {
@@ -279,6 +280,17 @@ router.post('/unlock/:bucketId', requireAuth, async (req, res) => {
         // Track daily unlock spend for R2
         viewer.dailyUnlockSpend += bucket.price;
         await viewer.save();
+
+        // Notify the curator that their bucket was purchased (no buyer identity — privacy)
+        Notification.create({
+            userId: bucket.userId,
+            type: 'bucket_unlocked',
+            data: {
+                bucketId:     bucket._id,
+                bucketName:   bucket.name,
+                creditsEarned: curatorEarns,
+            },
+        }).catch(err => console.error('[notif] bucket_unlocked:', err));
 
         res.json({ success: true });
     } catch (error) {
