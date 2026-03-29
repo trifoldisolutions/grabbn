@@ -674,10 +674,12 @@
         settings: document.querySelector('[data-tab-panel="settings"]')
     };
     var tabBtns = document.querySelectorAll('[data-bucket-tab]');
+    var activeTab = 'details';
 
     function isMobileLayout() { return window.innerWidth < 1024; }
 
     function switchBucketTab(tabName) {
+        activeTab = tabName;
         Object.keys(tabPanels).forEach(function (key) {
             var isMobile = isMobileLayout();
             var isActive = key === tabName;
@@ -709,7 +711,7 @@
     });
 
     window.addEventListener('resize', function () {
-        if (!modal.classList.contains('hidden')) resetMobileTabs();
+        if (!modal.classList.contains('hidden')) switchBucketTab(activeTab);
     });
 
     // ── Open / Close ─────────────────────────────────────────────────────────
