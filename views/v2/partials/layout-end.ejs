@@ -636,8 +636,12 @@
                 clearDraftStatus();
             }
         } else if (state._editBucketIsDraft) {
+            clearTimeout(_autoSaveTimer);
+            clearDraftStatus();
             var val = nameInput.value.trim();
-            if (val) showDraftStatus(val); else clearDraftStatus();
+            if (val) {
+                _autoSaveTimer = setTimeout(function () { showDraftStatus(val); }, 400);
+            }
         }
     });
 

@@ -6,10 +6,11 @@
 
 <!-- ── Embed bucket data for client-side modal ─────────────────────────── -->
 <script>
-    window.__PROFILE_OWN__          = <%- JSON.stringify(ownBuckets) %>;
-    window.__PROFILE_GRABBED__      = <%- JSON.stringify(grabbedBuckets) %>;
-    window.__PROFILE_IS_OWNER__     = <%- JSON.stringify(isOwner) %>;
+    window.__PROFILE_OWN__           = <%- JSON.stringify(ownBuckets) %>;
+    window.__PROFILE_GRABBED__       = <%- JSON.stringify(grabbedBuckets) %>;
+    window.__PROFILE_IS_OWNER__      = <%- JSON.stringify(isOwner) %>;
     window.__PROFILE_VIEWER_AUTHED__ = <%- JSON.stringify(!!(user && !user.isAnonymous)) %>;
+    window.__PROFILE_ANON_ID__       = <%- JSON.stringify(profileUser.anonymousId) %>;
 </script>
 
 <div class="w-full max-w-5xl mx-auto px-4 md:px-6 py-8">
@@ -97,7 +98,7 @@
                 <span class="text-xs text-gray-500">Grabs</span>
             </div>
             <div class="flex flex-col items-center">
-                <span class="text-lg font-bold"><%= subscriberCount.toLocaleString() %></span>
+                <span class="text-lg font-bold" data-stat="subscribers"><%= subscriberCount.toLocaleString() %></span>
                 <span class="text-xs text-gray-500">Subscribers</span>
             </div>
             <div class="flex flex-col items-center">
@@ -116,7 +117,7 @@
                     Edit Profile
                 </a>
             <% } else { %>
-                <button id="followBtn" class="px-5 py-2 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors">
+                <button id="followBtn" disabled class="px-5 py-2 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors opacity-50 cursor-not-allowed">
                     Follow
                 </button>
                 <button id="dmBtn" class="flex items-center gap-1.5 px-5 py-2 text-sm font-semibold border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
@@ -405,6 +406,85 @@
             });
         });
     });
+
+    // ── Follow button ─────────────────────────────────────────────────────────
+    const followBtn = document.getElementById('followBtn');
+    if (followBtn) {
+        const curatorAnonId = window.__PROFILE_ANON_ID__;
+
+        function setFollowState(following) {
+            followBtn.dataset.following = following ? '1' : '0';
+            followBtn.disabled = false;
+            followBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            if (following) {
+                followBtn.textContent = 'Following';
+                followBtn.classList.remove('bg-orchid-600', 'hover:bg-orchid-700', 'text-white');
+                followBtn.classList.add('border', 'border-silver-200', 'text-woodsmoke-800');
+            } else {
+                followBtn.textContent = 'Follow';
+                followBtn.classList.add('bg-orchid-600', 'hover:bg-orchid-700', 'text-white');
+                followBtn.classList.remove('border', 'border-silver-200', 'text-woodsmoke-800');
+            }
+        }
+
+        // Hover effect for "Following" → "Unfollow"
+        followBtn.addEventListener('mouseenter', () => {
+            if (followBtn.dataset.following !== '1') return;
+            followBtn.textContent = 'Unfollow';
+            followBtn.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
+            followBtn.classList.remove('text-woodsmoke-800', 'border-silver-200');
+        });
+        followBtn.addEventListener('mouseleave', () => {
+            if (followBtn.dataset.following !== '1') return;
+            followBtn.textContent = 'Following';
+            followBtn.classList.remove('bg-red-50', 'text-red-600', 'border-red-200');
+            followBtn.classList.add('text-woodsmoke-800', 'border-silver-200');
+        });
+
+        // Check initial follow state (unauthenticated users get the btn enabled immediately pointing to login)
+        if (window.__PROFILE_VIEWER_AUTHED__) {
+            fetch(`/api/users/${curatorAnonId}/subscribe`, { credentials: 'include' })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (data) setFollowState(data.isSubscribed);
+                    else { followBtn.disabled = false; followBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+                })
+                .catch(() => { followBtn.disabled = false; followBtn.classList.remove('opacity-50', 'cursor-not-allowed'); });
+        } else {
+            followBtn.disabled = false;
+            followBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        followBtn.addEventListener('click', async () => {
+            if (!window.__PROFILE_VIEWER_AUTHED__) {
+                window.location.href = '/v2/login';
+                return;
+            }
+            const isFollowing = followBtn.dataset.following === '1';
+            followBtn.disabled = true;
+            followBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            try {
+                const res = await fetch(`/api/users/${curatorAnonId}/subscribe`, {
+                    method: isFollowing ? 'DELETE' : 'POST',
+                    credentials: 'include',
+                });
+                if (res.ok) {
+                    setFollowState(!isFollowing);
+                    const subCountEl = document.querySelector('[data-stat="subscribers"]');
+                    if (subCountEl) {
+                        const current = parseInt(subCountEl.textContent.replace(/,/g, ''), 10) || 0;
+                        subCountEl.textContent = (current + (isFollowing ? -1 : 1)).toLocaleString();
+                    }
+                } else {
+                    followBtn.disabled = false;
+                    followBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            } catch (_) {
+                followBtn.disabled = false;
+                followBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    }
 
     // ── Direct message button ─────────────────────────────────────────────────
     const dmBtn = document.getElementById('dmBtn');
