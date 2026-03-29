@@ -2,6 +2,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Notification from '../models/notification.js';
+import Bucket from '../models/bucket.js';
 import { anonymousAuth, requireAuth } from '../middleware/anonymousAuth.js';
 
 const router = express.Router();
@@ -29,6 +30,24 @@ router.get('/', async (req, res) => {
                 .lean(),
             Notification.countDocuments({ userId: req.user._id }),
         ]);
+
+        // Attach bucket thumbnails in one batch query — keeps notification
+        // documents lean while still giving the frontend what it needs to render.
+        const bucketIds = notifications
+            .map(n => n.data?.bucketId || n.data?.sourceBucketId)
+            .filter(Boolean);
+
+        if (bucketIds.length) {
+            const buckets = await Bucket.find({ _id: { $in: bucketIds } })
+                .select('thumbnail')
+                .lean();
+            const thumbMap = Object.fromEntries(buckets.map(b => [String(b._id), b.thumbnail || '']));
+
+            for (const n of notifications) {
+                const id = n.data?.bucketId || n.data?.sourceBucketId;
+                if (id) n.data.bucketThumbnail = thumbMap[String(id)] || '';
+            }
+        }
 
         res.json({
             notifications,

@@ -47,7 +47,7 @@
             </button>
 
             <!-- Notification modal -->
-            <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50" style="width:450px">
+            <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50" style="width:425px">
                 <div class="px-4 py-3 border-b border-silver-100">
                     <span class="text-sm font-semibold text-woodsmoke-900">Notifications</span>
                 </div>
@@ -150,7 +150,8 @@
             return `<div class="w-9 h-9 rounded-full bg-orchid-50 shrink-0 flex items-center justify-center">${USER_ICON}</div>`;
         }
 
-        function bucketThumbHtml() {
+        function bucketThumbHtml(src) {
+            if (src) return `<img src="${escHtml(src)}" class="w-11 h-9 rounded-md object-cover shrink-0" />`;
             return `<div class="w-11 h-9 rounded-md bg-silver-100 shrink-0 flex items-center justify-center">${BUCKET_ICON}</div>`;
         }
 
@@ -193,7 +194,7 @@
             }
 
             return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors">
-                ${bucketThumbHtml()}
+                ${bucketThumbHtml(d.bucketThumbnail)}
                 <div class="flex-1 min-w-0">
                     <p class="text-sm text-woodsmoke-800 leading-snug">${text}</p>
                     <p class="text-xs text-gray-400 mt-0.5">${timeAgo(n.createdAt)}</p>
