@@ -481,6 +481,17 @@ app.get('/api/buckets/:name/id', requireAuth, requireVerification, async (req, r
     }
 });
 
+// Delete all draft buckets for the current user (called when opening a fresh new-bucket modal)
+app.delete('/api/buckets/drafts', requireAuth, async (req, res) => {
+    try {
+        await Bucket.deleteMany({ userId: req.user._id, isDraft: true });
+        res.json({ ok: true });
+    } catch (error) {
+        console.error('Error deleting drafts:', error);
+        res.status(500).json({ error: 'Failed to delete drafts' });
+    }
+});
+
 // Delete a bucket (and all its links)
 app.delete('/api/buckets/:name', requireAuth, requireVerification, async (req, res) => {
     try {

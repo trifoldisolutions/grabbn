@@ -569,6 +569,7 @@
         if (!name || state._editBucket) return;
         try {
             if (_draftName === null) {
+                _draftName = name; // optimistic — prevents a concurrent timer from racing into another POST
                 var res = await fetch('/api/buckets', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -577,7 +578,6 @@
                 });
                 if (res.ok) {
                     var data = await res.json();
-                    _draftName = name;
                     _draftId   = data._id || null;
                     showDraftStatus(name);
                 } else if (res.status === 409) {
@@ -588,11 +588,16 @@
                     if (lookup.ok) {
                         var lookupData = await lookup.json();
                         if (lookupData.isDraft) {
-                            _draftName = name;
-                            _draftId   = lookupData.bucketId;
+                            _draftId = lookupData.bucketId;
                             showDraftStatus(name);
+                        } else {
+                            _draftName = null; // name taken by a real bucket, reset
                         }
+                    } else {
+                        _draftName = null;
                     }
+                } else {
+                    _draftName = null; // unexpected failure, reset optimistic value
                 }
             } else if (_draftName !== name) {
                 var res2 = await fetch('/api/buckets/' + encodeURIComponent(_draftName), {
@@ -738,6 +743,8 @@
         modal.classList.remove('hidden');
         resetMobileTabs();
         if (!isMobileLayout()) newLinkUrl.focus();
+        // Clean up any stale drafts from previous sessions so the profile stays tidy
+        fetch('/api/buckets/drafts', { method: 'DELETE', credentials: 'include' }).catch(function () {});
     }
 
     function closeModal() {
