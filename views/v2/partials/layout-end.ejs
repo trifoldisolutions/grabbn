@@ -635,6 +635,9 @@
             } else {
                 clearDraftStatus();
             }
+        } else if (state._editBucketIsDraft) {
+            var val = nameInput.value.trim();
+            if (val) showDraftStatus(val); else clearDraftStatus();
         }
     });
 
