@@ -123,7 +123,8 @@
         const iconPlain    = document.getElementById('notifIconPlain');
         const iconDot      = document.getElementById('notifIconDot');
 
-        let loaded = false;
+        let loaded   = false;
+        let lastCount = 0;
 
         // ── helpers ──────────────────────────────────────────────────────────
         function setUnread(hasUnread) {
@@ -185,11 +186,22 @@
                 .replace(/"/g, '&quot;');
         }
 
-        // ── fetch unread count on load ────────────────────────────────────────
-        fetch('/api/notifications/unread-count')
-            .then(r => r.ok ? r.json() : null)
-            .then(data => { if (data) setUnread(data.count > 0); })
-            .catch(() => {});
+        // ── poll unread count ─────────────────────────────────────────────────
+        function pollUnread() {
+            fetch('/api/notifications/unread-count')
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data) return;
+                    setUnread(data.count > 0);
+                    // New notifications arrived since last poll — invalidate cache
+                    if (data.count > lastCount) loaded = false;
+                    lastCount = data.count;
+                })
+                .catch(() => {});
+        }
+
+        pollUnread();
+        setInterval(pollUnread, 30000);
 
         // ── open / close ──────────────────────────────────────────────────────
         btn.addEventListener('click', function (e) {
