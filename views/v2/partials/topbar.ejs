@@ -47,7 +47,7 @@
             </button>
 
             <!-- Notification modal -->
-            <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50 w-[340px]">
+            <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50 w-[450px]">
                 <div class="px-4 py-3 border-b border-silver-100">
                     <span class="text-sm font-semibold text-woodsmoke-900">Notifications</span>
                 </div>
@@ -141,16 +141,17 @@
             return Math.floor(h / 24) + 'd ago';
         }
 
-        function avatarHtml(src, name, size = 'w-9 h-9') {
-            if (src) return `<img src="${escHtml(src)}" class="${size} rounded-full object-cover shrink-0" />`;
-            const initial = (name || '?')[0].toUpperCase();
-            return `<div class="${size} rounded-full bg-orchid-100 text-orchid-600 text-xs font-bold flex items-center justify-center shrink-0">${initial}</div>`;
+        const USER_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="text-orchid-400"><g fill="none"><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>`;
+
+        const BUCKET_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="text-gray-300"><g fill="none"><path fill="currentColor" d="M13 3a1 1 0 1 0-2 0v1.07A8.002 8.002 0 0 0 4 12v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1a8.002 8.002 0 0 0-7-7.93zm-1 15a3.001 3.001 0 0 0 2.83-2H9.17A3.001 3.001 0 0 0 12 18"/></g></svg>`;
+
+        function avatarHtml(src) {
+            if (src) return `<img src="${escHtml(src)}" class="w-9 h-9 rounded-full object-cover shrink-0" />`;
+            return `<div class="w-9 h-9 rounded-full bg-orchid-50 shrink-0 flex items-center justify-center">${USER_ICON}</div>`;
         }
 
         function bucketThumbHtml() {
-            return `<div class="w-11 h-9 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-gray-300">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M13 3a1 1 0 1 0-2 0v1.07A8.002 8.002 0 0 0 4 12v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1a8.002 8.002 0 0 0-7-7.93zm-1 15a3.001 3.001 0 0 0 2.83-2H9.17A3.001 3.001 0 0 0 12 18"/></g></svg>
-            </div>`;
+            return `<div class="w-11 h-9 rounded-md bg-silver-100 shrink-0 flex items-center justify-center">${BUCKET_ICON}</div>`;
         }
 
         function renderItem(n) {
@@ -164,12 +165,12 @@
                     data-anon-id="${anonId}">Follow</button>`;
 
                 return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors">
+                    ${avatarHtml(d.followerAvatar)}
                     <div class="flex-1 min-w-0">
                         <p class="text-sm text-woodsmoke-800 leading-snug"><span class="font-semibold">@${escHtml(d.followerUsername || 'Someone')}</span> followed you</p>
                         <p class="text-xs text-gray-400 mt-0.5">${timeAgo(n.createdAt)}</p>
                     </div>
                     ${btnHtml}
-                    ${avatarHtml(d.followerAvatar, d.followerUsername)}
                 </div>`;
             }
 
@@ -192,11 +193,11 @@
             }
 
             return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors">
+                ${bucketThumbHtml()}
                 <div class="flex-1 min-w-0">
                     <p class="text-sm text-woodsmoke-800 leading-snug">${text}</p>
                     <p class="text-xs text-gray-400 mt-0.5">${timeAgo(n.createdAt)}</p>
                 </div>
-                ${bucketThumbHtml()}
             </div>`;
         }
 
