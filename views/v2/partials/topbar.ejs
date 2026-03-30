@@ -183,7 +183,7 @@
                 ? `<img src="${escHtml(src)}" class="w-9 h-9 rounded-full object-cover shrink-0" />`
                 : `<div class="w-9 h-9 rounded-full bg-orchid-50 shrink-0 flex items-center justify-center">${USER_ICON}</div>`;
             if (!href) return inner;
-            return `<a href="${href}" class="shrink-0" onclick="event.stopPropagation()">${inner}</a>`;
+            return `<a href="${href}" class="shrink-0">${inner}</a>`;
         }
 
         function bucketThumbHtml(src, bucketId) {
@@ -192,17 +192,17 @@
                 ? `<img src="${escHtml(src)}" class="w-11 h-9 rounded-md object-cover shrink-0" />`
                 : `<div class="w-11 h-9 rounded-md bg-silver-100 shrink-0 flex items-center justify-center">${BUCKET_ICON}</div>`;
             if (!href) return inner;
-            return `<a href="${href}" class="shrink-0" onclick="event.stopPropagation()">${inner}</a>`;
+            return `<a href="${href}" class="shrink-0">${inner}</a>`;
         }
 
         function userLink(username) {
             if (!username) return '<span class="font-semibold">Someone</span>';
-            return `<a href="/v2/@${encodeURIComponent(username)}" class="font-semibold hover:underline" onclick="event.stopPropagation()">@${escHtml(username)}</a>`;
+            return `<a href="/v2/@${encodeURIComponent(username)}" class="font-semibold hover:underline">@${escHtml(username)}</a>`;
         }
 
         function bucketLink(name, bucketId) {
             if (!bucketId) return `<span class="font-semibold">${escHtml(name || 'a bucket')}</span>`;
-            return `<a href="/v2/${escHtml(bucketId)}" class="font-semibold hover:underline" onclick="event.stopPropagation()">${escHtml(name || 'a bucket')}</a>`;
+            return `<a href="/v2/${escHtml(bucketId)}" class="font-semibold hover:underline">${escHtml(name || 'a bucket')}</a>`;
         }
 
         function renderItem(n) {
