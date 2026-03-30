@@ -1657,6 +1657,8 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
     const q = (req.query.q || '').trim();
     if (!q) return res.redirect('/v2/explore');
 
+    const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags isDraft visibility isPublic';
+
     let users   = [];
     let buckets = [];
 
@@ -1675,7 +1677,8 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
 
         if (shareMatch) {
             const bucket = await Bucket.findById(shareMatch[1])
-                .populate('userId', 'username anonymousId')
+                .select(BUCKET_SELECT)
+                .populate('userId', 'username anonymousId avatar')
                 .lean();
             if (bucket && bucketVisibility(bucket) === 'public' && !bucket.isDraft) {
                 buckets = [bucket];
@@ -1687,7 +1690,10 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
 
         } else if (isObjectId) {
             const [bucket, userByAnonId] = await Promise.all([
-                Bucket.findById(q).populate('userId', 'username anonymousId').lean(),
+                Bucket.findById(q)
+                    .select(BUCKET_SELECT)
+                    .populate('userId', 'username anonymousId avatar')
+                    .lean(),
                 User.findOne({ anonymousId: q, isAnonymous: false }).lean(),
             ]);
             if (bucket && bucketVisibility(bucket) === 'public' && !bucket.isDraft) buckets = [bucket];
@@ -1695,15 +1701,19 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
 
         } else {
             const searchTerm = usernameAt || q;
-            const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escaped    = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
             const bucketPromise = usernameAt
                 ? Promise.resolve([])
                 : Bucket.find({
-                    name: new RegExp(escaped, 'i'),
+                    name:    new RegExp(escaped, 'i'),
                     isDraft: { $ne: true },
-                    $or: FILTER_PUBLIC.$or,
-                  }).limit(24).populate('userId', 'username anonymousId').lean();
+                    $or:     FILTER_PUBLIC.$or,
+                  })
+                  .select(BUCKET_SELECT)
+                  .limit(24)
+                  .populate('userId', 'username anonymousId avatar')
+                  .lean();
 
             const [foundUsers, foundBuckets] = await Promise.all([
                 User.find({ username: new RegExp(escaped, 'i'), isAnonymous: false }).limit(10).lean(),
@@ -1713,14 +1723,14 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
             buckets = foundBuckets;
         }
 
-        // Grab counts per bucket (parallel)
+        // ── Grab counts (via sourceBucketId / originalBucketId) ───────────────
         const grabCounts = await Promise.all(
             buckets.map(b => Bucket.countDocuments({
                 $or: [{ sourceBucketId: b._id }, { originalBucketId: b._id }],
             }))
         );
 
-        // Public bucket counts per user (parallel)
+        // ── Public bucket counts per user ─────────────────────────────────────
         const bucketCounts = await Promise.all(
             users.map(u => Bucket.countDocuments({
                 userId:  u._id,
@@ -1729,23 +1739,69 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
             }))
         );
 
+        // ── Which buckets has the current user already grabbed? ───────────────
+        let grabbedSet = new Set();
+        if (req.user?._id && buckets.length) {
+            const grabs = await Bucket.find({
+                userId:         req.user._id,
+                sourceBucketId: { $in: buckets.map(b => b._id) },
+            }).select('sourceBucketId').lean();
+            grabs.forEach(g => grabbedSet.add(String(g.sourceBucketId)));
+        }
+
+        // ── Which users/curators does the current user already follow? ────────
+        let followedIds = new Set();
+        if (req.user?._id && !req.user.isAnonymous) {
+            const allTargetIds = [
+                ...buckets.map(b => b.userId?._id).filter(Boolean),
+                ...users.map(u => u._id),
+            ];
+            if (allTargetIds.length) {
+                const subs = await Subscription.find({
+                    followerId: req.user._id,
+                    followeeId: { $in: allTargetIds },
+                }).select('followeeId').lean();
+                subs.forEach(s => followedIds.add(String(s.followeeId)));
+            }
+        }
+
+        // ── Format buckets (same shape as /api/v2/showroom) ───────────────────
         const formattedBuckets = buckets.map((b, i) => ({
-            _id:        b._id,
-            name:       b.name,
-            thumbnail:  b.thumbnail || null,
-            grabCount:  grabCounts[i],
-            viewCount:  b.viewCount  || 0,
-            linksCount: b.links?.length || 0,
+            _id:         b._id,
+            name:        b.name,
+            thumbnail:   b.thumbnail || b.links?.find(l => l.image)?.image || '',
+            linkCount:   b.links?.length || 0,
+            isPaywalled: b.isPaywalled  || false,
+            price:       b.price        || 0,
+            viewCount:   b.viewCount    || 0,
+            shareCount:  b.shareCount   || 0,
+            createdAt:   b.createdAt,
+            updatedAt:   b.updatedAt,
+            description: b.description  || '',
+            hashtags:    b.hashtags     || [],
+            isGrabbed:   grabbedSet.has(String(b._id)),
+            grabCount:   grabCounts[i],
+            grabbers:    (b.grabbedBy || [])
+                .filter(g => g.avatar)
+                .slice(-4)
+                .map(g => ({ username: g.username || '?', avatar: g.avatar })),
             curator: {
-                username:   b.userId?.username    || null,
-                anonymousId: b.userId?.anonymousId || null,
+                username:    b.userId?.username    || 'Unknown',
+                userId:      b.userId?.anonymousId || '',
+                avatar:      b.userId?.avatar      || '',
+                isFollowing: followedIds.has(String(b.userId?._id)),
             },
         }));
 
+        // ── Format users ──────────────────────────────────────────────────────
         const formattedUsers = users.map((u, i) => ({
             username:    u.username,
-            avatar:      u.avatar || null,
+            avatar:      u.avatar   || null,
+            anonymousId: u.anonymousId,
             bucketCount: bucketCounts[i],
+            isFollowing: followedIds.has(String(u._id)),
+            isSelf:      !!(req.user && !req.user.isAnonymous &&
+                            req.user._id.toString() === u._id.toString()),
         }));
 
         res.render('v2/search', {
