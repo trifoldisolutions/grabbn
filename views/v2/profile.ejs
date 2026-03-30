@@ -415,7 +415,7 @@
         function setFollowState(following) {
             followBtn.dataset.following = following ? '1' : '0';
             followBtn.disabled = false;
-            followBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            followBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-red-50', 'text-red-600', 'border-red-200');
             if (following) {
                 followBtn.textContent = 'Following';
                 followBtn.classList.remove('bg-orchid-600', 'hover:bg-orchid-700', 'text-white');
