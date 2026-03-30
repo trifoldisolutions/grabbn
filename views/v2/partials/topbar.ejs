@@ -18,16 +18,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="text-woodsmoke-950" width="16" height="16" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.5 2a8.5 8.5 0 1 0 5.262 15.176l3.652 3.652a1 1 0 0 0 1.414-1.414l-3.652-3.652A8.5 8.5 0 0 0 10.5 2M4 10.5a6.5 6.5 0 1 1 13 0a6.5 6.5 0 0 1-13 0"/></g></svg>
         </button>
         
-        <input id="searchInput" type="text" placeholder="find any public bucket by its name, id, curator or share link..." class="w-full py-2 text-sm focus:outline-none focus:border-gray-400 placeholder-gray-400 bg-transparent"/>
-
-        <div id="searchDropdownWrapper">
-            <div id="searchDropdownSelectedContainer" class="h-10 w-auto px-5 flex gap-x-2 items-center justify-center mr-1">
-                <span class="font-semibold">Bucket</span>
-                <span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
-                </span>
-            </div>
-        </div>
+        <input id="searchInput" type="text" placeholder="search users and buckets by name, @username, ID or share link…" class="w-full py-2 text-sm focus:outline-none focus:border-gray-400 placeholder-gray-400 bg-transparent"/>
     </div>
 
     <!-- Right side -->
@@ -112,6 +103,32 @@
     const searchInput = document.getElementById('searchInput');
     const searchWrapper = document.getElementById('searchInputWrapper');
 
+    // ── Search redirect ───────────────────────────────────────────────────────
+    const mobileSearchInput = document.getElementById('mobileSearchInput');
+    const searchInputBtn    = document.getElementById('searchInputBtn');
+
+    function submitSearch(input) {
+        var q = (input ? input.value : '').trim();
+        if (!q) return;
+        window.location.href = '/v2/search?q=' + encodeURIComponent(q);
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') submitSearch(searchInput);
+        });
+    }
+    if (mobileSearchInput) {
+        mobileSearchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') submitSearch(mobileSearchInput);
+        });
+    }
+    if (searchInputBtn) {
+        searchInputBtn.addEventListener('click', function () {
+            submitSearch(searchInput || mobileSearchInput);
+        });
+    }
+
     // ── Profile context menu ──────────────────────────────────────────────────
     const userAvatarWrapper   = document.getElementById('userAvatarWrapper');
     const profileContextMenu  = document.getElementById('profileContextMenu');
@@ -187,7 +204,7 @@
         }
 
         function bucketThumbHtml(src, bucketId) {
-            const href  = bucketId ? `/v2/${escHtml(bucketId)}` : null;
+            const href  = bucketId ? `/v2/bucket/${escHtml(bucketId)}` : null;
             const inner = src
                 ? `<img src="${escHtml(src)}" class="w-11 h-9 rounded-md object-cover shrink-0" />`
                 : `<div class="w-11 h-9 rounded-md bg-silver-100 shrink-0 flex items-center justify-center">${BUCKET_ICON}</div>`;
@@ -202,7 +219,7 @@
 
         function bucketLink(name, bucketId) {
             if (!bucketId) return `<span class="font-semibold">${escHtml(name || 'a bucket')}</span>`;
-            return `<a href="/v2/${escHtml(bucketId)}" class="font-semibold hover:underline">${escHtml(name || 'a bucket')}</a>`;
+            return `<a href="/v2/bucket/${escHtml(bucketId)}" class="font-semibold hover:underline">${escHtml(name || 'a bucket')}</a>`;
         }
 
         function renderItem(n) {

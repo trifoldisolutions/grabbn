@@ -1652,6 +1652,124 @@ for (const { path: routePath, view, title, page } of v2Pages) {
     });
 }
 
+// Search page — /v2/search?q=<query>
+app.get('/v2/search', anonymousAuth, async (req, res) => {
+    const q = (req.query.q || '').trim();
+    if (!q) return res.redirect('/v2/explore');
+
+    let users   = [];
+    let buckets = [];
+
+    try {
+        // 1. Bucket share URL  →  /share/bucket/{id}
+        const shareMatch = q.match(/\/share\/bucket\/([a-f0-9]{24})/i);
+
+        // 2. Profile URL  →  /@username  or  /v2/@username
+        const profileUrlMatch = q.match(/\/@([A-Za-z0-9_.-]+)(?:[/?]|$)/);
+
+        // 3. Raw 24-char hex ObjectId
+        const isObjectId = /^[a-f0-9]{24}$/i.test(q);
+
+        // 4. @username shorthand
+        const usernameAt = q.startsWith('@') ? q.slice(1) : null;
+
+        if (shareMatch) {
+            const bucket = await Bucket.findById(shareMatch[1])
+                .populate('userId', 'username anonymousId')
+                .lean();
+            if (bucket && bucketVisibility(bucket) === 'public' && !bucket.isDraft) {
+                buckets = [bucket];
+            }
+
+        } else if (profileUrlMatch) {
+            const found = await User.findOne({ username: profileUrlMatch[1], isAnonymous: false }).lean();
+            if (found) users = [found];
+
+        } else if (isObjectId) {
+            const [bucket, userByAnonId] = await Promise.all([
+                Bucket.findById(q).populate('userId', 'username anonymousId').lean(),
+                User.findOne({ anonymousId: q, isAnonymous: false }).lean(),
+            ]);
+            if (bucket && bucketVisibility(bucket) === 'public' && !bucket.isDraft) buckets = [bucket];
+            if (userByAnonId) users = [userByAnonId];
+
+        } else {
+            const searchTerm = usernameAt || q;
+            const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+            const bucketPromise = usernameAt
+                ? Promise.resolve([])
+                : Bucket.find({
+                    name: new RegExp(escaped, 'i'),
+                    isDraft: { $ne: true },
+                    $or: FILTER_PUBLIC.$or,
+                  }).limit(24).populate('userId', 'username anonymousId').lean();
+
+            const [foundUsers, foundBuckets] = await Promise.all([
+                User.find({ username: new RegExp(escaped, 'i'), isAnonymous: false }).limit(10).lean(),
+                bucketPromise,
+            ]);
+            users   = foundUsers;
+            buckets = foundBuckets;
+        }
+
+        // Grab counts per bucket (parallel)
+        const grabCounts = await Promise.all(
+            buckets.map(b => Bucket.countDocuments({
+                $or: [{ sourceBucketId: b._id }, { originalBucketId: b._id }],
+            }))
+        );
+
+        // Public bucket counts per user (parallel)
+        const bucketCounts = await Promise.all(
+            users.map(u => Bucket.countDocuments({
+                userId:  u._id,
+                isDraft: { $ne: true },
+                $or:     FILTER_PUBLIC.$or,
+            }))
+        );
+
+        const formattedBuckets = buckets.map((b, i) => ({
+            _id:        b._id,
+            name:       b.name,
+            thumbnail:  b.thumbnail || null,
+            grabCount:  grabCounts[i],
+            viewCount:  b.viewCount  || 0,
+            linksCount: b.links?.length || 0,
+            curator: {
+                username:   b.userId?.username    || null,
+                anonymousId: b.userId?.anonymousId || null,
+            },
+        }));
+
+        const formattedUsers = users.map((u, i) => ({
+            username:    u.username,
+            avatar:      u.avatar || null,
+            bucketCount: bucketCounts[i],
+        }));
+
+        res.render('v2/search', {
+            title:   `"${q}" — Search`,
+            page:    'explore',
+            user:    req.user ?? null,
+            query:   q,
+            users:   formattedUsers,
+            buckets: formattedBuckets,
+        });
+
+    } catch (err) {
+        console.error('Search error:', err);
+        res.render('v2/search', {
+            title:   `"${q}" — Search`,
+            page:    'explore',
+            user:    req.user ?? null,
+            query:   q,
+            users:   [],
+            buckets: [],
+        });
+    }
+});
+
 // Profile page — redirect /v2/profile to the logged-in user's @username route
 app.get('/v2/profile', anonymousAuth, requireAuth, (req, res) => {
     const username = req.user?.username;
@@ -1752,8 +1870,8 @@ app.get('/v2/report/:bucketId', anonymousAuth, async (req, res) => {
     }
 });
 
-// Bucket thumbnail — /v2/:bucketId/thumbnail.jpg
-app.get('/v2/:bucketId/thumbnail.jpg', async (req, res) => {
+// Bucket thumbnail — /v2/bucket/:bucketId/thumbnail.jpg
+app.get('/v2/bucket/:bucketId/thumbnail.jpg', async (req, res) => {
     try {
         const bucket = await Bucket.findById(req.params.bucketId).lean();
         if (!bucket) return res.status(404).send('Not found');
@@ -1769,8 +1887,8 @@ app.get('/v2/:bucketId/thumbnail.jpg', async (req, res) => {
     }
 });
 
-// Bucket view page — /v2/:bucketId  (accessible to anyone)
-app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
+// Bucket view page — /v2/bucket/:bucketId  (accessible to anyone)
+app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
     try {
         const { bucketId } = req.params;
         const bucket = await Bucket.findById(bucketId).lean();
@@ -1813,13 +1931,13 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
             trackBucketView(bucketId, userId, req.ip).catch(() => {});
         }
 
-        const bucketUrl = `${shareBaseUrl}/v2/${bucketId}`;
+        const bucketUrl = `${shareBaseUrl}/v2/bucket/${bucketId}`;
         const hasThumbnail = !!(bucket.thumbnail || bucket.links?.some(l => l.image));
-        const ogImage = hasThumbnail ? `${shareBaseUrl}/v2/${bucketId}/thumbnail.jpg` : null;
+        const ogImage = hasThumbnail ? `${shareBaseUrl}/v2/bucket/${bucketId}/thumbnail.jpg` : null;
 
         res.render('v2/bucket', {
             title: bucket.name,
-            page: '',
+            page: 'explore',
             user: req.user ?? null,
             bucket,
             bucketId,
