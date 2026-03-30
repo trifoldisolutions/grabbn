@@ -5,8 +5,12 @@
 <%- include('partials/layout') %>
 
 <script>
-    window.__SEARCH_BUCKETS__ = <%- JSON.stringify(buckets) %>;
-    window.__SEARCH_USERS__   = <%- JSON.stringify(users) %>;
+    window.__SEARCH_BUCKETS__  = <%- JSON.stringify(buckets) %>;
+    window.__SEARCH_USERS__    = <%- JSON.stringify(users) %>;
+    window.__SEARCH_REPOS__    = <%- JSON.stringify(repos) %>;
+    window.__SEARCH_TAGS__     = <%- JSON.stringify(tags) %>;
+    window.__REPOS_MATCH_Q__   = <%- JSON.stringify(reposMatchQuery) %>;
+    window.__TAGS_MATCH_Q__    = <%- JSON.stringify(tagsMatchQuery) %>;
     (function () {
         var q   = <%- JSON.stringify(query) %>;
         var si  = document.getElementById('searchInput');
@@ -62,8 +66,24 @@
         <% } %>
     </div>
 
-    <!-- Right spacer — keeps content aligned with the topbar right boundary -->
-    <div class="hidden md:block w-72 shrink-0"></div>
+    <!-- ── Right sidebar ────────────────────────────────────────────────────── -->
+    <div class="hidden md:flex w-72 shrink-0 overflow-y-auto py-4 flex-col gap-8">
+
+        <!-- Repositories -->
+        <div>
+            <h2 class="text-xl font-bold text-woodsmoke-950">Repositories</h2>
+            <p id="repos-subtitle" class="text-sm text-gray-400 mt-0.5 mb-3"></p>
+            <div id="search-repos-list" class="grid grid-cols-3 gap-1.5"></div>
+        </div>
+
+        <!-- Tags -->
+        <div>
+            <h2 class="text-xl font-bold text-woodsmoke-950">Tags</h2>
+            <p id="tags-subtitle" class="text-sm text-gray-400 mt-0.5 mb-3"></p>
+            <div id="search-tags-list" class="flex flex-wrap gap-1.5"></div>
+        </div>
+
+    </div>
 
 </div>
 

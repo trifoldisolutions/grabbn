@@ -2,8 +2,12 @@
 // Bucket cards use the exact same DOM structure as showroom.js.
 (function () {
 
-    const USERS   = window.__SEARCH_USERS__   || [];
-    const BUCKETS = window.__SEARCH_BUCKETS__ || [];
+    const USERS         = window.__SEARCH_USERS__   || [];
+    const BUCKETS       = window.__SEARCH_BUCKETS__ || [];
+    const REPOS         = window.__SEARCH_REPOS__   || [];
+    const TAGS          = window.__SEARCH_TAGS__    || [];
+    const REPOS_MATCH_Q = !!window.__REPOS_MATCH_Q__;
+    const TAGS_MATCH_Q  = !!window.__TAGS_MATCH_Q__;
 
     // ── SVG assets (identical to showroom) ────────────────────────────────────
 
@@ -386,9 +390,65 @@
         }
     }
 
+    // ── Repositories sidebar ──────────────────────────────────────────────────
+
+    function renderRepos() {
+        const list = document.getElementById('search-repos-list');
+        const sub  = document.getElementById('repos-subtitle');
+        if (!list) return;
+        if (sub) sub.textContent = REPOS_MATCH_Q ? 'Matching your search' : 'Popular right now';
+        if (!REPOS.length) {
+            list.innerHTML = '<p class="col-span-3 text-xs text-gray-400 py-2">No repositories yet.</p>';
+            return;
+        }
+        REPOS.forEach(r => list.appendChild(createRepoCard(r)));
+    }
+
+    function createRepoCard(repo) {
+        const IMG_PH = `<div class="w-full h-full bg-silver-100 flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="text-gray-300" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg></div>`;
+        const cells = Array.from({ length: 4 }, (_, i) => {
+            const img = repo.topLinks?.[i]?.image;
+            return img
+                ? `<div class="w-full h-full overflow-hidden bg-gray-100"><img src="${escAttr(img)}" alt="" loading="lazy" class="w-full h-full object-cover" /></div>`
+                : IMG_PH;
+        });
+        const card = document.createElement('a');
+        card.href      = `/v2/repository/${encodeURIComponent(repo.domain)}`;
+        card.className = 'block rounded-md overflow-hidden cursor-pointer hover:shadow-md transition-shadow bg-white border border-gray-100';
+        card.innerHTML = `
+            <div class="grid grid-cols-2 gap-0.5 aspect-square">${cells.join('')}</div>
+            <div class="px-2 py-1.5">
+                <p class="text-xs font-semibold truncate text-woodsmoke-950">${escHtml(repo.domain)}</p>
+                <p class="text-xs text-gray-400">${formatNum(repo.bucketCount)} bucket${repo.bucketCount !== 1 ? 's' : ''}</p>
+            </div>`;
+        return card;
+    }
+
+    // ── Tags sidebar ──────────────────────────────────────────────────────────
+
+    function renderTags() {
+        const list = document.getElementById('search-tags-list');
+        const sub  = document.getElementById('tags-subtitle');
+        if (!list) return;
+        if (sub) sub.textContent = TAGS_MATCH_Q ? 'Matching your search' : 'Trending globally';
+        if (!TAGS.length) {
+            list.innerHTML = '<p class="text-xs text-gray-400 py-2">No tags found.</p>';
+            return;
+        }
+        TAGS.forEach(t => {
+            const pill = document.createElement('a');
+            pill.href      = `/v2/search?q=${encodeURIComponent('#' + t.tag)}`;
+            pill.className = 'inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-md bg-orchid-50 text-orchid-600 hover:bg-orchid-100 transition-colors';
+            pill.innerHTML = `#${escHtml(t.tag)} <span class="text-orchid-300 font-normal">${formatNum(t.count)}</span>`;
+            list.appendChild(pill);
+        });
+    }
+
     // ── Boot ──────────────────────────────────────────────────────────────────
 
     renderUsers();
     renderBuckets();
+    renderRepos();
+    renderTags();
 
 })();

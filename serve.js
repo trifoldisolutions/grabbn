@@ -1804,24 +1804,80 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
                             req.user._id.toString() === u._id.toString()),
         }));
 
+        // ── Sidebar: repositories matching the query ──────────────────────────
+        // Strip leading @/#/http and pull the core search term for domain matching
+        const sidebarTerm    = q.replace(/^[@#]/, '').replace(/^https?:\/\/[^/]*\//, '').trim();
+        const sidebarEscaped = sidebarTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        let repos           = [];
+        let reposMatchQuery = false;
+        if (sidebarEscaped) {
+            repos = await Repository.find({ domain: new RegExp(sidebarEscaped, 'i') })
+                .sort({ totalClicks: -1 }).limit(6).lean();
+            reposMatchQuery = repos.length > 0;
+        }
+        if (!repos.length) {
+            repos = await Repository.find().sort({ totalClicks: -1 }).limit(6).lean();
+        }
+
+        // ── Sidebar: hashtags matching the query ──────────────────────────────
+        let tagResults    = [];
+        let tagsMatchQuery = false;
+        if (sidebarEscaped.length >= 2) {
+            tagResults = await Bucket.aggregate([
+                { $match: { isDraft: { $ne: true }, $or: FILTER_PUBLIC.$or } },
+                { $unwind: '$hashtags' },
+                { $match: { hashtags: new RegExp(sidebarEscaped, 'i') } },
+                { $group: { _id: { $toLower: '$hashtags' }, count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 15 },
+            ]);
+            tagsMatchQuery = tagResults.length > 0;
+        }
+        if (!tagResults.length) {
+            tagResults = await Bucket.aggregate([
+                { $match: { isDraft: { $ne: true }, $or: FILTER_PUBLIC.$or } },
+                { $unwind: '$hashtags' },
+                { $group: { _id: { $toLower: '$hashtags' }, count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 15 },
+            ]);
+        }
+
+        const formattedRepos = repos.map(r => ({
+            domain:      r.domain,
+            bucketCount: r.bucketCount || 0,
+            topLinks:    (r.topLinks || []).slice(0, 4).map(l => ({ image: l.image || '' })),
+        }));
+
+        const formattedTags = tagResults.map(t => ({ tag: t._id, count: t.count }));
+
         res.render('v2/search', {
-            title:   `"${q}" — Search`,
-            page:    'explore',
-            user:    req.user ?? null,
-            query:   q,
-            users:   formattedUsers,
-            buckets: formattedBuckets,
+            title:          `"${q}" — Search`,
+            page:           'explore',
+            user:           req.user ?? null,
+            query:          q,
+            users:          formattedUsers,
+            buckets:        formattedBuckets,
+            repos:          formattedRepos,
+            tags:           formattedTags,
+            reposMatchQuery,
+            tagsMatchQuery,
         });
 
     } catch (err) {
         console.error('Search error:', err);
         res.render('v2/search', {
-            title:   `"${q}" — Search`,
-            page:    'explore',
-            user:    req.user ?? null,
-            query:   q,
-            users:   [],
-            buckets: [],
+            title:          `"${q}" — Search`,
+            page:           'explore',
+            user:           req.user ?? null,
+            query:          q,
+            users:          [],
+            buckets:        [],
+            repos:          [],
+            tags:           [],
+            reposMatchQuery: false,
+            tagsMatchQuery:  false,
         });
     }
 });
