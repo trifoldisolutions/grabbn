@@ -1430,6 +1430,16 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
 
         // Build a public bucket count per curator in one aggregation
         const curatorIds = [...new Set(items.map(b => b.userId?._id).filter(Boolean))];
+
+        // Build a set of curator IDs the current user already follows
+        let followedSet = new Set();
+        if (req.user?._id && !req.user.isAnonymous) {
+            const subs = await Subscription.find({
+                followerId: req.user._id,
+                followeeId: { $in: curatorIds },
+            }).select('followeeId').lean();
+            subs.forEach(s => followedSet.add(String(s.followeeId)));
+        }
         const bucketCounts = await Bucket.aggregate([
             { $match: { userId: { $in: curatorIds }, ...FILTER_PUBLIC, name: { $ne: 'Singletons' } } },
             { $group: { _id: '$userId', count: { $sum: 1 } } }
@@ -1461,7 +1471,8 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
                     username:    b.userId?.username    || 'Unknown',
                     userId:      b.userId?.anonymousId || '',
                     avatar:      b.userId?.avatar      || '',
-                    bucketCount: bucketCountMap[String(b.userId?._id)] || 0
+                    bucketCount: bucketCountMap[String(b.userId?._id)] || 0,
+                    isFollowing: followedSet.has(String(b.userId?._id))
                 }
             }))
         });

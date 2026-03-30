@@ -115,8 +115,10 @@
                         <span class="text-xs text-gray-400 truncate">${dateLabel(b.createdAt, b.updatedAt)}</span>
                     </div>
                 </a>
-                <button class="follow-btn shrink-0 text-sm font-semibold px-5 py-1 rounded-md bg-orchid-100 text-orchid-600" onclick="event.preventDefault();event.stopPropagation()">
-                    Follow
+                <button class="follow-btn shrink-0 text-sm font-semibold px-5 py-1 rounded-md ${b.curator.isFollowing ? 'bg-gray-100 text-gray-500' : 'bg-orchid-100 text-orchid-600'}"
+                    data-anon-id="${escAttr(b.curator.userId)}"
+                    data-following="${b.curator.isFollowing ? '1' : '0'}">
+                    ${b.curator.isFollowing ? 'Following' : 'Follow'}
                 </button>
             </div>
 
@@ -181,11 +183,50 @@
         const menuBtn = card.querySelector('.menu-btn');
         if (menuBtn) menuBtn.addEventListener('click', onMenuClick);
 
+        // Attach follow click
+        const followBtn = card.querySelector('.follow-btn');
+        if (followBtn) followBtn.addEventListener('click', onFollowClick);
+
         // Stop curator link from triggering the card <a> navigation
         const curatorLink = card.querySelector('a[href^="/v2/@"]');
         if (curatorLink) curatorLink.addEventListener('click', e => e.stopPropagation());
 
         return card;
+    }
+
+    // ── Follow button handler ─────────────────────────────────────────────────
+
+    async function onFollowClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (window.__GRABBN_USER__?.isAnonymous) {
+            window.location.href = '/signup.html';
+            return;
+        }
+
+        const btn       = e.currentTarget;
+        if (btn.dataset.busy === 'true') return;
+
+        const anonId    = btn.dataset.anonId;
+        const following = btn.dataset.following === '1';
+
+        btn.dataset.busy = 'true';
+
+        try {
+            const res = await fetch(`/api/users/${encodeURIComponent(anonId)}/subscribe`, {
+                method: following ? 'DELETE' : 'POST',
+            });
+
+            if (res.ok || res.status === 409) {
+                const nowFollowing = !following;
+                btn.dataset.following = nowFollowing ? '1' : '0';
+                btn.textContent       = nowFollowing ? 'Following' : 'Follow';
+                btn.className         = `follow-btn shrink-0 text-sm font-semibold px-5 py-1 rounded-md ${nowFollowing ? 'bg-gray-100 text-gray-500' : 'bg-orchid-100 text-orchid-600'}`;
+            }
+        } catch { /* network error — leave state unchanged */ }
+
+        btn.dataset.busy = 'false';
     }
 
     // ── Grab button handler ───────────────────────────────────────────────────

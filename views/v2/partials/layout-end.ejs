@@ -377,7 +377,8 @@
         mature:       false,
         thumbnail:    null, // { dataUrl, visible }
         _linkThumbTargetId: null,
-        _editBucket:  null  // { _id, name } when editing an existing bucket
+        _editBucket:        null,  // { _id, name } when editing an existing bucket
+        _originalSnapshot:  null   // snapshot of form state at modal open; used to detect no-op saves
     };
 
     // ── Element refs ─────────────────────────────────────────────────────────
@@ -535,6 +536,7 @@
         state._linkThumbTargetId = null;
         state._editBucket        = null;
         state._editBucketIsDraft = false;
+        state._originalSnapshot  = null;
     }
 
     function updateCharCount() {
@@ -851,6 +853,20 @@
         // Draft buckets show 'Save' (first publish); real buckets show 'Update'
         submitLabel.textContent = bucket.isDraft ? 'Save' : 'Update';
         if (bucket.isDraft) showDraftStatus(bucket.name);
+
+        // Snapshot the current form state so we can detect no-op saves on submit
+        state._originalSnapshot = {
+            name:        bucket.name,
+            description: bucket.description || '',
+            sourceUrl:   bucket.sourceUrl || '',
+            visibility:  bucketVisibility,
+            monetized:   !!bucket.isPaywalled,
+            price:       bucket.price || 0,
+            mature:      !!bucket.mature,
+            tags:        (bucket.hashtags || []).slice().sort().join('|'),
+            links:       (bucket.links || []).map(function (l) { return l.href + ':' + (l.isFree ? '1' : '0'); }).sort().join('|'),
+            thumbnail:   bucket.thumbnail || ''
+        };
 
         // Enable delete button (edit mode) and reset its confirm state
         deleteBtn.disabled = false;
@@ -1582,6 +1598,31 @@
             showError('Please enter a bucket name.');
             nameInput.focus();
             return;
+        }
+
+        // When editing an existing (non-draft) bucket, skip the round-trip if nothing changed
+        if (state._editBucket && !state._editBucketIsDraft && state._originalSnapshot) {
+            var snap = state._originalSnapshot;
+            var currentLinks = state.links.slice().sort(function (a, b) {
+                return (a.url > b.url ? 1 : -1);
+            }).map(function (l) { return (l.url || '') + ':' + (l.monetized ? '0' : '1'); }).sort().join('|');
+            var currentTags  = state.tags.slice().sort().join('|');
+            var currentThumb = state.thumbnail ? state.thumbnail.dataUrl : '';
+            var nothingChanged =
+                name                          === snap.name &&
+                descInput.value.trim()        === snap.description &&
+                sourceUrlInput.value.trim()   === snap.sourceUrl &&
+                state.visibility              === snap.visibility &&
+                state.monetization            === snap.monetized &&
+                priceAsEWL()                  === snap.price &&
+                state.mature                  === snap.mature &&
+                currentTags                   === snap.tags &&
+                currentLinks                  === snap.links &&
+                currentThumb                  === snap.thumbnail;
+            if (nothingChanged) {
+                closeModal();
+                return;
+            }
         }
 
         setLoading(true);
