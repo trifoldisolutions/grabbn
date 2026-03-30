@@ -1391,7 +1391,8 @@ app.post('/api/links/click', async (req, res) => {
             LinkClick.create({ href, domain, bucketId, userId: req.user?._id ?? null }),
             Bucket.updateOne(
                 { _id: bucketId, 'links.href': href },
-                { $inc: { 'links.$.clickCount': 1 } }
+                { $inc: { 'links.$.clickCount': 1 } },
+                { timestamps: false }
             ),
         ]);
     } catch (err) {
@@ -1817,15 +1818,16 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
                     Bucket.findByIdAndUpdate(bucketId, {
                         $push: { viewedBy: { userId: req.user._id, lastViewedVersion: bucket.updatedAt } },
                         $inc: { viewCount: 1 }
-                    }).catch(() => {});
+                    }, { timestamps: false }).catch(() => {});
                 } else if (existing.lastViewedVersion < bucket.updatedAt) {
                     Bucket.updateOne(
                         { _id: bucketId, 'viewedBy.userId': req.user._id },
-                        { $set: { 'viewedBy.$.lastViewedVersion': bucket.updatedAt }, $inc: { viewCount: 1 } }
+                        { $set: { 'viewedBy.$.lastViewedVersion': bucket.updatedAt }, $inc: { viewCount: 1 } },
+                        { timestamps: false }
                     ).catch(() => {});
                 }
             } else {
-                Bucket.findByIdAndUpdate(bucketId, { $inc: { viewCount: 1 } }).catch(() => {});
+                Bucket.findByIdAndUpdate(bucketId, { $inc: { viewCount: 1 } }, { timestamps: false }).catch(() => {});
             }
         }
 

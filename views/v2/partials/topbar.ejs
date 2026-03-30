@@ -319,9 +319,11 @@
             const opening = modal.classList.toggle('hidden') === false;
             if (opening) positionModal();
             if (opening && !loaded) loadNotifications();
+            if (!opening && loaded) setUnread(false);
         });
 
         document.addEventListener('click', function () {
+            if (!modal.classList.contains('hidden') && loaded) setUnread(false);
             modal.classList.add('hidden');
         });
 
