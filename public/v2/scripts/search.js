@@ -91,13 +91,14 @@
         const isLoggedIn = window.__GRABBN_USER__ && !window.__GRABBN_USER__.isAnonymous;
 
         let actionBtn = '';
-        if (isLoggedIn && !u.isSelf) {
-            if (u.isFollowing) {
+        if (!u.isSelf) {
+            if (isLoggedIn && u.isFollowing) {
                 // Already following → show Message button linking to their profile
                 actionBtn = `<a href="/v2/@${encodeURIComponent(u.username)}"
                     class="shrink-0 text-sm font-semibold px-4 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
                     onclick="event.stopPropagation()">Message</a>`;
             } else {
+                // Not following (or anonymous) → show Follow; click redirects anon to signup
                 actionBtn = `<button
                     class="follow-btn shrink-0 text-sm font-semibold px-4 py-1 rounded-md bg-orchid-100 text-orchid-600 hover:bg-orchid-200 transition-colors"
                     data-anon-id="${escAttr(u.anonymousId)}"
