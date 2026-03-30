@@ -44,8 +44,10 @@
             <!-- Notification modal -->
             <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50" style="width:450px;max-width:calc(100vw - 1rem)">
                 <div class="px-4 py-3 border-b border-silver-100 flex items-center justify-between">
-                    <span class="text-sm font-semibold text-woodsmoke-900">Notifications</span>
-                    <span id="notifUnreadBadge" class="hidden ml-2 text-xs font-semibold bg-orchid-100 text-orchid-600 rounded-full px-2 py-0.5"></span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-woodsmoke-900">Notifications</span>
+                        <span id="notifUnreadBadge" class="hidden text-xs font-semibold bg-orchid-100 text-orchid-600 rounded-full px-2 py-0.5"></span>
+                    </div>
                     <div class="flex items-center gap-3">
                         <button id="notifMarkReadBtn" class="text-xs text-gray-400 hover:text-woodsmoke-700 transition-colors">Mark all as read</button>
                         <button id="notifClearBtn" class="text-xs text-gray-400 hover:text-red-400 transition-colors">Clear all</button>
@@ -129,7 +131,7 @@
 
         function setBadge(count) {
             if (count > 0) {
-                badge.textContent = count;
+                badge.textContent = count + ' unread';
                 badge.classList.remove('hidden');
             } else {
                 badge.classList.add('hidden');
