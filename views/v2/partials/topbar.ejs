@@ -194,7 +194,8 @@
 
         function renderItem(n) {
             const d    = n.data || {};
-            const base = n.seen ? '' : 'bg-orchid-100';
+            const base = n.read ? '' : 'bg-orchid-100';
+            const nid  = escHtml(String(n._id));
 
             if (n.type === 'new_follower') {
                 const anonId  = escHtml(d.followerAnonymousId || '');
@@ -202,7 +203,7 @@
                     class="notif-follow-btn text-xs font-semibold px-3 py-1.5 rounded-md border border-silver-200 text-woodsmoke-700 hover:bg-silver-50 transition-colors shrink-0 whitespace-nowrap"
                     data-anon-id="${anonId}">Follow</button>`;
 
-                return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors">
+                return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors" data-notif-id="${nid}">
                     ${avatarHtml(d.followerAvatar, d.followerUsername)}
                     <div class="flex-1 min-w-0">
                         <p class="text-sm text-woodsmoke-800 leading-snug">${userLink(d.followerUsername)} followed you</p>
@@ -232,7 +233,7 @@
                     text = 'New notification';
             }
 
-            return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors">
+            return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors" data-notif-id="${nid}">
                 ${bucketThumbHtml(d.bucketThumbnail, bucketId)}
                 <div class="flex-1 min-w-0">
                     <p class="text-sm text-woodsmoke-800 leading-snug">${text}</p>
@@ -303,6 +304,20 @@
             }
         });
 
+        // ── Mark individual notif as read on interaction (link click or follow btn) ──
+        list.addEventListener('click', function (e) {
+            if (!e.target.closest('a, .notif-follow-btn')) return;
+            const item = e.target.closest('[data-notif-id]');
+            if (!item) return;
+            const id = item.dataset.notifId;
+            fetch('/api/notifications/read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: [id] }),
+            }).catch(() => {});
+            item.classList.remove('bg-orchid-100');
+        });
+
         // ── Clear all ─────────────────────────────────────────────────────────
         clearBtn.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -317,7 +332,6 @@
         function onModalClose() {
             if (!loaded) return;
             fetch('/api/notifications/seen', { method: 'POST' }).catch(() => {});
-            list.querySelectorAll('.bg-orchid-100').forEach(el => el.classList.remove('bg-orchid-100'));
             setUnread(false);
         }
 
