@@ -22,6 +22,8 @@ import creditsRouter, { handleWebhook } from './server/routes/credits.js';
 import connectRouter, { handleConnectWebhook } from './server/routes/stripeConnect.js';
 import notificationsRouter from './server/routes/notifications.js';
 import Notification from './server/models/notification.js';
+import BucketView from './server/models/bucketView.js';
+import BucketShare from './server/models/bucketShare.js';
 import { wsClients, pushNotification } from './server/ws.js';
 
 dotenv.config();
@@ -1154,31 +1156,34 @@ app.delete('/api/buckets/grab/:sourceBucketId', requireAuth, requireVerification
     }
 });
 
-// Record a view for a bucket (only counts if new viewer or bucket was modified since last view)
+// Increment viewCount for a bucket, deduplicating by userId (logged-in) or IP (anon, 6h window).
+// isOwner check must be done by the caller before invoking this.
+async function trackBucketView(bucketId, userId, ip) {
+    const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+    if (userId) {
+        const exists = await BucketView.exists({ bucketId, userId });
+        if (!exists) {
+            await BucketView.create({ bucketId, userId, ip: null, expiresAt: null });
+            await Bucket.findByIdAndUpdate(bucketId, { $inc: { viewCount: 1 } }, { timestamps: false });
+        }
+    } else {
+        const exists = await BucketView.exists({ bucketId, ip });
+        if (!exists) {
+            await BucketView.create({ bucketId, userId: null, ip, expiresAt: new Date(Date.now() + SIX_HOURS_MS) });
+            await Bucket.findByIdAndUpdate(bucketId, { $inc: { viewCount: 1 } }, { timestamps: false });
+        }
+    }
+}
+
+// Record a view for a bucket
 app.post('/api/buckets/:id/view', requireAuth, requireVerification, async (req, res) => {
     try {
-        const bucket = await Bucket.findById(req.params.id);
+        const bucket = await Bucket.findById(req.params.id).select('_id userId').lean();
         if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
 
-        const existing = bucket.viewedBy.find(v => v.userId.equals(req.user._id));
-
-        if (!existing) {
-            // New viewer
-            await Bucket.findByIdAndUpdate(req.params.id, {
-                $push: { viewedBy: { userId: req.user._id, lastViewedVersion: bucket.updatedAt } },
-                $inc: { viewCount: 1 }
-            });
-        } else if (existing.lastViewedVersion < bucket.updatedAt) {
-            // Returning viewer, but bucket was modified since last view
-            await Bucket.updateOne(
-                { _id: req.params.id, 'viewedBy.userId': req.user._id },
-                {
-                    $set: { 'viewedBy.$.lastViewedVersion': bucket.updatedAt },
-                    $inc: { viewCount: 1 }
-                }
-            );
+        if (!bucket.userId.equals(req.user._id)) {
+            await trackBucketView(bucket._id, req.user._id, null);
         }
-        // else: same user, no changes since last view — skip
 
         res.json({ success: true });
     } catch (error) {
@@ -1187,31 +1192,23 @@ app.post('/api/buckets/:id/view', requireAuth, requireVerification, async (req, 
     }
 });
 
-// Record a share for a bucket (only counts if new sharer or bucket was modified since last share)
+// Record a share for a bucket — counts once per user per bucket, forever.
+// The unique index on BucketShare makes duplicate inserts fail silently (race-condition-safe).
 app.post('/api/buckets/:id/share', requireAuth, requireVerification, async (req, res) => {
     try {
-        const bucket = await Bucket.findById(req.params.id);
+        const bucket = await Bucket.findById(req.params.id).select('_id userId').lean();
         if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
 
-        const existing = bucket.sharedBy.find(v => v.userId.equals(req.user._id));
-
-        if (!existing) {
-            // New sharer
-            await Bucket.findByIdAndUpdate(req.params.id, {
-                $push: { sharedBy: { userId: req.user._id, lastSharedVersion: bucket.updatedAt } },
-                $inc: { shareCount: 1 }
-            });
-        } else if (existing.lastSharedVersion < bucket.updatedAt) {
-            // Returning sharer, but bucket was modified since last share
-            await Bucket.updateOne(
-                { _id: req.params.id, 'sharedBy.userId': req.user._id },
-                {
-                    $set: { 'sharedBy.$.lastSharedVersion': bucket.updatedAt },
-                    $inc: { shareCount: 1 }
-                }
-            );
+        if (bucket.userId.equals(req.user._id)) {
+            return res.json({ success: true }); // owner sharing their own bucket doesn't count
         }
-        // else: same user, no changes since last share — skip
+
+        try {
+            await BucketShare.create({ bucketId: bucket._id, userId: req.user._id });
+            await Bucket.findByIdAndUpdate(bucket._id, { $inc: { shareCount: 1 } }, { timestamps: false });
+        } catch (err) {
+            if (err.code !== 11000) throw err; // 11000 = duplicate key — user already shared, skip silently
+        }
 
         res.json({ success: true });
     } catch (error) {
@@ -1812,23 +1809,8 @@ app.get('/v2/:bucketId', anonymousAuth, async (req, res) => {
 
         // Track view (fire-and-forget, skip owner)
         if (!isOwner) {
-            if (req.user) {
-                const existing = bucket.viewedBy?.find(v => v.userId.toString() === req.user._id.toString());
-                if (!existing) {
-                    Bucket.findByIdAndUpdate(bucketId, {
-                        $push: { viewedBy: { userId: req.user._id, lastViewedVersion: bucket.updatedAt } },
-                        $inc: { viewCount: 1 }
-                    }, { timestamps: false }).catch(() => {});
-                } else if (existing.lastViewedVersion < bucket.updatedAt) {
-                    Bucket.updateOne(
-                        { _id: bucketId, 'viewedBy.userId': req.user._id },
-                        { $set: { 'viewedBy.$.lastViewedVersion': bucket.updatedAt }, $inc: { viewCount: 1 } },
-                        { timestamps: false }
-                    ).catch(() => {});
-                }
-            } else {
-                Bucket.findByIdAndUpdate(bucketId, { $inc: { viewCount: 1 } }, { timestamps: false }).catch(() => {});
-            }
+            const userId = (req.user && !req.user.isAnonymous) ? req.user._id : null;
+            trackBucketView(bucketId, userId, req.ip).catch(() => {});
         }
 
         const bucketUrl = `${shareBaseUrl}/v2/${bucketId}`;

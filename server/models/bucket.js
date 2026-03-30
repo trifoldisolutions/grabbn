@@ -91,18 +91,10 @@ const bucketSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
-    viewedBy: [{
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      lastViewedVersion: { type: Date }
-    }],
     shareCount: {
       type: Number,
       default: 0
     },
-    sharedBy: [{
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      lastSharedVersion: { type: Date }
-    }],
     grabbedBy: [{
       userId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       username: { type: String, default: '' },
