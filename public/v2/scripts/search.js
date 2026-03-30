@@ -394,9 +394,7 @@
 
     function renderRepos() {
         const list = document.getElementById('search-repos-list');
-        const sub  = document.getElementById('repos-subtitle');
         if (!list) return;
-        if (sub) sub.textContent = REPOS_MATCH_Q ? 'Matching your search' : 'Popular right now';
         if (!REPOS.length) {
             list.innerHTML = '<p class="col-span-3 text-xs text-gray-400 py-2">No repositories yet.</p>';
             return;
@@ -428,9 +426,7 @@
 
     function renderTags() {
         const list = document.getElementById('search-tags-list');
-        const sub  = document.getElementById('tags-subtitle');
         if (!list) return;
-        if (sub) sub.textContent = TAGS_MATCH_Q ? 'Matching your search' : 'Trending globally';
         if (!TAGS.length) {
             list.innerHTML = '<p class="text-xs text-gray-400 py-2">No tags found.</p>';
             return;
