@@ -45,6 +45,7 @@
             <div id="notificationModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50" style="width:450px;max-width:calc(100vw - 1rem)">
                 <div class="px-4 py-3 border-b border-silver-100 flex items-center justify-between">
                     <span class="text-sm font-semibold text-woodsmoke-900">Notifications</span>
+                    <span id="notifUnreadBadge" class="hidden ml-2 text-xs font-semibold bg-orchid-100 text-orchid-600 rounded-full px-2 py-0.5"></span>
                     <div class="flex items-center gap-3">
                         <button id="notifMarkReadBtn" class="text-xs text-gray-400 hover:text-woodsmoke-700 transition-colors">Mark all as read</button>
                         <button id="notifClearBtn" class="text-xs text-gray-400 hover:text-red-400 transition-colors">Clear all</button>
@@ -120,10 +121,20 @@
         const modal     = document.getElementById('notificationModal');
         const list      = document.getElementById('notificationList');
         const dot       = document.getElementById('notifDot');
+        const badge     = document.getElementById('notifUnreadBadge');
         const clearBtn      = document.getElementById('notifClearBtn');
         const markReadBtn   = document.getElementById('notifMarkReadBtn');
 
         let loaded = false;
+
+        function setBadge(count) {
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
 
         // ── helpers ──────────────────────────────────────────────────────────
         function setUnread(hasUnread) {
@@ -315,7 +326,11 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ids: [id] }),
             }).catch(() => {});
-            item.classList.remove('bg-orchid-100');
+            if (item.classList.contains('bg-orchid-100')) {
+                item.classList.remove('bg-orchid-100');
+                const current = parseInt(badge.textContent) || 0;
+                setBadge(Math.max(0, current - 1));
+            }
         });
 
         // ── Clear all ─────────────────────────────────────────────────────────
@@ -324,6 +339,7 @@
             fetch('/api/notifications/clear', { method: 'POST' })
                 .catch(() => {});
             list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">No notifications yet</p>';
+            setBadge(0);
             setUnread(false);
             loaded = true; // prevent re-fetch from showing stale data
         });
@@ -361,6 +377,7 @@
                 .catch(() => {});
             // Remove orchid bg from every rendered item immediately
             list.querySelectorAll('.bg-orchid-100').forEach(el => el.classList.remove('bg-orchid-100'));
+            setBadge(0);
             setUnread(false);
         });
 
@@ -377,6 +394,7 @@
                         (notifications.length === 20
                             ? '<p class="py-2 text-center text-xs text-gray-400">Showing latest 20</p>'
                             : '');
+                    setBadge(notifications.filter(n => !n.read).length);
                 })
                 .catch(() => {
                     list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">Failed to load</p>';
