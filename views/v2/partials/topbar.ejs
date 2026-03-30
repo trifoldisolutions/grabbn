@@ -314,16 +314,26 @@
         });
 
         // ── open / close ──────────────────────────────────────────────────────
+        function onModalClose() {
+            if (!loaded) return;
+            fetch('/api/notifications/seen', { method: 'POST' }).catch(() => {});
+            list.querySelectorAll('.bg-orchid-100').forEach(el => el.classList.remove('bg-orchid-100'));
+            setUnread(false);
+        }
+
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
             const opening = modal.classList.toggle('hidden') === false;
-            if (opening) positionModal();
-            if (opening && !loaded) loadNotifications();
-            if (!opening && loaded) setUnread(false);
+            if (opening) {
+                positionModal();
+                if (!loaded) loadNotifications();
+            } else {
+                onModalClose();
+            }
         });
 
         document.addEventListener('click', function () {
-            if (!modal.classList.contains('hidden') && loaded) setUnread(false);
+            if (!modal.classList.contains('hidden')) onModalClose();
             modal.classList.add('hidden');
         });
 
@@ -353,10 +363,6 @@
                         (notifications.length === 20
                             ? '<p class="py-2 text-center text-xs text-gray-400">Showing latest 20</p>'
                             : '');
-
-                    // Mark all visible notifications as seen — removes orchid bg on next open.
-                    // Does NOT mark as read; dot stays until "Mark all as read" is clicked.
-                    fetch('/api/notifications/seen', { method: 'POST' }).catch(() => {});
                 })
                 .catch(() => {
                     list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">Failed to load</p>';

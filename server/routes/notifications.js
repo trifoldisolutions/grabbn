@@ -80,7 +80,7 @@ router.get('/', async (req, res) => {
 // ── GET /api/notifications/unread-count ──────────────────────────────────────
 router.get('/unread-count', async (req, res) => {
     try {
-        const filter = { ...visibleFilter(req.user), read: false };
+        const filter = { ...visibleFilter(req.user), seen: false };
         const count  = await Notification.countDocuments(filter);
         res.json({ count });
     } catch (err) {
