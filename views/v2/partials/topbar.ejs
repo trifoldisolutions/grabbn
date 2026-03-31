@@ -420,6 +420,10 @@
                 });
         }
     })();
+    <% } else { %>
+    document.getElementById('notificationBtn')?.addEventListener('click', function () {
+        window.location.href = '/signup.html';
+    });
     <% } %>
 
     if (userAvatarWrapper && profileContextMenu) {
