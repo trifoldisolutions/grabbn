@@ -2,18 +2,27 @@
 // Bucket cards use the exact same DOM structure as showroom.js.
 (function () {
 
-    const USERS         = window.__SEARCH_USERS__   || [];
-    const BUCKETS       = window.__SEARCH_BUCKETS__ || [];
-    const REPOS         = window.__SEARCH_REPOS__   || [];
-    const TAGS          = window.__SEARCH_TAGS__    || [];
-    const REPOS_MATCH_Q = !!window.__REPOS_MATCH_Q__;
-    const TAGS_MATCH_Q  = !!window.__TAGS_MATCH_Q__;
+    // ── Window data ───────────────────────────────────────────────────────────
+    const USERS            = window.__SEARCH_USERS__    || [];
+    const BUCKETS          = window.__SEARCH_BUCKETS__  || [];
+    const REPOS            = window.__SEARCH_REPOS__    || [];
+    const TAGS             = window.__SEARCH_TAGS__     || [];
+    const REPOS_MATCH_Q    = !!window.__REPOS_MATCH_Q__;
+    const TAGS_MATCH_Q     = !!window.__TAGS_MATCH_Q__;
+    const SEARCH_TYPE      = window.__SEARCH_TYPE__     || ''; // '' | 'people' | 'buckets' | 'repos'
+    const HAS_MORE_USERS   = !!window.__HAS_MORE_USERS__;
+    const HAS_MORE_BUCKETS = !!window.__HAS_MORE_BUCKETS__;
+    const HAS_MORE_REPOS   = !!window.__HAS_MORE_REPOS__;
+    const QUERY            = new URLSearchParams(window.location.search).get('q') || '';
+
+    // ── Infinite scroll state ─────────────────────────────────────────────────
+    let userSkip   = USERS.length;
+    let bucketSkip = BUCKETS.length;
+    let repoSkip   = REPOS.length;
 
     // ── SVG assets (identical to showroom) ────────────────────────────────────
 
     const NO_THUMB_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" class="text-gray-400" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>`;
-
-    const GRAB_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0V6.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/></g></svg>`;
 
     const GRAB_BTN_ICON_DEFAULT = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0V6.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/></g></svg>`;
 
@@ -33,7 +42,7 @@
 
     const BTN_BASE = 'grab-btn flex items-center gap-1.5 text-sm font-medium transition-colors';
 
-    // ── Helpers (identical to showroom) ──────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     function formatNum(n) {
         n = Number(n) || 0;
@@ -76,12 +85,20 @@
         return String(str).replace(/"/g, '&quot;');
     }
 
+    function show(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('hidden');
+    }
+
+    function hide(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    }
+
     // ── User cards ────────────────────────────────────────────────────────────
 
-    function renderUsers() {
-        const container = document.getElementById('search-users-list');
-        if (!container || !USERS.length) return;
-        USERS.forEach(u => container.appendChild(createUserCard(u)));
+    function appendUsers(list, container) {
+        list.forEach(u => container.appendChild(createUserCard(u)));
     }
 
     function createUserCard(u) {
@@ -97,12 +114,10 @@
         let actionBtn = '';
         if (!u.isSelf) {
             if (isLoggedIn && u.isFollowing) {
-                // Already following → show Message button linking to their profile
                 actionBtn = `<a href="/v2/@${encodeURIComponent(u.username)}"
                     class="shrink-0 text-sm font-semibold px-4 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
                     onclick="event.stopPropagation()">Message</a>`;
             } else {
-                // Not following (or anonymous) → show Follow; click redirects anon to signup
                 actionBtn = `<button
                     class="follow-btn shrink-0 text-sm font-semibold px-4 py-1 rounded-md bg-orchid-100 text-orchid-600 hover:bg-orchid-200 transition-colors"
                     data-anon-id="${escAttr(u.anonymousId)}"
@@ -129,10 +144,8 @@
 
     // ── Bucket cards (identical structure to showroom) ────────────────────────
 
-    function renderBuckets() {
-        const grid = document.getElementById('search-buckets-grid');
-        if (!grid || !BUCKETS.length) return;
-        BUCKETS.forEach(b => grid.appendChild(createCard(b)));
+    function appendBuckets(list, grid) {
+        list.forEach(b => grid.appendChild(createCard(b)));
     }
 
     function createCard(b) {
@@ -250,13 +263,39 @@
         return card;
     }
 
+    // ── Repo cards ────────────────────────────────────────────────────────────
+
+    function appendRepos(list, grid) {
+        list.forEach(r => grid.appendChild(createRepoCard(r)));
+    }
+
+    function createRepoCard(repo) {
+        const IMG_PH = `<div class="w-full h-full bg-silver-100 flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="text-gray-300" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg></div>`;
+        const cells = Array.from({ length: 4 }, (_, i) => {
+            const img = repo.topLinks?.[i]?.image;
+            return img
+                ? `<div class="w-full h-full overflow-hidden bg-gray-100"><img src="${escAttr(img)}" alt="" loading="lazy" class="w-full h-full object-cover" /></div>`
+                : IMG_PH;
+        });
+        const card = document.createElement('a');
+        card.href      = `/v2/repository/${encodeURIComponent(repo.domain)}`;
+        card.className = 'block rounded-md overflow-hidden cursor-pointer hover:shadow-md transition-shadow bg-white border border-gray-100';
+        card.innerHTML = `
+            <div class="grid grid-cols-2 gap-0.5 aspect-square">${cells.join('')}</div>
+            <div class="px-2 py-1.5">
+                <p class="text-xs font-semibold truncate text-woodsmoke-950">${escHtml(repo.domain)}</p>
+                <p class="text-xs text-gray-400">${formatNum(repo.bucketCount)} bucket${repo.bucketCount !== 1 ? 's' : ''}</p>
+            </div>`;
+        return card;
+    }
+
     // ── Follow handler ────────────────────────────────────────────────────────
 
     async function onFollowClick(e) {
         e.preventDefault();
         e.stopPropagation();
 
-        if (window.__GRABBN_USER__?.isAnonymous) {
+        if (!window.__GRABBN_USER__ || window.__GRABBN_USER__.isAnonymous) {
             window.location.href = '/signup.html';
             return;
         }
@@ -278,7 +317,7 @@
                 const nowFollowing = !following;
                 btn.dataset.following = nowFollowing ? '1' : '0';
                 btn.textContent       = nowFollowing ? 'Following' : 'Follow';
-                btn.className         = `follow-btn shrink-0 text-sm font-semibold px-${btn.dataset.anonId ? '5' : '4'} py-1 rounded-md ${nowFollowing ? 'bg-gray-100 text-gray-500' : 'bg-orchid-100 text-orchid-600'}`;
+                btn.className         = `follow-btn shrink-0 text-sm font-semibold px-${anonId ? '5' : '4'} py-1 rounded-md ${nowFollowing ? 'bg-gray-100 text-gray-500' : 'bg-orchid-100 text-orchid-600'}`;
             }
         } catch { /* network error — leave state unchanged */ }
 
@@ -291,7 +330,7 @@
         e.preventDefault();
         e.stopPropagation();
 
-        if (window.__GRABBN_USER__?.isAnonymous) {
+        if (!window.__GRABBN_USER__ || window.__GRABBN_USER__.isAnonymous) {
             window.location.href = '/signup.html';
             return;
         }
@@ -333,10 +372,10 @@
         if (btn.dataset.busy) return;
         btn.dataset.busy = '1';
 
-        const bucketId = btn.dataset.bucketId;
-        const url      = `${window.location.origin}/v2/bucket/${bucketId}`;
-        const origHtml = btn.innerHTML;
-        const u        = window.__GRABBN_USER__;
+        const bucketId  = btn.dataset.bucketId;
+        const url       = `${window.location.origin}/v2/bucket/${bucketId}`;
+        const origHtml  = btn.innerHTML;
+        const u         = window.__GRABBN_USER__;
         const shareText = (u && !u.isAnonymous && u.username)
             ? `@${u.username} is sharing a link collection with you from Grabbn. Have a look at it!`
             : 'Check out this link collection on Grabbn!';
@@ -390,38 +429,6 @@
         }
     }
 
-    // ── Repositories sidebar ──────────────────────────────────────────────────
-
-    function renderRepos() {
-        const list = document.getElementById('search-repos-list');
-        if (!list) return;
-        if (!REPOS.length) {
-            list.innerHTML = '<p class="col-span-3 text-xs text-gray-400 py-2">No repositories yet.</p>';
-            return;
-        }
-        REPOS.forEach(r => list.appendChild(createRepoCard(r)));
-    }
-
-    function createRepoCard(repo) {
-        const IMG_PH = `<div class="w-full h-full bg-silver-100 flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="text-gray-300" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg></div>`;
-        const cells = Array.from({ length: 4 }, (_, i) => {
-            const img = repo.topLinks?.[i]?.image;
-            return img
-                ? `<div class="w-full h-full overflow-hidden bg-gray-100"><img src="${escAttr(img)}" alt="" loading="lazy" class="w-full h-full object-cover" /></div>`
-                : IMG_PH;
-        });
-        const card = document.createElement('a');
-        card.href      = `/v2/repository/${encodeURIComponent(repo.domain)}`;
-        card.className = 'block rounded-md overflow-hidden cursor-pointer hover:shadow-md transition-shadow bg-white border border-gray-100';
-        card.innerHTML = `
-            <div class="grid grid-cols-2 gap-0.5 aspect-square">${cells.join('')}</div>
-            <div class="px-2 py-1.5">
-                <p class="text-xs font-semibold truncate text-woodsmoke-950">${escHtml(repo.domain)}</p>
-                <p class="text-xs text-gray-400">${formatNum(repo.bucketCount)} bucket${repo.bucketCount !== 1 ? 's' : ''}</p>
-            </div>`;
-        return card;
-    }
-
     // ── Tags sidebar ──────────────────────────────────────────────────────────
 
     function renderTags() {
@@ -440,11 +447,147 @@
         });
     }
 
+    // ── Infinite scroll ───────────────────────────────────────────────────────
+
+    function setupInfiniteScroll(type) {
+        const ids = {
+            people:  { sentinel: 'users-scroll-sentinel',      loading: 'users-loading',   grid: 'search-users-list' },
+            buckets: { sentinel: 'buckets-scroll-sentinel',    loading: 'buckets-loading', grid: 'search-buckets-grid' },
+            repos:   { sentinel: 'repos-scroll-sentinel',      loading: 'repos-loading',   grid: 'search-repos-main-grid' },
+        };
+        const { sentinel: sentinelId, loading: loadingId, grid: gridId } = ids[type] || {};
+        const sentinel = document.getElementById(sentinelId);
+        const loadingEl = document.getElementById(loadingId);
+        if (!sentinel) return;
+
+        let fetching = false;
+        let done     = false;
+
+        const observer = new IntersectionObserver(async (entries) => {
+            if (!entries[0].isIntersecting || fetching || done) return;
+            fetching = true;
+
+            if (loadingEl) { loadingEl.classList.remove('hidden'); }
+
+            const skip = type === 'people' ? userSkip : type === 'buckets' ? bucketSkip : repoSkip;
+
+            try {
+                const res  = await fetch(`/api/v2/search?q=${encodeURIComponent(QUERY)}&type=${type}&skip=${skip}`);
+                const data = await res.json();
+                const grid = document.getElementById(gridId);
+
+                if (grid && data.items && data.items.length > 0) {
+                    if (type === 'people')  appendUsers(data.items, grid);
+                    if (type === 'buckets') appendBuckets(data.items, grid);
+                    if (type === 'repos')   appendRepos(data.items, grid);
+                }
+
+                if (type === 'people')  userSkip   += (data.items || []).length;
+                if (type === 'buckets') bucketSkip += (data.items || []).length;
+                if (type === 'repos')   repoSkip   += (data.items || []).length;
+
+                if (!data.hasMore) {
+                    done = true;
+                    observer.disconnect();
+                }
+            } catch (err) {
+                console.error('Search pagination error:', err);
+            }
+
+            if (loadingEl) { loadingEl.classList.add('hidden'); }
+            fetching = false;
+        }, { rootMargin: '300px' });
+
+        observer.observe(sentinel);
+    }
+
     // ── Boot ──────────────────────────────────────────────────────────────────
 
-    renderUsers();
-    renderBuckets();
-    renderRepos();
-    renderTags();
+    (function boot() {
+        const isTypeSpecific = !!SEARCH_TYPE;
+
+        // Show back link in type-specific mode
+        if (isTypeSpecific) show('search-back-link');
+
+        const showUsers     = !SEARCH_TYPE || SEARCH_TYPE === 'people';
+        const showBuckets   = !SEARCH_TYPE || SEARCH_TYPE === 'buckets';
+        const showReposMain = SEARCH_TYPE === 'repos';
+
+        let totalCount = 0;
+
+        // ── People ────────────────────────────────────────────────────────────
+        if (showUsers && USERS.length > 0) {
+            show('section-users');
+            const container = document.getElementById('search-users-list');
+            if (container) appendUsers(USERS, container);
+            totalCount += USERS.length;
+
+            if (!isTypeSpecific && HAS_MORE_USERS) {
+                // Mixed mode: show "Show More" link
+                show('users-more-link');
+            } else if (SEARCH_TYPE === 'people') {
+                // Type-specific mode: show sentinel for infinite scroll
+                show('users-scroll-sentinel');
+                setupInfiniteScroll('people');
+            }
+        }
+
+        // ── Buckets ───────────────────────────────────────────────────────────
+        if (showBuckets && BUCKETS.length > 0) {
+            show('section-buckets');
+            const grid = document.getElementById('search-buckets-grid');
+            if (grid) appendBuckets(BUCKETS, grid);
+            totalCount += BUCKETS.length;
+            // Always set up infinite scroll for buckets (mixed and type-specific)
+            setupInfiniteScroll('buckets');
+        }
+
+        // ── Repos: main column (type=repos) or sidebar (mixed/other) ──────────
+        if (showReposMain) {
+            show('section-repos-main');
+            hide('sidebar-repos-section');
+            const grid = document.getElementById('search-repos-main-grid');
+            if (grid) appendRepos(REPOS, grid);
+            totalCount += REPOS.length;
+            setupInfiniteScroll('repos');
+        } else {
+            // Sidebar repos
+            const sidebarGrid = document.getElementById('search-repos-list');
+            if (sidebarGrid) {
+                if (REPOS.length > 0) {
+                    appendRepos(REPOS, sidebarGrid);
+                } else {
+                    sidebarGrid.innerHTML = '<p class="col-span-3 text-xs text-gray-400 py-2">No repositories yet.</p>';
+                }
+            }
+            if (HAS_MORE_REPOS) show('repos-more-link');
+        }
+
+        // ── Tags ──────────────────────────────────────────────────────────────
+        renderTags();
+
+        // ── Total count line ──────────────────────────────────────────────────
+        const totalLine = document.getElementById('search-total-line');
+        if (totalLine) {
+            if (showReposMain) {
+                const n = REPOS.length;
+                totalLine.textContent = n + ' result' + (n !== 1 ? 's' : '');
+            } else {
+                totalLine.textContent = totalCount + ' result' + (totalCount !== 1 ? 's' : '');
+            }
+        }
+
+        // ── Empty state ───────────────────────────────────────────────────────
+        const noMain = USERS.length === 0 && BUCKETS.length === 0;
+        if (!isTypeSpecific && noMain) {
+            show('search-empty');
+        } else if (isTypeSpecific && SEARCH_TYPE === 'people' && USERS.length === 0) {
+            show('search-empty');
+        } else if (isTypeSpecific && SEARCH_TYPE === 'buckets' && BUCKETS.length === 0) {
+            show('search-empty');
+        } else if (showReposMain && REPOS.length === 0) {
+            show('search-empty');
+        }
+    })();
 
 })();

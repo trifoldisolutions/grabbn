@@ -1652,15 +1652,167 @@ for (const { path: routePath, view, title, page } of v2Pages) {
     });
 }
 
-// Search page — /v2/search?q=<query>
+// ── Search: JSON pagination API ──────────────────────────────────────────────
+app.get('/api/v2/search', anonymousAuth, async (req, res) => {
+    const q    = (req.query.q    || '').trim();
+    const type = (req.query.type || '').toLowerCase(); // people | buckets | repos
+    const skip = Math.max(0, parseInt(req.query.skip) || 0);
+
+    if (!q || !['people', 'buckets', 'repos'].includes(type)) {
+        return res.json({ items: [], hasMore: false });
+    }
+
+    const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags isDraft visibility isPublic';
+    const U_LIMIT = 6, B_LIMIT = 9, R_LIMIT = 3;
+
+    try {
+        // Direct-lookup queries don't paginate
+        if (q.match(/\/share\/bucket\/([a-f0-9]{24})/i) ||
+            q.match(/\/@([A-Za-z0-9_.-]+)(?:[/?]|$)/)  ||
+            /^[a-f0-9]{24}$/i.test(q)) {
+            return res.json({ items: [], hasMore: false });
+        }
+
+        const searchTerm = q.startsWith('@') ? q.slice(1) : q;
+        const escaped    = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        // ── People ────────────────────────────────────────────────────────────
+        if (type === 'people') {
+            const found  = await User.find({ username: new RegExp(escaped, 'i'), isAnonymous: false })
+                .skip(skip).limit(U_LIMIT + 1).lean();
+            const hasMore = found.length > U_LIMIT;
+            const users   = found.slice(0, U_LIMIT);
+
+            const bucketCounts = await Promise.all(users.map(u =>
+                Bucket.countDocuments({ userId: u._id, isDraft: { $ne: true }, $or: FILTER_PUBLIC.$or })
+            ));
+            let followedIds = new Set();
+            if (req.user?._id && !req.user.isAnonymous && users.length) {
+                const subs = await Subscription.find({
+                    followerId: req.user._id,
+                    followeeId: { $in: users.map(u => u._id) },
+                }).select('followeeId').lean();
+                subs.forEach(s => followedIds.add(String(s.followeeId)));
+            }
+            return res.json({
+                hasMore,
+                items: users.map((u, i) => ({
+                    username:    u.username,
+                    avatar:      u.avatar    || null,
+                    anonymousId: u.anonymousId,
+                    bucketCount: bucketCounts[i],
+                    isFollowing: followedIds.has(String(u._id)),
+                    isSelf:      !!(req.user && !req.user.isAnonymous &&
+                                    req.user._id.toString() === u._id.toString()),
+                })),
+            });
+        }
+
+        // ── Buckets ───────────────────────────────────────────────────────────
+        if (type === 'buckets') {
+            const found = await Bucket.find({
+                name:    new RegExp(escaped, 'i'),
+                isDraft: { $ne: true },
+                $or:     FILTER_PUBLIC.$or,
+            })
+            .select(BUCKET_SELECT)
+            .skip(skip).limit(B_LIMIT + 1)
+            .populate('userId', 'username anonymousId avatar')
+            .lean();
+
+            const hasMore = found.length > B_LIMIT;
+            const buckets = found.slice(0, B_LIMIT);
+
+            const grabCounts = await Promise.all(buckets.map(b =>
+                Bucket.countDocuments({ $or: [{ sourceBucketId: b._id }, { originalBucketId: b._id }] })
+            ));
+            let grabbedSet = new Set();
+            if (req.user?._id && buckets.length) {
+                const grabs = await Bucket.find({
+                    userId:         req.user._id,
+                    sourceBucketId: { $in: buckets.map(b => b._id) },
+                }).select('sourceBucketId').lean();
+                grabs.forEach(g => grabbedSet.add(String(g.sourceBucketId)));
+            }
+            let followedIds = new Set();
+            if (req.user?._id && !req.user.isAnonymous) {
+                const ids = buckets.map(b => b.userId?._id).filter(Boolean);
+                if (ids.length) {
+                    const subs = await Subscription.find({
+                        followerId: req.user._id,
+                        followeeId: { $in: ids },
+                    }).select('followeeId').lean();
+                    subs.forEach(s => followedIds.add(String(s.followeeId)));
+                }
+            }
+            return res.json({
+                hasMore,
+                items: buckets.map((b, i) => ({
+                    _id:         b._id,
+                    name:        b.name,
+                    thumbnail:   b.thumbnail || b.links?.find(l => l.image)?.image || '',
+                    linkCount:   b.links?.length || 0,
+                    isPaywalled: b.isPaywalled  || false,
+                    price:       b.price        || 0,
+                    viewCount:   b.viewCount    || 0,
+                    shareCount:  b.shareCount   || 0,
+                    createdAt:   b.createdAt,
+                    updatedAt:   b.updatedAt,
+                    description: b.description  || '',
+                    hashtags:    b.hashtags     || [],
+                    isGrabbed:   grabbedSet.has(String(b._id)),
+                    grabCount:   grabCounts[i],
+                    grabbers:    (b.grabbedBy || []).filter(g => g.avatar).slice(-4)
+                                    .map(g => ({ username: g.username || '?', avatar: g.avatar })),
+                    curator: {
+                        username:    b.userId?.username    || 'Unknown',
+                        userId:      b.userId?.anonymousId || '',
+                        avatar:      b.userId?.avatar      || '',
+                        isFollowing: followedIds.has(String(b.userId?._id)),
+                    },
+                })),
+            });
+        }
+
+        // ── Repos ─────────────────────────────────────────────────────────────
+        if (type === 'repos') {
+            const sidebarTerm = q.replace(/^[@#]/, '').replace(/^https?:\/\/[^/]*\//, '').trim();
+            const sEsc        = sidebarTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const found       = await Repository.find({ domain: new RegExp(sEsc, 'i') })
+                .sort({ totalClicks: -1 }).skip(skip).limit(R_LIMIT + 1).lean();
+            const hasMore = found.length > R_LIMIT;
+            return res.json({
+                hasMore,
+                items: found.slice(0, R_LIMIT).map(r => ({
+                    domain:      r.domain,
+                    bucketCount: r.bucketCount || 0,
+                    topLinks:    (r.topLinks || []).slice(0, 4).map(l => ({ image: l.image || '' })),
+                })),
+            });
+        }
+
+        return res.json({ items: [], hasMore: false });
+
+    } catch (err) {
+        console.error('Search API error:', err);
+        return res.json({ items: [], hasMore: false });
+    }
+});
+
+// Search page — /v2/search?q=<query>[&type=people|buckets|repos]
 app.get('/v2/search', anonymousAuth, async (req, res) => {
-    const q = (req.query.q || '').trim();
+    const q          = (req.query.q    || '').trim();
+    const searchType = (req.query.type || '').toLowerCase(); // '' | 'people' | 'buckets' | 'repos'
     if (!q) return res.redirect('/v2/explore');
 
     const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags isDraft visibility isPublic';
+    const U_LIMIT = 6, B_LIMIT = 9, R_LIMIT = 3, T_LIMIT = 18;
 
     let users   = [];
     let buckets = [];
+    let hasMoreUsers   = false;
+    let hasMoreBuckets = false;
+    let hasMoreRepos   = false;
 
     try {
         // 1. Bucket share URL  →  /share/bucket/{id}
@@ -1703,27 +1855,35 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
             const searchTerm = usernameAt || q;
             const escaped    = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-            const bucketPromise = usernameAt
-                ? Promise.resolve([])
-                : Bucket.find({
-                    name:    new RegExp(escaped, 'i'),
-                    isDraft: { $ne: true },
-                    $or:     FILTER_PUBLIC.$or,
-                  })
-                  .select(BUCKET_SELECT)
-                  .limit(24)
-                  .populate('userId', 'username anonymousId avatar')
-                  .lean();
+            // In type-specific mode, skip irrelevant fetches
+            const skipBuckets = !!(usernameAt || searchType === 'people' || searchType === 'repos');
+            const skipUsers   = searchType === 'buckets' || searchType === 'repos';
 
             const [foundUsers, foundBuckets] = await Promise.all([
-                User.find({ username: new RegExp(escaped, 'i'), isAnonymous: false }).limit(10).lean(),
-                bucketPromise,
+                skipUsers
+                    ? Promise.resolve([])
+                    : User.find({ username: new RegExp(escaped, 'i'), isAnonymous: false })
+                        .limit(U_LIMIT + 1).lean(),
+                skipBuckets
+                    ? Promise.resolve([])
+                    : Bucket.find({
+                        name:    new RegExp(escaped, 'i'),
+                        isDraft: { $ne: true },
+                        $or:     FILTER_PUBLIC.$or,
+                      })
+                      .select(BUCKET_SELECT)
+                      .limit(B_LIMIT + 1)
+                      .populate('userId', 'username anonymousId avatar')
+                      .lean(),
             ]);
-            users   = foundUsers;
-            buckets = foundBuckets;
+
+            hasMoreUsers   = foundUsers.length   > U_LIMIT;
+            hasMoreBuckets = foundBuckets.length > B_LIMIT;
+            users   = foundUsers.slice(0, U_LIMIT);
+            buckets = foundBuckets.slice(0, B_LIMIT);
         }
 
-        // ── Grab counts (via sourceBucketId / originalBucketId) ───────────────
+        // ── Grab counts ───────────────────────────────────────────────────────
         const grabCounts = await Promise.all(
             buckets.map(b => Bucket.countDocuments({
                 $or: [{ sourceBucketId: b._id }, { originalBucketId: b._id }],
@@ -1739,7 +1899,7 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
             }))
         );
 
-        // ── Which buckets has the current user already grabbed? ───────────────
+        // ── Which buckets has the viewer already grabbed? ─────────────────────
         let grabbedSet = new Set();
         if (req.user?._id && buckets.length) {
             const grabs = await Bucket.find({
@@ -1749,7 +1909,7 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
             grabs.forEach(g => grabbedSet.add(String(g.sourceBucketId)));
         }
 
-        // ── Which users/curators does the current user already follow? ────────
+        // ── Which users/curators does the viewer already follow? ──────────────
         let followedIds = new Set();
         if (req.user?._id && !req.user.isAnonymous) {
             const allTargetIds = [
@@ -1765,7 +1925,7 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
             }
         }
 
-        // ── Format buckets (same shape as /api/v2/showroom) ───────────────────
+        // ── Format buckets ────────────────────────────────────────────────────
         const formattedBuckets = buckets.map((b, i) => ({
             _id:         b._id,
             name:        b.name,
@@ -1796,7 +1956,7 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
         // ── Format users ──────────────────────────────────────────────────────
         const formattedUsers = users.map((u, i) => ({
             username:    u.username,
-            avatar:      u.avatar   || null,
+            avatar:      u.avatar    || null,
             anonymousId: u.anonymousId,
             bucketCount: bucketCounts[i],
             isFollowing: followedIds.has(String(u._id)),
@@ -1804,23 +1964,24 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
                             req.user._id.toString() === u._id.toString()),
         }));
 
-        // ── Sidebar: repositories matching the query ──────────────────────────
-        // Strip leading @/#/http and pull the core search term for domain matching
+        // ── Sidebar: repositories ─────────────────────────────────────────────
         const sidebarTerm    = q.replace(/^[@#]/, '').replace(/^https?:\/\/[^/]*\//, '').trim();
         const sidebarEscaped = sidebarTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
         let repos           = [];
         let reposMatchQuery = false;
         if (sidebarEscaped) {
-            repos = await Repository.find({ domain: new RegExp(sidebarEscaped, 'i') })
-                .sort({ totalClicks: -1 }).limit(6).lean();
-            reposMatchQuery = repos.length > 0;
+            const found = await Repository.find({ domain: new RegExp(sidebarEscaped, 'i') })
+                .sort({ totalClicks: -1 }).limit(R_LIMIT + 1).lean();
+            reposMatchQuery = found.length > 0;
+            hasMoreRepos    = found.length > R_LIMIT;
+            repos           = found.slice(0, R_LIMIT);
         }
         if (!repos.length) {
-            repos = await Repository.find().sort({ totalClicks: -1 }).limit(6).lean();
+            repos = await Repository.find().sort({ totalClicks: -1 }).limit(R_LIMIT).lean();
         }
 
-        // ── Sidebar: hashtags matching the query ──────────────────────────────
+        // ── Sidebar: hashtags ─────────────────────────────────────────────────
         let tagResults    = [];
         let tagsMatchQuery = false;
         if (sidebarEscaped.length >= 2) {
@@ -1830,7 +1991,7 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
                 { $match: { hashtags: new RegExp(sidebarEscaped, 'i') } },
                 { $group: { _id: { $toLower: '$hashtags' }, count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
-                { $limit: 15 },
+                { $limit: T_LIMIT },
             ]);
             tagsMatchQuery = tagResults.length > 0;
         }
@@ -1840,7 +2001,7 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
                 { $unwind: '$hashtags' },
                 { $group: { _id: { $toLower: '$hashtags' }, count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
-                { $limit: 15 },
+                { $limit: T_LIMIT },
             ]);
         }
 
@@ -1857,27 +2018,35 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
             page:           'explore',
             user:           req.user ?? null,
             query:          q,
+            searchType,
             users:          formattedUsers,
             buckets:        formattedBuckets,
             repos:          formattedRepos,
             tags:           formattedTags,
             reposMatchQuery,
             tagsMatchQuery,
+            hasMoreUsers,
+            hasMoreBuckets,
+            hasMoreRepos,
         });
 
     } catch (err) {
         console.error('Search error:', err);
         res.render('v2/search', {
-            title:          `"${q}" — Search`,
-            page:           'explore',
-            user:           req.user ?? null,
-            query:          q,
-            users:          [],
-            buckets:        [],
-            repos:          [],
-            tags:           [],
+            title:           `"${q}" — Search`,
+            page:            'explore',
+            user:            req.user ?? null,
+            query:           q,
+            searchType,
+            users:           [],
+            buckets:         [],
+            repos:           [],
+            tags:            [],
             reposMatchQuery: false,
             tagsMatchQuery:  false,
+            hasMoreUsers:    false,
+            hasMoreBuckets:  false,
+            hasMoreRepos:    false,
         });
     }
 });

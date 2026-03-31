@@ -5,12 +5,16 @@
 <%- include('partials/layout') %>
 
 <script>
-    window.__SEARCH_BUCKETS__  = <%- JSON.stringify(buckets) %>;
-    window.__SEARCH_USERS__    = <%- JSON.stringify(users) %>;
-    window.__SEARCH_REPOS__    = <%- JSON.stringify(repos) %>;
-    window.__SEARCH_TAGS__     = <%- JSON.stringify(tags) %>;
-    window.__REPOS_MATCH_Q__   = <%- JSON.stringify(reposMatchQuery) %>;
-    window.__TAGS_MATCH_Q__    = <%- JSON.stringify(tagsMatchQuery) %>;
+    window.__SEARCH_BUCKETS__   = <%- JSON.stringify(buckets) %>;
+    window.__SEARCH_USERS__     = <%- JSON.stringify(users) %>;
+    window.__SEARCH_REPOS__     = <%- JSON.stringify(repos) %>;
+    window.__SEARCH_TAGS__      = <%- JSON.stringify(tags) %>;
+    window.__REPOS_MATCH_Q__    = <%- JSON.stringify(reposMatchQuery) %>;
+    window.__TAGS_MATCH_Q__     = <%- JSON.stringify(tagsMatchQuery) %>;
+    window.__SEARCH_TYPE__      = <%- JSON.stringify(searchType) %>;
+    window.__HAS_MORE_USERS__   = <%- JSON.stringify(hasMoreUsers) %>;
+    window.__HAS_MORE_BUCKETS__ = <%- JSON.stringify(hasMoreBuckets) %>;
+    window.__HAS_MORE_REPOS__   = <%- JSON.stringify(hasMoreRepos) %>;
     (function () {
         var q   = <%- JSON.stringify(query) %>;
         var si  = document.getElementById('searchInput');
@@ -25,54 +29,78 @@
     <!-- Main column — same max-width as showroom feed -->
     <div class="w-full md:max-w-2xl overflow-y-auto pb-4 pt-4">
 
+        <!-- Back link (shown in type-specific mode) -->
+        <div id="search-back-link" class="hidden mb-3">
+            <a href="/v2/search?q=<%= encodeURIComponent(query) %>"
+               class="inline-flex items-center gap-1.5 text-sm text-orchid-600 hover:underline">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.707 4.293a1 1 0 0 1 0 1.414L9.414 12l6.293 6.293a1 1 0 0 1-1.414 1.414l-7-7a1 1 0 0 1 0-1.414l7-7a1 1 0 0 1 1.414 0"/></g></svg>
+                All results for "<%= query %>"
+            </a>
+        </div>
+
         <!-- ── Header ──────────────────────────────────────────────────────── -->
         <div class="mb-5">
             <h1 class="text-xl font-bold text-woodsmoke-950">Results for "<%= query %>"</h1>
-            <% const total = users.length + buckets.length; %>
-            <p class="text-sm text-gray-400 mt-1"><%= total %> result<%= total !== 1 ? 's' : '' %></p>
+            <p id="search-total-line" class="text-sm text-gray-400 mt-1"></p>
         </div>
 
-        <% if (total === 0) { %>
-        <!-- ── Empty state ──────────────────────────────────────────────────── -->
-        <div class="flex flex-col items-center gap-3 py-20 text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" class="text-gray-200">
-                <g fill="none" fill-rule="evenodd">
-                    <path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/>
-                    <path fill="currentColor" d="M10.5 2a8.5 8.5 0 1 0 5.262 15.176l3.652 3.652a1 1 0 0 0 1.414-1.414l-3.652-3.652A8.5 8.5 0 0 0 10.5 2M4 10.5a6.5 6.5 0 1 1 13 0a6.5 6.5 0 0 1-13 0"/>
-                </g>
-            </svg>
-            <p class="font-semibold text-woodsmoke-700">Nothing found for "<%= query %>"</p>
-            <p class="text-sm text-gray-400 max-w-xs">Try a different name, @username, bucket ID, or paste a share link</p>
+        <!-- ── Empty state ─────────────────────────────────────────────────── -->
+        <div id="search-empty" class="hidden">
+            <div class="flex flex-col items-center gap-3 py-20 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" class="text-gray-200">
+                    <g fill="none" fill-rule="evenodd">
+                        <path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/>
+                        <path fill="currentColor" d="M10.5 2a8.5 8.5 0 1 0 5.262 15.176l3.652 3.652a1 1 0 0 0 1.414-1.414l-3.652-3.652A8.5 8.5 0 0 0 10.5 2M4 10.5a6.5 6.5 0 1 1 13 0a6.5 6.5 0 0 1-13 0"/>
+                    </g>
+                </svg>
+                <p class="font-semibold text-woodsmoke-700">Nothing found for "<%= query %>"</p>
+                <p class="text-sm text-gray-400 max-w-xs">Try a different name, @username, bucket ID, or paste a share link</p>
+            </div>
         </div>
 
-        <% } else { %>
-
-        <% if (users.length > 0) { %>
         <!-- ── People ───────────────────────────────────────────────────────── -->
-        <section class="mb-6">
+        <section id="section-users" class="hidden mb-6">
             <h2 class="text-[0.7rem] font-semibold uppercase tracking-widest text-gray-400 mb-2">People</h2>
             <div id="search-users-list" class="flex flex-col gap-0.5"></div>
+            <!-- Show More link (mixed mode only) -->
+            <div id="users-more-link" class="hidden mt-3 text-center">
+                <a href="/v2/search?q=<%= encodeURIComponent(query) %>&type=people"
+                   class="text-sm font-semibold text-orchid-600 hover:underline">Show More</a>
+            </div>
+            <!-- Infinite scroll sentinel (type=people only) -->
+            <div id="users-scroll-sentinel" class="hidden h-2 mt-2"></div>
+            <div id="users-loading" class="hidden py-4 text-center text-sm text-gray-400">Loading…</div>
         </section>
-        <% } %>
 
-        <% if (buckets.length > 0) { %>
         <!-- ── Buckets ──────────────────────────────────────────────────────── -->
-        <section>
+        <section id="section-buckets" class="hidden">
             <h2 class="text-[0.7rem] font-semibold uppercase tracking-widest text-gray-400 mb-3">Buckets</h2>
             <div id="search-buckets-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-1 gap-4 w-full md:w-[80%] md:mx-auto"></div>
+            <div id="buckets-scroll-sentinel" class="h-2 mt-4"></div>
+            <div id="buckets-loading" class="hidden py-4 text-center text-sm text-gray-400">Loading…</div>
         </section>
-        <% } %>
 
-        <% } %>
+        <!-- ── Repos main column (type=repos only) ─────────────────────────── -->
+        <section id="section-repos-main" class="hidden">
+            <h2 class="text-[0.7rem] font-semibold uppercase tracking-widest text-gray-400 mb-3">Repositories</h2>
+            <div id="search-repos-main-grid" class="grid grid-cols-3 gap-1.5"></div>
+            <div id="repos-scroll-sentinel" class="h-2 mt-4"></div>
+            <div id="repos-loading" class="hidden py-4 text-center text-sm text-gray-400">Loading…</div>
+        </section>
+
     </div>
 
     <!-- ── Right sidebar ────────────────────────────────────────────────────── -->
     <div class="hidden md:flex w-72 shrink-0 overflow-y-auto py-4 flex-col gap-8">
 
-        <!-- Repositories -->
-        <div>
+        <!-- Repositories (hidden when type=repos — they move to main column) -->
+        <div id="sidebar-repos-section">
             <h2 class="text-[0.7rem] font-semibold uppercase tracking-widest text-gray-400 mb-3">Repositories</h2>
             <div id="search-repos-list" class="grid grid-cols-3 gap-1.5"></div>
+            <div id="repos-more-link" class="hidden mt-2">
+                <a href="/v2/search?q=<%= encodeURIComponent(query) %>&type=repos"
+                   class="text-sm font-semibold text-orchid-600 hover:underline">Show More</a>
+            </div>
         </div>
 
         <!-- Tags -->
