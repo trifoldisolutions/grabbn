@@ -69,7 +69,7 @@
 
     function createCard(b) {
         const card = document.createElement('a');
-        card.href      = `/v2/${b._id}`;
+        card.href      = `/v2/bucket/${b._id}`;
         card.className = 'flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer';
 
         // Thumbnail / placeholder
@@ -77,26 +77,22 @@
             ? `<div class="px-3 pb-3"><img src="${escAttr(b.thumbnail)}" class="w-full aspect-[1] object-cover rounded-md" loading="lazy" /></div>`
             : `<div class="px-3 pb-3"><div class="w-full aspect-[1] bg-silver-100 rounded-md flex items-center justify-center">${NO_THUMB_SVG}</div></div>`;
 
-        // Avatar stack — real grabbers, or 3 placeholder circles as fallback
-        const avatarRing  = 'w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-white shrink-0 overflow-hidden';
+        // Avatar stack — real grabbers only
+        const avatarRing  = 'w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white shrink-0 overflow-hidden';
         const grabberList = (b.grabbers && b.grabbers.length > 0) ? b.grabbers : [];
-        const PLACEHOLDER_COLORS = ['bg-orchid-200', 'bg-blue-200', 'bg-amber-200'];
-        const placeholderStack = PLACEHOLDER_COLORS.map(c =>
-            `<div class="${avatarRing} ${c}"></div>`
-        ).join('');
-        const avatarStack = grabberList.length > 0
-            ? grabberList.map((g) =>
-                `<img src="${escAttr(g.avatar)}" alt="${escAttr(g.username)}" class="${avatarRing}" title="${escAttr(g.username)}" loading="lazy" />`
-              ).join('')
-            : placeholderStack;
+        const avatarStack = grabberList
+            .filter(g => g.avatar)
+            .map(g => `<img src="${escAttr(g.avatar)}" alt="${escAttr(g.username)}" class="${avatarRing}" title="${escAttr(g.username)}" loading="lazy" />`)
+            .join('');
 
         // Grab button state
         const isCurator = b.curator.userId && b.curator.userId === window.__GRABBN_USER__?.anonymousId;
         const grabbed   = !!b.isGrabbed;
         const grabCount = formatNum(b.grabCount ?? b.grabbers?.length ?? 0);
         const grabColor = grabbed ? 'text-orchid-600' : 'text-gray-500 hover:text-orchid-600';
-        const grabActionBtn = isCurator ? '' : `
-            <button class="${BTN_BASE} ${grabColor}" data-grabbed="${grabbed}" data-bucket-id="${escAttr(b._id)}" title="Grab this bucket" onclick="event.preventDefault();event.stopPropagation()">
+        const grabActionBtn = isCurator
+            ? `<span class="flex items-center gap-1.5 text-sm font-medium text-gray-400">${GRAB_ICON}<span class="grab-count">${grabCount}</span></span>`
+            : `<button class="${BTN_BASE} ${grabColor}" data-grabbed="${grabbed}" data-bucket-id="${escAttr(b._id)}" title="Grab this bucket" onclick="event.preventDefault();event.stopPropagation()">
                 ${grabbed ? GRAB_BTN_ICON_GRABBED : GRAB_BTN_ICON_DEFAULT}
                 <span class="grab-count">${grabCount}</span>
             </button>`;
@@ -157,7 +153,7 @@
                 ${b.description ? `<p class="text-xs text-gray-500 line-clamp-2 leading-relaxed">${escHtml(b.description)}</p>` : ''}
                 ${b.hashtags && b.hashtags.length > 0 ? `<div class="flex flex-wrap gap-1">${b.hashtags.slice(0, 4).map(tag => `<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-orchid-50 text-orchid-500">#${escHtml(tag)}</span>`).join('')}</div>` : ''}
                 <!-- Action row -->
-                <div class="flex items-center gap-4 pt-0.5" onclick="event.preventDefault();event.stopPropagation()">
+                <div class="flex items-center gap-4 pt-1.5" onclick="event.preventDefault();event.stopPropagation()">
                     ${grabActionBtn}
                     <span class="flex items-center gap-1 text-sm font-medium text-gray-500">
                         ${VIEW_ICON}
@@ -286,7 +282,7 @@
         btn.dataset.busy = '1';
 
         const bucketId = btn.dataset.bucketId;
-        const url      = `${window.location.origin}/v2/${bucketId}`;
+        const url      = `${window.location.origin}/v2/bucket/${bucketId}`;
         const origHtml = btn.innerHTML;
         const u = window.__GRABBN_USER__;
         const shareText = (u && !u.isAnonymous && u.username)

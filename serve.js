@@ -16,6 +16,8 @@ import LinkClick from './server/models/linkClick.js';
 import Repository from './server/models/repository.js';
 import Subscription from './server/models/subscription.js';
 import { buildRepositories } from './server/jobs/buildRepositories.js';
+import { buildExploreScores } from './server/jobs/buildExploreScores.js';
+import { FILTER_PUBLIC } from './server/utils/filters.js';
 import bucketShareRouter from './server/routes/bucketShare.js';
 import authRouter from './server/routes/auth.js';
 import creditsRouter, { handleWebhook } from './server/routes/credits.js';
@@ -24,6 +26,8 @@ import notificationsRouter from './server/routes/notifications.js';
 import Notification from './server/models/notification.js';
 import BucketView from './server/models/bucketView.js';
 import BucketShare from './server/models/bucketShare.js';
+import FeedImpression from './server/models/feedImpression.js';
+import TopicScore from './server/models/topicScore.js';
 import { wsClients, pushNotification } from './server/ws.js';
 
 dotenv.config();
@@ -38,14 +42,6 @@ function bucketVisibility(bucket) {
   if (bucket.visibility) return bucket.visibility;
   return bucket.isPublic ? 'public' : 'private';
 }
-
-// MongoDB filter that matches "publicly discoverable" buckets (public only).
-const FILTER_PUBLIC = {
-  $or: [
-    { visibility: 'public' },
-    { visibility: { $exists: false }, isPublic: true },
-  ]
-};
 
 // MongoDB filter that matches "link-accessible" buckets (public + unlisted).
 const FILTER_ACCESSIBLE = {
@@ -722,7 +718,7 @@ app.patch('/api/buckets/:name/links/free', requireAuth, requireVerification, asy
         }
 
         link.isFree = isFree;
-        await bucket.save();
+        await bucket.save({ timestamps: false });
 
         res.json({ success: true, href, isFree });
     } catch (error) {
@@ -1039,7 +1035,7 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
         }
 
         // Fetch the source bucket (with owner info for curator attribution)
-        const source = await Bucket.findById(sourceBucketId).populate('userId', 'username anonymousId');
+        const source = await Bucket.findById(sourceBucketId).select('+topic').populate('userId', 'username anonymousId');
         if (!source) {
             return res.status(404).json({ error: 'Source bucket not found' });
         }
@@ -1096,6 +1092,8 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
         await Bucket.findByIdAndUpdate(rootBucketId, {
             $push: { grabbedBy: { userId: req.user._id, username: req.user.username || '', avatar: req.user.avatar || '' } }
         }, { timestamps: false });
+
+        addGuestPoints(req.user, source.topic ?? null, GUEST_PTS.grab);
 
         // Notify the original curator (skip self-grabs)
         if (!curatorId.equals(req.user._id)) {
@@ -1178,11 +1176,12 @@ async function trackBucketView(bucketId, userId, ip) {
 // Record a view for a bucket
 app.post('/api/buckets/:id/view', requireAuth, requireVerification, async (req, res) => {
     try {
-        const bucket = await Bucket.findById(req.params.id).select('_id userId').lean();
+        const bucket = await Bucket.findById(req.params.id).select('_id userId topic').lean();
         if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
 
         if (!bucket.userId.equals(req.user._id)) {
             await trackBucketView(bucket._id, req.user._id, null);
+            addGuestPoints(req.user, bucket.topic ?? null, GUEST_PTS.pageVisit);
         }
 
         res.json({ success: true });
@@ -1196,7 +1195,7 @@ app.post('/api/buckets/:id/view', requireAuth, requireVerification, async (req, 
 // The unique index on BucketShare makes duplicate inserts fail silently (race-condition-safe).
 app.post('/api/buckets/:id/share', requireAuth, requireVerification, async (req, res) => {
     try {
-        const bucket = await Bucket.findById(req.params.id).select('_id userId').lean();
+        const bucket = await Bucket.findById(req.params.id).select('_id userId topic').lean();
         if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
 
         if (bucket.userId.equals(req.user._id)) {
@@ -1206,6 +1205,7 @@ app.post('/api/buckets/:id/share', requireAuth, requireVerification, async (req,
         try {
             await BucketShare.create({ bucketId: bucket._id, userId: req.user._id });
             await Bucket.findByIdAndUpdate(bucket._id, { $inc: { shareCount: 1 } }, { timestamps: false });
+            addGuestPoints(req.user, bucket.topic ?? null, GUEST_PTS.share);
         } catch (err) {
             if (err.code !== 11000) throw err; // 11000 = duplicate key — user already shared, skip silently
         }
@@ -1384,21 +1384,102 @@ app.post('/api/links/click', async (req, res) => {
         let domain;
         try { domain = new URL(href).hostname; } catch { return; }
 
-        await Promise.all([
+        const [, bucket] = await Promise.all([
             LinkClick.create({ href, domain, bucketId, userId: req.user?._id ?? null }),
-            Bucket.updateOne(
+            Bucket.findOneAndUpdate(
                 { _id: bucketId, 'links.href': href },
                 { $inc: { 'links.$.clickCount': 1 } },
-                { timestamps: false }
+                { timestamps: false, new: false, select: 'topic' }
             ),
         ]);
+
+        addGuestPoints(req.user, bucket?.topic ?? null, GUEST_PTS.linkClick);
     } catch (err) {
         console.error('LinkClick record error:', err);
     }
 });
 
 // ---------------------------------------------------------------------------
-// V2 API — showroom feed (public buckets, paginated)
+// Guest session point tracking
+// ---------------------------------------------------------------------------
+// Point weights
+const GUEST_PTS = { grab: 4, share: 5, pageVisit: 1, linkClick: 0.5 };
+const WARM_THRESHOLD    = 10;   // points needed to transition to warm start
+const ACTIVE_CAP_MIN    = 360;  // 6 hours of combined active time — reset if exceeded without warmth
+const IDLE_CUTOFF_MIN   = 30;   // gaps longer than this aren't counted as active time
+
+/**
+ * Fire-and-forget — update a user's guest recommendation session after any engagement event.
+ * @param {Object} user     - req.user (may be anonymous or registered)
+ * @param {string} topic    - domain topic of the bucket they engaged with (may be null)
+ * @param {number} pts      - point weight for this action
+ */
+async function addGuestPoints(user, topic, pts) {
+    if (!user?._id) return;
+    try {
+        const now  = new Date();
+        const u    = await User.findById(user._id).select('guestSession').lean();
+        if (!u) return;
+
+        const gs = u.guestSession || {};
+
+        // Compute elapsed active time since last event (ignore idle gaps > IDLE_CUTOFF_MIN)
+        let deltaMinutes = 0;
+        if (gs.lastActiveAt) {
+            const idleMinutes = (now - new Date(gs.lastActiveAt)) / 60000;
+            if (idleMinutes < IDLE_CUTOFF_MIN) deltaMinutes = idleMinutes;
+        }
+
+        const newPoints       = (gs.points       || 0) + pts;
+        const newActiveMinutes = (gs.activeMinutes || 0) + deltaMinutes;
+
+        // If the 6h active budget is exhausted without reaching warm, reset the session
+        if (!gs.warmStart && newActiveMinutes > ACTIVE_CAP_MIN && newPoints < WARM_THRESHOLD) {
+            await User.updateOne({ _id: user._id }, {
+                $set: {
+                    'guestSession.points':           0,
+                    'guestSession.activeMinutes':    0,
+                    'guestSession.topicEngagements': [],
+                    'guestSession.inferredTopic':    null,
+                    'guestSession.lastActiveAt':     now,
+                    'guestSession.warmStart':        false
+                }
+            });
+            return;
+        }
+
+        // Update per-topic engagement tally
+        const engagements = [...(gs.topicEngagements || [])];
+        if (topic) {
+            const entry = engagements.find(e => e.domain === topic);
+            if (entry) entry.pts += pts;
+            else engagements.push({ domain: topic, pts });
+        }
+
+        // inferredTopic = domain with most accumulated pts
+        const inferredTopic = engagements.length
+            ? engagements.reduce((best, e) => e.pts > best.pts ? e : best).domain
+            : (gs.inferredTopic || null);
+
+        const warmStart = gs.warmStart || newPoints >= WARM_THRESHOLD;
+
+        await User.updateOne({ _id: user._id }, {
+            $set: {
+                'guestSession.points':           newPoints,
+                'guestSession.activeMinutes':    newActiveMinutes,
+                'guestSession.topicEngagements': engagements,
+                'guestSession.inferredTopic':    inferredTopic,
+                'guestSession.lastActiveAt':     now,
+                'guestSession.warmStart':        warmStart
+            }
+        });
+    } catch (err) {
+        console.error('[guestSession] update error:', err);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// V2 API — showroom feed (personalized for logged-in users, public fallback)
 // ---------------------------------------------------------------------------
 app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
     try {
@@ -1406,17 +1487,121 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
         const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
         const skip  = (page - 1) * limit;
 
-        const buckets = await Bucket.find({ ...FILTER_PUBLIC, name: { $ne: 'Singletons' } })
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit + 1)
-            .populate('userId', 'username anonymousId avatar')
-            .select('name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags');
+        let buckets;
+        let isPersonalized = false;
 
-        const hasMore = buckets.length > limit;
-        const items   = hasMore ? buckets.slice(0, limit) : buckets;
+        if (req.user?._id && !req.user.isAnonymous) {
+            // Resolve followed curator IDs
+            const subs = await Subscription.find({ followerId: req.user._id }).select('followeeId').lean();
+            const followedIds = subs.map(s => s.followeeId);
 
-        // Build a set of bucket IDs the current user has already grabbed
+            // Resolve grabbed source bucket IDs, keeping grab time to filter stale ones
+            const grabbedBuckets = await Bucket.find({
+                userId:         req.user._id,
+                sourceBucketId: { $ne: null }
+            }).select('sourceBucketId createdAt').lean();
+            // Only surface a grabbed source bucket if it was updated after the user grabbed it
+            const updatedGrabbedConditions = grabbedBuckets.map(b => ({
+                _id:       b.sourceBucketId,
+                updatedAt: { $gt: b.createdAt }
+            }));
+
+            if (followedIds.length > 0 || updatedGrabbedConditions.length > 0) {
+                isPersonalized = true;
+                const orClauses = [];
+                if (followedIds.length > 0)              orClauses.push({ userId: { $in: followedIds } });
+                if (updatedGrabbedConditions.length > 0) orClauses.push(...updatedGrabbedConditions);
+                buckets = await Bucket.find({
+                    $or: orClauses,
+                    ...FILTER_PUBLIC,
+                    isDraft: { $ne: true },
+                    name:    { $ne: 'Singletons' }
+                })
+                    .sort({ updatedAt: -1 })
+                    .skip(skip)
+                    .limit(limit + 1)
+                    .populate('userId', 'username anonymousId avatar')
+                    .select('name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags');
+            }
+        }
+
+        // Topic-based feed for anonymous/guest users
+        if (!isPersonalized && req.user?.isAnonymous) {
+            isPersonalized = true;
+            const gs            = req.user.guestSession || {};
+            const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags topic';
+            const BASE_FILTER   = { ...FILTER_PUBLIC, isDraft: { $ne: true }, name: { $ne: 'Singletons' } };
+
+            if (gs.warmStart && gs.inferredTopic) {
+                // Warm start — user has revealed a topic preference.
+                // Reserve 1 slot per page for a discovery bucket from the second-best topic.
+                const mainLimit = limit - 1;
+                const secondTopic = await TopicScore.findOne({ domain: { $ne: gs.inferredTopic } })
+                    .sort({ score: -1 }).lean();
+
+                const [mainBuckets, discoveryBucket] = await Promise.all([
+                    Bucket.find({ topic: gs.inferredTopic, ...BASE_FILTER })
+                        .sort({ exploreScore: -1 })
+                        .skip(skip)
+                        .limit(mainLimit + 1)
+                        .populate('userId', 'username anonymousId avatar')
+                        .select(BUCKET_SELECT),
+                    secondTopic
+                        ? Bucket.findOne({ topic: secondTopic.domain, ...BASE_FILTER })
+                            .sort({ exploreScore: -1 })
+                            .skip(skip % 10) // gentle variety across pages
+                            .populate('userId', 'username anonymousId avatar')
+                            .select(BUCKET_SELECT)
+                        : Promise.resolve(null)
+                ]);
+
+                const hasMoreMain = mainBuckets.length > mainLimit;
+                const mainItems   = hasMoreMain ? mainBuckets.slice(0, mainLimit) : mainBuckets;
+                buckets = discoveryBucket ? [...mainItems, discoveryBucket] : mainItems;
+                // Reuse hasMore from main stream
+                buckets._hasMore = hasMoreMain;
+            } else {
+                // Cold start — show the best performing topic this week
+                const bestTopic = await TopicScore.findOne({ bucketCount: { $gte: 3 } })
+                    .sort({ score: -1 }).lean();
+
+                if (bestTopic) {
+                    buckets = await Bucket.find({ topic: bestTopic.domain, ...BASE_FILTER })
+                        .sort({ exploreScore: -1 })
+                        .skip(skip)
+                        .limit(limit + 1)
+                        .populate('userId', 'username anonymousId avatar')
+                        .select(BUCKET_SELECT);
+                }
+
+                // Fallback if no topic scores exist yet — sort by exploreScore globally
+                if (!buckets || buckets.length === 0) {
+                    buckets = await Bucket.find(BASE_FILTER)
+                        .sort({ exploreScore: -1 })
+                        .skip(skip)
+                        .limit(limit + 1)
+                        .populate('userId', 'username anonymousId avatar')
+                        .select(BUCKET_SELECT);
+                }
+            }
+        }
+
+        // Fallback for logged-in users with no follows/grabs yet
+        if (!isPersonalized) {
+            buckets = await Bucket.find({ ...FILTER_PUBLIC, isDraft: { $ne: true }, name: { $ne: 'Singletons' } })
+                .sort({ exploreScore: -1 })
+                .skip(skip)
+                .limit(limit + 1)
+                .populate('userId', 'username anonymousId avatar')
+                .select('name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags');
+        }
+
+        // Warm-start path sets _hasMore on the array itself to avoid over-slicing
+        // the mixed main+discovery result. All other paths use the +1 sentinel trick.
+        const hasMore = buckets._hasMore ?? (buckets.length > limit);
+        const items   = buckets._hasMore  ? buckets : (hasMore ? buckets.slice(0, limit) : buckets);
+
+        // Build grabbed set for current user
         let grabbedSet = new Set();
         if (req.user?._id) {
             const grabs = await Bucket.find({
@@ -1426,10 +1611,8 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
             grabs.forEach(g => grabbedSet.add(String(g.sourceBucketId)));
         }
 
-        // Build a public bucket count per curator in one aggregation
+        // Build follow set for current user
         const curatorIds = [...new Set(items.map(b => b.userId?._id).filter(Boolean))];
-
-        // Build a set of curator IDs the current user already follows
         let followedSet = new Set();
         if (req.user?._id && !req.user.isAnonymous) {
             const subs = await Subscription.find({
@@ -1438,6 +1621,7 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
             }).select('followeeId').lean();
             subs.forEach(s => followedSet.add(String(s.followeeId)));
         }
+
         const bucketCounts = await Bucket.aggregate([
             { $match: { userId: { $in: curatorIds }, ...FILTER_PUBLIC, name: { $ne: 'Singletons' } } },
             { $group: { _id: '$userId', count: { $sum: 1 } } }
@@ -1447,24 +1631,23 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
         res.json({
             hasMore,
             buckets: items.map(b => ({
-                _id:        b._id,
-                name:       b.name,
-                thumbnail:  b.thumbnail || b.links.find(l => l.image)?.image || '',
-                linkCount:  b.links.length,
+                _id:         b._id,
+                name:        b.name,
+                thumbnail:   b.thumbnail || b.links.find(l => l.image)?.image || '',
+                linkCount:   b.links.length,
                 isPaywalled: b.isPaywalled || false,
-                price:      b.price || 0,
-                viewCount:  b.viewCount  || 0,
+                price:       b.price || 0,
+                viewCount:   b.viewCount  || 0,
                 shareCount:  b.shareCount || 0,
                 createdAt:   b.createdAt,
                 updatedAt:   b.updatedAt,
                 description: b.description || '',
                 hashtags:    b.hashtags    || [],
                 isGrabbed:   grabbedSet.has(String(b._id)),
-                grabCount:  (b.grabbedBy || []).length,
-                grabbers:   (b.grabbedBy || [])
-                    .filter(g => g.avatar)
+                grabCount:   (b.grabbedBy || []).length,
+                grabbers:    (b.grabbedBy || [])
                     .slice(-4)
-                    .map(g => ({ username: g.username || '?', avatar: g.avatar })),
+                    .map(g => ({ username: g.username || '?', avatar: g.avatar || '' })),
                 curator: {
                     username:    b.userId?.username    || 'Unknown',
                     userId:      b.userId?.anonymousId || '',
@@ -1483,6 +1666,192 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 // Subscriptions — follow / unfollow a curator
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// V2 API — explore feed (scored + personalized, paginated)
+// ---------------------------------------------------------------------------
+app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
+    try {
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+        const skip  = Math.max(0, parseInt(req.query.skip)  || 0);
+
+        // Phase 1: fetch candidates sorted by pre-computed exploreScore
+        const candidates = await Bucket.find({
+            ...FILTER_PUBLIC,
+            isDraft: { $ne: true },
+            name:    { $ne: 'Singletons' }
+        })
+            .sort({ exploreScore: -1 })
+            .skip(skip)
+            .limit(limit * 5)
+            .populate('userId', 'username anonymousId avatar')
+            .select('name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags exploreScore')
+            .lean();
+
+        // Phase 2: filter out buckets already shown to this user in the last 2h.
+        // The feed intentionally returns fewer than `limit` items when unseen content
+        // runs out — the client should handle a short response gracefully rather than
+        // padding the page with already-seen buckets.
+        const impressionFilter = req.user?._id
+            ? { userId: req.user._id }
+            : req.user?.anonymousId
+                ? { anonymousId: req.user.anonymousId }
+                : null;
+
+        let unseenCandidates = candidates;
+        if (impressionFilter) {
+            const seen = await FeedImpression.find(impressionFilter).select('bucketId').lean();
+            const seenIds = new Set(seen.map(i => String(i.bucketId)));
+            unseenCandidates = candidates.filter(b => !seenIds.has(String(b._id)));
+        }
+
+        // Phase 3: personalize for authenticated non-anonymous users
+        let scored = unseenCandidates;
+
+        if (req.user?._id && !req.user.isAnonymous) {
+            // Signal A: hashtag overlap with grabbed buckets
+            const grabbedBuckets = await Bucket.find({
+                userId:         req.user._id,
+                sourceBucketId: { $ne: null }
+            }).select('hashtags').lean();
+            const userHashtags = new Set(grabbedBuckets.flatMap(b => b.hashtags || []));
+
+            // Signal B: domain affinity — domains clicked in the last 30 days
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            const domainClicks = await LinkClick.aggregate([
+                { $match: { userId: req.user._id, createdAt: { $gte: thirtyDaysAgo } } },
+                { $group: { _id: '$domain', clicks: { $sum: 1 } } }
+            ]);
+            const domainAffinityMap = Object.fromEntries(domainClicks.map(d => [d._id, d.clicks]));
+
+            // Signal C: social proximity — followed curator IDs
+            const subs = await Subscription.find({ followerId: req.user._id }).select('followeeId').lean();
+            const followedIds = new Set(subs.map(s => String(s.followeeId)));
+
+            scored = candidates.map(b => {
+                let score = b.exploreScore || 0;
+
+                // Signal A: hashtag overlap ×1.5 per matching tag
+                const tagOverlap = (b.hashtags || []).filter(t => userHashtags.has(t)).length;
+                score *= 1 + (tagOverlap * 0.5);
+
+                // Signal B: domain affinity +0.4 per recent click on matching domain
+                const bucketDomains = (b.links || []).map(l => {
+                    try { return new URL(l.href).hostname; } catch { return null; }
+                }).filter(Boolean);
+                const affinityBoost = bucketDomains.reduce((acc, d) => acc + (domainAffinityMap[d] || 0) * 0.4, 0);
+                score += affinityBoost;
+
+                // Signal C: social proximity ×1.3 if grabbed by someone you follow
+                const grabbedByFollowed = (b.grabbedBy || []).some(g => followedIds.has(String(g.userId)));
+                if (grabbedByFollowed) score *= 1.3;
+
+                return { ...b, _personalizedScore: score };
+            });
+
+            scored.sort((a, b) => (b._personalizedScore || 0) - (a._personalizedScore || 0));
+        }
+
+        // Phase 4: jitter — shift rankings between refreshes
+        const JITTER = 0.35;
+        scored = scored
+            .map(b => ({
+                ...b,
+                _jitteredScore: (b._personalizedScore ?? b.exploreScore ?? 0) * (1 - JITTER + Math.random() * JITTER * 2)
+            }))
+            .sort((a, b) => b._jitteredScore - a._jitteredScore);
+
+        // Phase 5: diversity caps — prevent feed from being dominated by one curator or topic
+        const MAX_PER_CURATOR = 2;
+        const MAX_PER_TOPIC   = 3;
+        const curatorCount = {};
+        const topicCount   = {};
+        const diverse = [];
+        for (const b of scored) {
+            const curatorKey = String(b.userId?._id || b.userId);
+            const topicKey   = b.topic || '__none__';
+            if ((curatorCount[curatorKey] || 0) >= MAX_PER_CURATOR) continue;
+            if (topicKey !== '__none__' && (topicCount[topicKey] || 0) >= MAX_PER_TOPIC) continue;
+            diverse.push(b);
+            curatorCount[curatorKey] = (curatorCount[curatorKey] || 0) + 1;
+            topicCount[topicKey]     = (topicCount[topicKey]     || 0) + 1;
+            if (diverse.length >= limit + 1) break;
+        }
+
+        const items   = diverse.slice(0, limit);
+        const hasMore = diverse.length > limit;
+
+        // Build grabbed set for current user
+        let grabbedSet = new Set();
+        if (req.user?._id) {
+            const grabs = await Bucket.find({
+                userId:         req.user._id,
+                sourceBucketId: { $in: items.map(b => b._id) }
+            }).select('sourceBucketId').lean();
+            grabs.forEach(g => grabbedSet.add(String(g.sourceBucketId)));
+        }
+
+        // Build follow set for current user
+        const curatorIds = [...new Set(items.map(b => b.userId?._id).filter(Boolean))];
+        let followedSet = new Set();
+        if (req.user?._id && !req.user.isAnonymous) {
+            const subs = await Subscription.find({
+                followerId: req.user._id,
+                followeeId: { $in: curatorIds }
+            }).select('followeeId').lean();
+            subs.forEach(s => followedSet.add(String(s.followeeId)));
+        }
+
+        // Bucket counts per curator
+        const bucketCounts = await Bucket.aggregate([
+            { $match: { userId: { $in: curatorIds }, ...FILTER_PUBLIC, name: { $ne: 'Singletons' } } },
+            { $group: { _id: '$userId', count: { $sum: 1 } } }
+        ]);
+        const bucketCountMap = Object.fromEntries(bucketCounts.map(r => [String(r._id), r.count]));
+
+        res.json({
+            hasMore,
+            buckets: items.map(b => ({
+                _id:         b._id,
+                name:        b.name,
+                thumbnail:   b.thumbnail || (b.links || []).find(l => l.image)?.image || '',
+                linkCount:   (b.links || []).length,
+                isPaywalled: b.isPaywalled || false,
+                price:       b.price || 0,
+                viewCount:   b.viewCount  || 0,
+                shareCount:  b.shareCount || 0,
+                createdAt:   b.createdAt,
+                updatedAt:   b.updatedAt,
+                description: b.description || '',
+                hashtags:    b.hashtags    || [],
+                isGrabbed:   grabbedSet.has(String(b._id)),
+                grabCount:   (b.grabbedBy || []).length,
+                grabbers:    (b.grabbedBy || [])
+                    .slice(-4)
+                    .map(g => ({ username: g.username || '?', avatar: g.avatar || '' })),
+                curator: {
+                    username:    b.userId?.username    || 'Unknown',
+                    userId:      b.userId?.anonymousId || '',
+                    avatar:      b.userId?.avatar      || '',
+                    bucketCount: bucketCountMap[String(b.userId?._id)] || 0,
+                    isFollowing: followedSet.has(String(b.userId?._id))
+                }
+            }))
+        });
+
+        // Record impressions for returned buckets (fire-and-forget, don't block response)
+        if (impressionFilter && items.length) {
+            const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+            FeedImpression.insertMany(
+                items.map(b => ({ ...impressionFilter, bucketId: b._id, expiresAt })),
+                { ordered: false }
+            ).catch(() => {}); // swallow errors — impressions are best-effort
+        }
+    } catch (err) {
+        console.error('Explore feed error:', err);
+        res.status(500).json({ error: 'Failed to load explore feed' });
+    }
+});
 
 // Subscribe to a curator (identified by their anonymousId)
 app.post('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, async (req, res) => {
@@ -2253,11 +2622,20 @@ connectMongo()
         });
 
         // Run the repository build immediately, then every hour
-        const REPO_REBUILD_INTERVAL = 60 * 60 * 1000; // 1 hour
+        const REPO_REBUILD_INTERVAL    = 60 * 60 * 1000;  // 1 hour
+        const EXPLORE_REBUILD_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
         buildRepositories().catch(err => console.error('[repos] Initial build failed:', err));
         setInterval(() => {
             buildRepositories().catch(err => console.error('[repos] Scheduled build failed:', err));
         }, REPO_REBUILD_INTERVAL);
+
+        // Run explore score build staggered 1h after repos, then every 2 hours
+        setTimeout(() => {
+            buildExploreScores().catch(err => console.error('[explore] Initial build failed:', err));
+            setInterval(() => {
+                buildExploreScores().catch(err => console.error('[explore] Scheduled build failed:', err));
+            }, EXPLORE_REBUILD_INTERVAL);
+        }, 60 * 60 * 1000);
 
         // Delete anonymous users based on inactivity:
         //   - no buckets: expire after 1 hour

@@ -103,6 +103,22 @@ const bucketSchema = new mongoose.Schema(
     isDraft: {
       type: Boolean,
       default: false
+    },
+    exploreScore: {
+      type: Number,
+      default: 0,
+      index: true
+    },
+    exploreScoreUpdatedAt: {
+      type: Date,
+      default: null
+    },
+    // Primary domain topic — derived by buildExploreScores from sourceUrl / pinned link /
+    // highest-clicked link / first link (in priority order). Used for topic-based recommendations.
+    topic: {
+      type: String,
+      default: null,
+      index: true
     }
   },
   { timestamps: true }
@@ -110,6 +126,9 @@ const bucketSchema = new mongoose.Schema(
 
 // Compound index for userId + name to ensure unique bucket names per user
 bucketSchema.index({ userId: 1, name: 1 }, { unique: true });
+
+// Compound index for explore feed: public buckets sorted by score
+bucketSchema.index({ isPublic: 1, exploreScore: -1 });
 
 // Keep visibility and isPublic in sync on every save
 bucketSchema.pre('save', function () {

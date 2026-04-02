@@ -103,7 +103,25 @@ const userSchema = new mongoose.Schema(
     // Region inferred from IP on first visit (ISO 3166-1 alpha-2 country + subdivision code)
     country: { type: String, default: null },
     region:  { type: String, default: null },
-    city:    { type: String, default: null }
+    city:    { type: String, default: null },
+    // Guest/anon recommendation session state.
+    // Carried over intact when an anonymous user converts to a registered account.
+    guestSession: {
+        // Domain of the topic they engage with most (argmax of topicEngagements)
+        inferredTopic:    { type: String,  default: null },
+        // Accumulated weighted engagement points (grab×4, share×5, pageVisit×1, linkClick×0.5)
+        points:           { type: Number,  default: 0 },
+        // Per-domain engagement breakdown — stored as an array to avoid dot-in-key issues
+        // with MongoDB paths (domain names contain dots).
+        // [ { domain: "github.com", pts: 7.5 }, … ]
+        topicEngagements: { type: [{ domain: String, pts: Number, _id: false }], default: [] },
+        // Combined active browsing time in minutes (idle gaps > 30 min are excluded)
+        activeMinutes:    { type: Number,  default: 0 },
+        // Timestamp of the last engagement event — used to compute active-time deltas
+        lastActiveAt:     { type: Date,    default: null },
+        // True once the user crosses the warm-start threshold (≥ 10 pts within 6h active time)
+        warmStart:        { type: Boolean, default: false }
+    }
   },
   { timestamps: true }
 );

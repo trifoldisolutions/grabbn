@@ -820,7 +820,7 @@
                     const bucket = pool?.find(b => b._id === card.dataset.bucketId);
                     if (bucket && window.openBucketModal) { window.openBucketModal(bucket); return; }
                 }
-                window.location.href = `/v2/${card.dataset.bucketId}`;
+                window.location.href = `/v2/bucket/${card.dataset.bucketId}`;
             });
         });
     });
@@ -831,7 +831,7 @@
         btn.dataset.busy = '1';
 
         const bucketId = btn.dataset.bucketId;
-        const url      = `${window.location.origin}/v2/${bucketId}`;
+        const url      = `${window.location.origin}/v2/bucket/${bucketId}`;
         const origHtml = btn.innerHTML;
 
         const showFeedback = () => {

@@ -1,6 +1,6 @@
 <%
   title = bucket.name
-  page  = ''
+  page  = 'explore'
   function compactNum(n) {
     n = Number(n) || 0;
     if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '')  + 'M';
@@ -368,7 +368,7 @@
         const el = document.getElementById('bvTimeAgo');
         if (el) el.textContent = label;
     })();
-    const shareUrl  = '<%= `${shareBaseUrl}/v2/${bucketId}` %>';
+    const shareUrl  = '<%= `${shareBaseUrl}/v2/bucket/${bucketId}` %>';
     const linkHrefs = <%- JSON.stringify(visibleLinks.map(function(l){ return l.href; })) %>;
 
     // Track link clicks
