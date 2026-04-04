@@ -764,7 +764,7 @@
     // ── Share button ─────────────────────────────────────────────────────────
     viewerShareBtn.addEventListener('click', async () => {
         if (!_viewerBucket) return;
-        const url  = window.location.href;
+        const url   = `${window.location.origin}/v2/bucket/${_viewerBucket._id}?ref=share&sid=${generateSid()}`;
         const title = _viewerBucket.name;
         if (navigator.share) {
             try { await navigator.share({ title, url }); } catch (_) {}
@@ -775,6 +775,7 @@
                 setTimeout(() => { viewerShareLabel.textContent = 'Share'; }, 2000);
             } catch (_) {}
         }
+        fetch(`/api/buckets/${_viewerBucket._id}/share`, { method: 'POST', credentials: 'include' }).catch(() => {});
     });
 
     // ── Copy all links button ────────────────────────────────────────────────
@@ -825,13 +826,24 @@
         });
     });
 
+    // ── Shared sid generator ──────────────────────────────────────────────────
+    function generateSid() {
+        try {
+            const arr = new Uint8Array(9);
+            crypto.getRandomValues(arr);
+            return Array.from(arr, b => b.toString(36).padStart(2, '0')).join('').slice(0, 12);
+        } catch (_) {
+            return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+        }
+    }
+
     // ── Share button on bucket cards ──────────────────────────────────────────
     async function handleCardShare(btn) {
         if (btn.dataset.busy) return;
         btn.dataset.busy = '1';
 
         const bucketId = btn.dataset.bucketId;
-        const url      = `${window.location.origin}/v2/bucket/${bucketId}`;
+        const url      = `${window.location.origin}/v2/bucket/${bucketId}?ref=share&sid=${generateSid()}`;
         const origHtml = btn.innerHTML;
 
         const showFeedback = () => {
