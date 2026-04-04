@@ -11,6 +11,15 @@
   const viewCount  = b.viewCount  ?? 0;
   const linkCount  = b.links?.length ?? 0;
   const PLACEHOLDER_COLORS = ['bg-orchid-200', 'bg-blue-200', 'bg-amber-200'];
+  function timeAgo(date) {
+    const s = Math.floor((Date.now() - new Date(date)) / 1000);
+    if (s < 60)        return `${s}s ago`;
+    if (s < 3600)      return `${Math.floor(s / 60)}m ago`;
+    if (s < 86400)     return `${Math.floor(s / 3600)}h ago`;
+    if (s < 2592000)   return `${Math.floor(s / 86400)}d ago`;
+    if (s < 31536000)  return `${Math.floor(s / 2592000)}mo ago`;
+    return `${Math.floor(s / 31536000)}y ago`;
+  }
 %>
 <div
     class="flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer hover:shadow-md transition-shadow"
@@ -101,7 +110,12 @@
                 <span><%= compactNum(shareCount) %></span>
             </button>
             <% if (!isOwn && b.originalCuratorName) { %>
-                <span class="ml-auto text-xs text-gray-400 truncate">from @<%= b.originalCuratorName %></span>
+                <div class="ml-auto flex flex-col items-end gap-0.5 min-w-0">
+                    <% if (b.updatedAt) { %>
+                        <span class="text-xs text-gray-400">updated <%= timeAgo(b.updatedAt) %></span>
+                    <% } %>
+                    <span class="text-sm text-gray-400 truncate">from @<%= b.originalCuratorName %></span>
+                </div>
             <% } %>
         </div>
     </div>

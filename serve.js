@@ -481,17 +481,19 @@ app.put('/api/buckets/:oldName', requireAuth, requireVerification, async (req, r
             return res.status(403).json({ error: 'Cannot use Singletons as a bucket name' });
         }
 
-        const bucket = await Bucket.findOneAndUpdate(
-            { userId: req.user._id, name: oldName },
-            { name: newName },
-            { new: true }
-        );
-
-        if (!bucket) {
+        const existing = await Bucket.findOne({ userId: req.user._id, name: oldName });
+        if (!existing) {
             return res.status(404).json({ error: 'Bucket not found' });
         }
 
-        res.json({ name: bucket.name });
+        if (existing.sourceBucketId) {
+            return res.status(403).json({ error: 'Grabbed buckets cannot be renamed' });
+        }
+
+        existing.name = newName;
+        await existing.save();
+
+        res.json({ name: existing.name });
     } catch (error) {
         console.error('Error updating bucket:', error);
         res.status(500).json({ error: 'Failed to update bucket' });
@@ -506,6 +508,11 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         // Fetch current state to detect meaningful changes before building the update
         const current = await Bucket.findOne({ _id: req.params.id, userId: req.user._id });
         if (!current) return res.status(404).json({ error: 'Bucket not found' });
+
+        // Grabbed buckets are view-only — editing is not allowed
+        if (current.sourceBucketId) {
+            return res.status(403).json({ error: 'Grabbed buckets cannot be edited' });
+        }
 
         const update = {};
         if (name        !== undefined) update.name        = name;
