@@ -94,8 +94,8 @@
                 </span>
             </div>
 
-            <!-- Thumbnail (full width) -->
-            <div class="relative w-full aspect-square bg-silver-50 rounded-xl overflow-hidden border border-silver-100">
+            <!-- Thumbnail (full width, max height capped so content below stays visible) -->
+            <div class="relative w-full aspect-square max-h-80 bg-silver-50 rounded-xl overflow-hidden border border-silver-100">
                 <% if (thumbnailUrl) { %>
                     <img src="<%= imgSrc(thumbnailUrl) %>" alt="<%= bucket.name %>" class="absolute inset-0 w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling&&this.nextElementSibling.classList.remove('hidden')">
                     <div class="hidden absolute inset-0 flex items-center justify-center text-silver-300">
