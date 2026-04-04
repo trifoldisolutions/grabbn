@@ -104,6 +104,21 @@ const bucketSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    // Direct views only (not explore-driven) — used in exploreScore to avoid circular feedback
+    directViewCount: {
+      type: Number,
+      default: 0
+    },
+    // Verified shares: incremented when someone lands via ?ref=share (not just on button click)
+    verifiedShareCount: {
+      type: Number,
+      default: 0
+    },
+    // "Not interested" signal — log-scaled penalty in exploreScore
+    skipCount: {
+      type: Number,
+      default: 0
+    },
     exploreScore: {
       type: Number,
       default: 0,
@@ -113,12 +128,30 @@ const bucketSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    // Tracks the last time a meaningful content change occurred (new link added, link href changed).
+    // Used by buildExploreScores for activity decay — more honest than updatedAt which fires on any edit.
+    lastMeaningfulActivityAt: {
+      type: Date,
+      default: null
+    },
     // Primary domain topic — derived by buildExploreScores from sourceUrl / pinned link /
     // highest-clicked link / first link (in priority order). Used for topic-based recommendations.
     topic: {
       type: String,
       default: null,
       index: true
+    },
+    // 3-star rating system — only grabbers who clicked >= 2 links can rate.
+    // ratingSum: sum of all submitted star values (1–3 each).
+    // ratingCount: number of unique ratings.
+    // Average = ratingSum / ratingCount (computed on read, not stored).
+    ratingSum: {
+      type: Number,
+      default: 0
+    },
+    ratingCount: {
+      type: Number,
+      default: 0
     }
   },
   { timestamps: true }

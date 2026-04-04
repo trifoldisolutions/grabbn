@@ -10,8 +10,8 @@
 %>
 <%- include('partials/layout') %>
 
-<div class="flex justify-center px-4 md:px-6 py-6">
-    <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-5 md:max-h-[70vh] md:items-stretch">
+<div class="w-full max-w-[65rem] mx-auto px-4 md:px-6 py-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:items-stretch">
 
         <!-- ── Column 1 · Meta ────────────────────────────────────────────── -->
         <div class="flex flex-col gap-4">
@@ -66,7 +66,7 @@
                 </div>
             </div>
 
-            <!-- Stats row: grabs · views · shares -->
+            <!-- Stats row: grabs · views · shares · rating -->
             <div class="flex items-center gap-5 text-sm font-medium text-gray-500">
                 <span class="flex items-center gap-1.5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0V6.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/></g></svg>
@@ -79,6 +79,18 @@
                 <span class="flex items-center gap-1.5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
                     <%= compactNum(bucket.shareCount ?? 0) %> shares
+                </span>
+                <span class="flex items-center gap-1.5 <%= ratingCount > 0 ? 'text-amber-500' : 'text-silver-300' %>" title="<%= ratingCount > 0 ? ratingCount + ' rating' + (ratingCount !== 1 ? 's' : '') : 'No ratings yet' %>">
+                    <% for (var _s = 1; _s <= 3; _s++) { %>
+                    <% if (ratingCount > 0 && _s <= Math.round(ratingAvg)) { %>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176z"/></g></svg>
+                    <% } else { %>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176zM12 4.987L9.687 8.959a1.25 1.25 0 0 1-.816.592l-4.492.973l3.062 3.427c.234.262.347.61.312.959l-.463 4.573l4.206-1.854a1.25 1.25 0 0 1 1.008 0l4.206 1.854l-.463-4.573a1.25 1.25 0 0 1 .311-.959l3.063-3.427l-4.492-.973a1.25 1.25 0 0 1-.816-.592z"/></g></svg>
+                    <% } %>
+                    <% } %>
+                    <span class="text-sm font-medium <%= ratingCount > 0 ? 'text-woodsmoke-500' : 'text-silver-400' %>">
+                        <%= ratingCount > 0 ? ratingAvg + ' (' + ratingCount + ')' : 'No ratings' %>
+                    </span>
                 </span>
             </div>
 
@@ -94,15 +106,21 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>
                     </div>
                 <% } %>
-                <!-- Not Interested overlay -->
-                <div id="bvNotInterestedOverlay" class="hidden absolute inset-0 z-10 bg-woodsmoke-950/85 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6">
+                <!-- Not Interested — Level 1: main categories -->
+                <div id="bvNiOverlay1" class="hidden absolute inset-0 z-10 bg-woodsmoke-950/85 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6">
                     <p class="text-white text-sm font-semibold text-center">Why aren't you interested?</p>
-                    <div class="flex flex-col gap-2 w-full max-w-[200px]">
-                        <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="not-my-style">Not my style</button>
-                        <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="already-seen">Already seen it</button>
-                        <button class="bv-ni-reason w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-reason="inappropriate">Inappropriate content</button>
-                        <button id="bvNotInterestedCancelBtn" class="w-full h-9 px-4 text-xs font-medium rounded-md bg-transparent hover:bg-white/10 text-white hover:text-white transition-colors flex items-center justify-center">Cancel</button>
+                    <div class="flex flex-col gap-2 w-full max-w-[220px]">
+                        <button class="bv-ni-cat w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-category="not-relevant">Not relevant to me</button>
+                        <button class="bv-ni-cat w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-category="low-quality">Low quality</button>
+                        <button class="bv-ni-cat w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-category="trust-safety">Trust &amp; safety</button>
+                        <button class="bv-ni-cat w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center" data-category="already-in-feed">Already in my feed</button>
+                        <button id="bvNiCancel1" class="w-full h-9 px-4 text-xs font-medium rounded-md bg-transparent hover:bg-white/10 text-white transition-colors flex items-center justify-center">Cancel</button>
                     </div>
+                </div>
+                <!-- Not Interested — Level 2: sub-reasons (populated by JS) -->
+                <div id="bvNiOverlay2" class="hidden absolute inset-0 z-10 bg-woodsmoke-950/85 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6">
+                    <p class="text-white text-sm font-semibold text-center" id="bvNiSubTitle"></p>
+                    <div id="bvNiSubReasons" class="flex flex-col gap-2 w-full max-w-[220px]"></div>
                 </div>
             </div>
 
@@ -175,6 +193,36 @@
                 <span id="bvGrabLabel">Grab Bucket</span>
             </button>
             <% } %>
+            <% } %>
+
+            <!-- Rating widget — always visible to non-owners; stars locked until grabbed + 2 link clicks -->
+            <% if (!isOwner) { %>
+            <%
+                var _ratingLocked  = !user || user.isAnonymous || !canRate;
+                var _ratingHint    = !user || user.isAnonymous
+                    ? 'Sign in to rate'
+                    : !hasGrabbed
+                        ? 'Grab this bucket to rate it'
+                        : 'Open at least 2 links to unlock rating';
+            %>
+            <div id="bvRatingWidget" class="flex flex-col gap-1.5">
+                <p class="text-xs font-medium text-woodsmoke-500"><%= userRating ? 'Your rating' : 'Rate this bucket' %></p>
+                <div class="flex items-center gap-1.5">
+                    <% for (var _rs = 1; _rs <= 3; _rs++) { %>
+                    <button class="bv-star-btn w-9 h-9 flex items-center justify-center rounded-md border transition-colors <%= userRating >= _rs ? 'border-amber-300 bg-amber-50 text-amber-500' : _ratingLocked ? 'border-silver-100 text-silver-200 cursor-not-allowed' : 'border-silver-200 text-silver-300 hover:border-amber-200 hover:text-amber-400 hover:bg-amber-50' %>"
+                        data-stars="<%= _rs %>" <%= _ratingLocked ? 'disabled' : '' %>>
+                        <% if (userRating >= _rs) { %>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176z"/></g></svg>
+                        <% } else { %>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176zM12 4.987L9.687 8.959a1.25 1.25 0 0 1-.816.592l-4.492.973l3.062 3.427c.234.262.347.61.312.959l-.463 4.573l4.206-1.854a1.25 1.25 0 0 1 1.008 0l4.206 1.854l-.463-4.573a1.25 1.25 0 0 1 .311-.959l3.063-3.427l-4.492-.973a1.25 1.25 0 0 1-.816-.592z"/></g></svg>
+                        <% } %>
+                    </button>
+                    <% } %>
+                    <span id="bvRatingFeedback" class="text-xs ml-1 <%= _ratingLocked && !userRating ? 'text-woodsmoke-300 italic' : 'text-woodsmoke-400' %>">
+                        <%= _ratingLocked && !userRating ? _ratingHint : '' %>
+                    </span>
+                </div>
+            </div>
             <% } %>
 
             <!-- Action buttons row -->
@@ -343,6 +391,23 @@
     </div>
 </div>
 
+<!-- ── Recommendations ───────────────────────────────────────────────────── -->
+<div class="w-full max-w-[65rem] mx-auto px-4 md:px-6 pb-10 mt-2">
+    <div>
+        <h2 class="text-sm font-semibold text-woodsmoke-400 uppercase tracking-wide mb-3">More like this</h2>
+        <div id="bvRecs" class="grid grid-cols-3 gap-3">
+            <!-- skeleton placeholders -->
+            <% for (var _i = 0; _i < 3; _i++) { %>
+            <div class="bv-rec-skeleton animate-pulse flex flex-col gap-2">
+                <div class="w-full aspect-square rounded-lg bg-silver-100"></div>
+                <div class="h-3 bg-silver-100 rounded w-3/4"></div>
+                <div class="h-3 bg-silver-100 rounded w-1/2"></div>
+            </div>
+            <% } %>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
     const bucketId  = '<%= bucketId %>';
@@ -368,7 +433,7 @@
         const el = document.getElementById('bvTimeAgo');
         if (el) el.textContent = label;
     })();
-    const shareUrl  = '<%= `${shareBaseUrl}/v2/bucket/${bucketId}` %>';
+    const shareUrl  = '<%= `${shareBaseUrl}/v2/bucket/${bucketId}?ref=share` %>';
     const linkHrefs = <%- JSON.stringify(visibleLinks.map(function(l){ return l.href; })) %>;
 
     // Track link clicks
@@ -428,39 +493,106 @@
         document.querySelectorAll('.bv-link-menu').forEach(function (m) { m.classList.add('hidden'); });
     });
 
-    // Not interested (bucket-level)
+    // Not interested — two-level overlay
     const bvNotInterestedBtn = document.getElementById('bvNotInterestedBtn');
     if (bvNotInterestedBtn) {
-        bvNotInterestedBtn.addEventListener('click', function () {
-            document.getElementById('bvNotInterestedOverlay').classList.remove('hidden');
-            document.getElementById('bvLinksCol').classList.add('blur-sm', 'pointer-events-none', 'select-none');
-        });
-        function dismissNiOverlay() {
-            document.getElementById('bvNotInterestedOverlay').classList.add('hidden');
-            document.getElementById('bvLinksCol').classList.remove('blur-sm', 'pointer-events-none', 'select-none');
+        const NI_SUB_REASONS = {
+            'not-relevant':   { title: 'What feels off?',          reasons: [{ label: 'Not my style',       value: 'not-my-style' }, { label: "Topic doesn't interest me", value: 'wrong-topic' }] },
+            'low-quality':    { title: "What's the issue?",        reasons: [{ label: 'Too few links',      value: 'too-few-links' }, { label: 'Links look outdated',       value: 'outdated-links' }, { label: 'Misleading title',          value: 'misleading-title' }] },
+            'trust-safety':   { title: 'What did you notice?',     reasons: [{ label: 'Inappropriate content', value: 'inappropriate' }, { label: 'Spam',                   value: 'spam' }] },
+            'already-in-feed':{ title: null,                       reasons: [] }
+        };
+
+        const BTN_CLS = 'bv-ni-sub w-full h-9 px-4 text-xs font-medium rounded-md bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors flex items-center justify-center';
+
+        function blurContent()   { document.getElementById('bvLinksCol').classList.add('blur-sm', 'pointer-events-none', 'select-none'); }
+        function unblurContent() { document.getElementById('bvLinksCol').classList.remove('blur-sm', 'pointer-events-none', 'select-none'); }
+
+        function closeAllNi() {
+            document.getElementById('bvNiOverlay1').classList.add('hidden');
+            document.getElementById('bvNiOverlay2').classList.add('hidden');
+            unblurContent();
         }
 
-        document.querySelectorAll('.bv-ni-reason').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                dismissNiOverlay();
-                const label = document.getElementById('bvNotInterestedLabel');
-                label.textContent = 'Noted';
-                bvNotInterestedBtn.disabled = true;
-                bvNotInterestedBtn.classList.add('opacity-60', 'cursor-default');
-            });
+        function submitNi(category, reason) {
+            closeAllNi();
+            const label = document.getElementById('bvNotInterestedLabel');
+            label.textContent = 'Noted';
+            bvNotInterestedBtn.disabled = true;
+            bvNotInterestedBtn.classList.add('opacity-60', 'cursor-default');
+            fetch('/api/buckets/<%= bucket._id %>/not-interested', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category, reason: reason || null })
+            }).catch(function () {});
+        }
+
+        bvNotInterestedBtn.addEventListener('click', function () {
+            blurContent();
+            document.getElementById('bvNiOverlay1').classList.remove('hidden');
         });
 
-        document.getElementById('bvNotInterestedCancelBtn').addEventListener('click', dismissNiOverlay);
+        document.getElementById('bvNiCancel1').addEventListener('click', closeAllNi);
+
+        document.querySelectorAll('.bv-ni-cat').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const category = btn.dataset.category;
+                const config   = NI_SUB_REASONS[category];
+
+                // "Already in my feed" — no sub-reasons, submit immediately
+                if (!config || config.reasons.length === 0) {
+                    submitNi(category, null);
+                    return;
+                }
+
+                // Show level-2 overlay
+                document.getElementById('bvNiOverlay1').classList.add('hidden');
+                document.getElementById('bvNiSubTitle').textContent = config.title;
+
+                const container = document.getElementById('bvNiSubReasons');
+                container.innerHTML = '';
+                config.reasons.forEach(function (r) {
+                    const b = document.createElement('button');
+                    b.className = BTN_CLS;
+                    b.textContent = r.label;
+                    b.addEventListener('click', function () { submitNi(category, r.value); });
+                    container.appendChild(b);
+                });
+
+                // Back button
+                const back = document.createElement('button');
+                back.className = 'w-full h-9 px-4 text-xs font-medium rounded-md bg-transparent hover:bg-white/10 text-white transition-colors flex items-center justify-center';
+                back.textContent = '← Back';
+                back.addEventListener('click', function () {
+                    document.getElementById('bvNiOverlay2').classList.add('hidden');
+                    document.getElementById('bvNiOverlay1').classList.remove('hidden');
+                });
+                container.appendChild(back);
+
+                document.getElementById('bvNiOverlay2').classList.remove('hidden');
+            });
+        });
     }
 
     // Share
+    function generateSid() {
+        try {
+            const arr = new Uint8Array(9);
+            crypto.getRandomValues(arr);
+            return Array.from(arr, function (b) { return b.toString(36).padStart(2, '0'); }).join('').slice(0, 12);
+        } catch (_) {
+            return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+        }
+    }
+
     document.getElementById('bvShareBtn').addEventListener('click', async function () {
         const label = document.getElementById('bvShareLabel');
         const shareText = '<% if (user && !user.isAnonymous) { %>@<%= user.username %> is sharing a link collection with you from Grabbn. Have a look at it!<% } else { %>Check out this link collection on Grabbn!<% } %>';
+        const url = shareUrl + '&sid=' + generateSid();
         if (navigator.share) {
-            try { await navigator.share({ title: '<%= bucket.name.replace(/'/g, "\\'") %>', text: shareText, url: shareUrl }); } catch (_) {}
+            try { await navigator.share({ title: '<%= bucket.name.replace(/'/g, "\\'") %>', text: shareText, url: url }); } catch (_) {}
         } else {
-            await navigator.clipboard.writeText(shareText + '\n' + shareUrl).catch(() => {});
+            await navigator.clipboard.writeText(shareText + '\n' + url).catch(() => {});
             label.textContent = 'Link copied!';
             setTimeout(function () { label.textContent = 'Share'; }, 2000);
         }
@@ -480,6 +612,66 @@
         }
         setTimeout(function () { label.textContent = 'Copy all links'; }, 2000);
     });
+
+    // Star rating widget
+    (function () {
+        const starBtns = document.querySelectorAll('.bv-star-btn');
+        if (!starBtns.length) return;
+
+        const feedback = document.getElementById('bvRatingFeedback');
+        let current = <%- userRating || 'null' %>;
+
+        const SVG_FILLED  = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176z"/></g></svg>';
+        const SVG_OUTLINE = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176zM12 4.987L9.687 8.959a1.25 1.25 0 0 1-.816.592l-4.492.973l3.062 3.427c.234.262.347.61.312.959l-.463 4.573l4.206-1.854a1.25 1.25 0 0 1 1.008 0l4.206 1.854l-.463-4.573a1.25 1.25 0 0 1 .311-.959l3.063-3.427l-4.492-.973a1.25 1.25 0 0 1-.816-.592z"/></g></svg>';
+
+        function paint(filled) {
+            starBtns.forEach(function (btn) {
+                const s = Number(btn.dataset.stars);
+                const active = s <= filled;
+                btn.className = 'bv-star-btn w-9 h-9 flex items-center justify-center rounded-md border transition-colors '
+                    + (active ? 'border-amber-300 bg-amber-50 text-amber-500' : 'border-silver-200 text-silver-300 hover:border-amber-200 hover:text-amber-400 hover:bg-amber-50');
+                btn.innerHTML = active ? SVG_FILLED : SVG_OUTLINE;
+            });
+        }
+
+        starBtns.forEach(function (btn) {
+            btn.addEventListener('mouseenter', function () {
+                if (!btn.disabled) paint(Number(btn.dataset.stars));
+            });
+            btn.addEventListener('mouseleave', function () {
+                paint(current || 0);
+            });
+            btn.addEventListener('click', async function () {
+                if (btn.disabled) return;
+                const stars = Number(btn.dataset.stars);
+                starBtns.forEach(function (b) { b.disabled = true; });
+                try {
+                    const res = await fetch('/api/buckets/' + bucketId + '/rate', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ stars })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        current = stars;
+                        paint(current);
+                        const label = document.querySelector('#bvRatingWidget p');
+                        if (label) label.textContent = 'Your rating';
+                        if (feedback) { feedback.textContent = 'Saved'; setTimeout(function () { feedback.textContent = ''; }, 2000); }
+                    } else {
+                        if (feedback) { feedback.textContent = data.error || 'Failed'; setTimeout(function () { feedback.textContent = ''; }, 3000); }
+                    }
+                } catch (_) {
+                    if (feedback) { feedback.textContent = 'Network error'; setTimeout(function () { feedback.textContent = ''; }, 3000); }
+                }
+                starBtns.forEach(function (b) { b.disabled = false; });
+            });
+        });
+
+        // Initial paint
+        paint(current || 0);
+    })();
 
     // Report
     const bvReportBtn = document.getElementById('bvReportBtn');
@@ -578,6 +770,82 @@
             grabBtn.disabled = false;
         });
     }
+
+    // Recommendations — cards styled identically to the explore feed
+    (function () {
+        const NO_THUMB_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" class="text-gray-400" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>`;
+        const GRAB_ICON   = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0V6.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/></g></svg>`;
+        const VIEW_ICON   = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 5c3.679 0 8.162 2.417 9.73 5.901c.146.328.27.71.27 1.099c0 .388-.123.771-.27 1.099C20.161 16.583 15.678 19 12 19s-8.162-2.417-9.73-5.901C2.124 12.77 2 12.389 2 12c0-.388.123-.771.27-1.099C3.839 7.417 8.322 5 12 5m0 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8m0 2a2 2 0 1 1 0 4a2 2 0 0 1 0-4"/></g></svg>`;
+        const SHARE_ICON  = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M14.055 3.38a1 1 0 0 1 1.09.217l6 6a1 1 0 0 1 0 1.414l-6 6A1 1 0 0 1 13.5 16.5V14c-3.53.26-6.212 1.493-8.144 3.764a1 1 0 0 1-1.743-.578C3.117 12.568 5.259 7.44 13.5 6.03V3.5a1 1 0 0 1 .555-.12"/></g></svg>`;
+
+        function fmt(n) {
+            n = Number(n) || 0;
+            if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(2).replace(/\.?0+$/, '') + 'K';
+            return String(n);
+        }
+        function esc(s) {
+            return String(s).replace(/[&<>"']/g, function(c) {
+                return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+            });
+        }
+
+        function buildRecCard(b) {
+            const card = document.createElement('div');
+            card.className = 'flex flex-col rounded-md bg-white border border-silver-100';
+
+            const thumbSrc = b.thumbnail
+                ? (b.thumbnail.startsWith('data:') || b.thumbnail.startsWith('/') ? b.thumbnail : '/api/img-proxy?url=' + encodeURIComponent(b.thumbnail))
+                : null;
+            const thumbContent = thumbSrc
+                ? `<img src="${esc(thumbSrc)}" class="w-full h-full object-cover" loading="lazy" />`
+                : `<div class="w-full h-full flex items-center justify-center text-gray-400">${NO_THUMB_SVG}</div>`;
+
+            const priceBadge = b.isPaywalled
+                ? `<span class="px-1.5 py-0.5 rounded text-[12px] font-bold backdrop-blur-sm leading-none bg-orchid-600 text-white">${fmt(b.price)} EWL</span>`
+                : `<span class="px-1.5 py-0.5 rounded text-[12px] font-bold backdrop-blur-sm leading-none bg-white/80 text-gray-600">Free</span>`;
+
+            card.innerHTML = `
+                <div class="relative p-2">
+                    <a href="/v2/bucket/${esc(b._id)}" class="block aspect-square overflow-hidden rounded-sm bg-silver-100">
+                        ${thumbContent}
+                    </a>
+                    <div class="absolute bottom-4 right-4 flex items-center gap-1">
+                        <span class="px-1.5 py-0.5 rounded text-[12px] font-semibold bg-white/80 backdrop-blur-sm text-gray-600 leading-none">
+                            ${b.linkCount} link${b.linkCount !== 1 ? 's' : ''}
+                        </span>
+                        ${priceBadge}
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 px-3 pt-2.5 pb-0 min-w-0">
+                    <p class="font-semibold truncate flex-1 text-woodsmoke-950">${esc(b.name)}</p>
+                </div>
+                <div class="flex items-center gap-3 px-3 pt-1.5 pb-2.5">
+                    <span class="flex items-center gap-1 text-sm font-medium text-gray-500">${GRAB_ICON}<span>${fmt(b.grabCount)}</span></span>
+                    <span class="flex items-center gap-1 text-sm font-medium text-gray-500">${VIEW_ICON}<span>${fmt(b.viewCount)}</span></span>
+                    <span class="flex items-center gap-1 text-sm font-medium text-gray-500">${SHARE_ICON}<span>${fmt(b.shareCount)}</span></span>
+                </div>
+            `;
+            return card;
+        }
+
+        fetch('/api/buckets/' + bucketId + '/recommendations', { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                const grid = document.getElementById('bvRecs');
+                if (!grid) return;
+                grid.innerHTML = '';
+                if (!data.buckets || data.buckets.length === 0) {
+                    grid.closest('.flex.justify-center').style.display = 'none';
+                    return;
+                }
+                data.buckets.forEach(function (b) { grid.appendChild(buildRecCard(b)); });
+            })
+            .catch(function () {
+                const grid = document.getElementById('bvRecs');
+                if (grid) grid.closest('.flex.justify-center').style.display = 'none';
+            });
+    })();
 
     // Unlock button (paywalled, logged-in user without access)
     const unlockBtn = document.getElementById('bvUnlockBtn');

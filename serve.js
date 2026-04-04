@@ -28,6 +28,9 @@ import BucketView from './server/models/bucketView.js';
 import BucketShare from './server/models/bucketShare.js';
 import FeedImpression from './server/models/feedImpression.js';
 import TopicScore from './server/models/topicScore.js';
+import BucketSkip   from './server/models/bucketSkip.js';
+import ShareVisit   from './server/models/shareVisit.js';
+import BucketRating from './server/models/bucketRating.js';
 import { wsClients, pushNotification } from './server/ws.js';
 
 dotenv.config();
@@ -567,6 +570,10 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
                 }
             }
         }
+
+        // Track real content changes (new links, link hrefs changed) as meaningful activity
+        // so the explore score activity decay uses an honest signal rather than any edit.
+        if (notifyGrabbers) update.lastMeaningfulActivityAt = new Date();
 
         const bucket = await Bucket.findOneAndUpdate(
             { _id: req.params.id, userId: req.user._id },
@@ -1154,21 +1161,23 @@ app.delete('/api/buckets/grab/:sourceBucketId', requireAuth, requireVerification
     }
 });
 
-// Increment viewCount for a bucket, deduplicating by userId (logged-in) or IP (anon, 6h window).
+// Increment viewCount (and directViewCount when source !== 'explore') for a bucket,
+// deduplicating permanently by userId (logged-in) or IP (anon).
 // isOwner check must be done by the caller before invoking this.
-async function trackBucketView(bucketId, userId, ip) {
-    const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+async function trackBucketView(bucketId, userId, ip, source) {
+    const isExplore = source === 'explore';
+    const inc = isExplore ? { viewCount: 1 } : { viewCount: 1, directViewCount: 1 };
     if (userId) {
         const exists = await BucketView.exists({ bucketId, userId });
         if (!exists) {
-            await BucketView.create({ bucketId, userId, ip: null, expiresAt: null });
-            await Bucket.findByIdAndUpdate(bucketId, { $inc: { viewCount: 1 } }, { timestamps: false });
+            await BucketView.create({ bucketId, userId, ip: null });
+            await Bucket.findByIdAndUpdate(bucketId, { $inc: inc }, { timestamps: false });
         }
     } else {
         const exists = await BucketView.exists({ bucketId, ip });
         if (!exists) {
-            await BucketView.create({ bucketId, userId: null, ip, expiresAt: new Date(Date.now() + SIX_HOURS_MS) });
-            await Bucket.findByIdAndUpdate(bucketId, { $inc: { viewCount: 1 } }, { timestamps: false });
+            await BucketView.create({ bucketId, userId: null, ip });
+            await Bucket.findByIdAndUpdate(bucketId, { $inc: inc }, { timestamps: false });
         }
     }
 }
@@ -1214,6 +1223,92 @@ app.post('/api/buckets/:id/share', requireAuth, requireVerification, async (req,
     } catch (error) {
         console.error('Error recording share:', error);
         res.status(500).json({ error: 'Failed to record share' });
+    }
+});
+
+// Not interested in a bucket.
+// Tracks per-user skips (for feed filtering) and increments skipCount (for score penalty).
+// Trust & safety categories also file a soft report in the background.
+app.post('/api/buckets/:id/not-interested', async (req, res) => {
+    try {
+        const { category, reason } = req.body;
+
+        const validCategories = ['not-relevant', 'low-quality', 'trust-safety', 'already-in-feed'];
+        if (!category || !validCategories.includes(category)) {
+            return res.status(400).json({ error: 'Invalid category' });
+        }
+
+        const bucket = await Bucket.findById(req.params.id).select('_id userId').lean();
+        if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
+
+        const userId = (req.user && !req.user.isAnonymous) ? req.user._id : null;
+        const ip     = req.ip;
+
+        // Deduplicate: one skip per user/IP per bucket
+        const existingSkip = userId
+            ? await BucketSkip.exists({ bucketId: bucket._id, userId })
+            : await BucketSkip.exists({ bucketId: bucket._id, ip });
+
+        if (!existingSkip) {
+            await BucketSkip.create({ bucketId: bucket._id, userId, ip: userId ? null : ip, category, reason: reason || null });
+            await Bucket.findByIdAndUpdate(bucket._id, { $inc: { skipCount: 1 } }, { timestamps: false });
+        }
+
+        // Trust & safety reasons also file a soft report (fire-and-forget)
+        if (category === 'trust-safety' && userId) {
+            const reportReason = reason === 'spam' ? 'spam' : 'inappropriate';
+            Report.create({ bucketId: bucket._id, userId, reason: reportReason, detail: `via not-interested: ${reason || ''}` }).catch(() => {});
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error recording not-interested:', error);
+        res.status(500).json({ error: 'Failed to record' });
+    }
+});
+
+// Rate a bucket (1–3 stars)
+// Gate: user must have grabbed the bucket AND clicked at least 2 links from it.
+app.post('/api/buckets/:bucketId/rate', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { bucketId } = req.params;
+        const stars = Number(req.body.stars);
+
+        if (![1, 2, 3].includes(stars)) {
+            return res.status(400).json({ error: 'stars must be 1, 2, or 3' });
+        }
+
+        // Must have grabbed the bucket
+        const grabbed = await Bucket.findOne({ userId: req.user._id, sourceBucketId: bucketId }).select('_id').lean();
+        if (!grabbed) {
+            return res.status(403).json({ error: 'Grab this bucket before rating it' });
+        }
+
+        // Must have clicked at least 2 links from it
+        const clickCount = await LinkClick.countDocuments({ bucketId, userId: req.user._id });
+        if (clickCount < 2) {
+            return res.status(403).json({ error: 'Explore at least 2 links before rating' });
+        }
+
+        // Upsert: adjust ratingSum by the delta if re-rating
+        const existing = await BucketRating.findOne({ bucketId, userId: req.user._id }).select('stars').lean();
+        if (existing) {
+            const delta = stars - existing.stars;
+            await Promise.all([
+                BucketRating.updateOne({ bucketId, userId: req.user._id }, { $set: { stars } }),
+                Bucket.findByIdAndUpdate(bucketId, { $inc: { ratingSum: delta } }, { timestamps: false })
+            ]);
+        } else {
+            await Promise.all([
+                BucketRating.create({ bucketId, userId: req.user._id, stars }),
+                Bucket.findByIdAndUpdate(bucketId, { $inc: { ratingSum: stars, ratingCount: 1 } }, { timestamps: false })
+            ]);
+        }
+
+        res.json({ ok: true, stars });
+    } catch (err) {
+        console.error('Error rating bucket:', err);
+        res.status(500).json({ error: 'Failed to save rating' });
     }
 });
 
@@ -1337,7 +1432,10 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
                         image:    await fetchImageAsBase64(link.image || null) ?? link.image ?? null,
                     }))
             );
-            bucket.links.push(...newLinks);
+            if (newLinks.length > 0) {
+                bucket.links.push(...newLinks);
+                bucket.lastMeaningfulActivityAt = new Date();
+            }
 
             // Auto-set bucket thumbnail from first link image if not already set
             if (!bucket.thumbnail) {
@@ -1350,7 +1448,7 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
                 bucket.sourceUrl = links[0].sourceUrl;
             }
 
-            await bucket.save();
+            await bucket.save({ timestamps: newLinks.length > 0 });
             results.push(bucket);
         }
 
@@ -1688,10 +1786,8 @@ app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
             .select('name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags exploreScore')
             .lean();
 
-        // Phase 2: filter out buckets already shown to this user in the last 2h.
-        // The feed intentionally returns fewer than `limit` items when unseen content
-        // runs out — the client should handle a short response gracefully rather than
-        // padding the page with already-seen buckets.
+        // Phase 2: filter out buckets already shown to this user in the last 2h,
+        // and buckets the user has explicitly skipped (never show again).
         const impressionFilter = req.user?._id
             ? { userId: req.user._id }
             : req.user?.anonymousId
@@ -1700,9 +1796,17 @@ app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
 
         let unseenCandidates = candidates;
         if (impressionFilter) {
-            const seen = await FeedImpression.find(impressionFilter).select('bucketId').lean();
-            const seenIds = new Set(seen.map(i => String(i.bucketId)));
-            unseenCandidates = candidates.filter(b => !seenIds.has(String(b._id)));
+            const [seen, skipped] = await Promise.all([
+                FeedImpression.find(impressionFilter).select('bucketId').lean(),
+                req.user?._id
+                    ? BucketSkip.find({ userId: req.user._id }).select('bucketId').lean()
+                    : Promise.resolve([])
+            ]);
+            const seenIds    = new Set(seen.map(i => String(i.bucketId)));
+            const skippedIds = new Set(skipped.map(s => String(s.bucketId)));
+            unseenCandidates = candidates.filter(b =>
+                !seenIds.has(String(b._id)) && !skippedIds.has(String(b._id))
+            );
         }
 
         // Phase 3: personalize for authenticated non-anonymous users
@@ -2537,6 +2641,66 @@ app.get('/v2/bucket/:bucketId/thumbnail.jpg', async (req, res) => {
     }
 });
 
+// Bucket recommendations — returns similar public buckets sorted by exploreScore.
+// Matching strategy (in order of preference):
+//   1. Shared hashtags (any overlap)
+//   2. Same topic (domain / derived topic)
+// The current bucket and its curator's other buckets are excluded.
+app.get('/api/buckets/:id/recommendations', anonymousAuth, async (req, res) => {
+    try {
+        const bucket = await Bucket.findById(req.params.id)
+            .select('userId topic hashtags')
+            .lean();
+        if (!bucket) return res.json({ buckets: [] });
+
+        const BASE_FILTER = { ...FILTER_PUBLIC, isDraft: { $ne: true }, name: { $ne: 'Singletons' } };
+        const exclude = { _id: { $ne: bucket._id }, userId: { $ne: bucket.userId } };
+
+        // Build OR conditions: hashtag overlap first, topic fallback
+        const orConditions = [];
+        if (bucket.hashtags?.length > 0) {
+            orConditions.push({ hashtags: { $in: bucket.hashtags } });
+        }
+        if (bucket.topic) {
+            orConditions.push({ topic: bucket.topic });
+        }
+
+        let recs = [];
+        if (orConditions.length > 0) {
+            recs = await Bucket.find({ ...BASE_FILTER, ...exclude, $or: orConditions })
+                .sort({ exploreScore: -1 })
+                .limit(3)
+                .populate('userId', 'username avatar anonymousId')
+                .select('name thumbnail links grabbedBy hashtags topic userId viewCount shareCount isPaywalled price')
+                .lean();
+        }
+
+        res.json({
+            buckets: recs.map(b => ({
+                _id:         b._id,
+                name:        b.name,
+                thumbnail:   b.thumbnail || (b.links || []).find(l => l.image)?.image || '',
+                linkCount:   (b.links || []).length,
+                grabCount:   (b.grabbedBy || []).length,
+                viewCount:   b.viewCount   || 0,
+                shareCount:  b.shareCount  || 0,
+                isPaywalled: b.isPaywalled || false,
+                price:       b.price       || 0,
+                hashtags:    b.hashtags    || [],
+                topic:       b.topic       || null,
+                curator: {
+                    username: b.userId?.username    || 'Unknown',
+                    avatar:   b.userId?.avatar      || '',
+                    userId:   b.userId?.anonymousId || ''
+                }
+            }))
+        });
+    } catch (err) {
+        console.error('Recommendations error:', err);
+        res.json({ buckets: [] });
+    }
+});
+
 // Bucket view page — /v2/bucket/:bucketId  (accessible to anyone)
 app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
     try {
@@ -2575,10 +2739,44 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
             ? !!(await Bucket.findOne({ userId: req.user._id, sourceBucketId: bucket._id }).select('_id').lean())
             : false;
 
+        // Rating eligibility: grabbed + clicked >= 2 links
+        let canRate    = false;
+        let userRating = null;
+        if (hasGrabbed) {
+            const [clickCount, existingRating] = await Promise.all([
+                LinkClick.countDocuments({ bucketId: bucket._id, userId: req.user._id }),
+                BucketRating.findOne({ bucketId: bucket._id, userId: req.user._id }).select('stars').lean()
+            ]);
+            canRate    = clickCount >= 2;
+            userRating = existingRating?.stars ?? null;
+        }
+        const ratingCount = bucket.ratingCount || 0;
+        const ratingAvg   = ratingCount > 0 ? Math.round((bucket.ratingSum / ratingCount) * 10) / 10 : null;
+
         // Track view (fire-and-forget, skip owner)
         if (!isOwner) {
             const userId = (req.user && !req.user.isAnonymous) ? req.user._id : null;
-            trackBucketView(bucketId, userId, req.ip).catch(() => {});
+            const viewSource = req.query.src === 'explore' ? 'explore' : 'direct';
+            trackBucketView(bucketId, userId, req.ip, viewSource).catch(() => {});
+        }
+
+        // Verified share: someone arrived via a shared link — deduplicate by (bucketId, sid, visitor)
+        // so refreshing the same link doesn't inflate the count, but each distinct recipient counts once.
+        if (req.query.ref === 'share' && req.query.sid) {
+            const sid    = String(req.query.sid).slice(0, 32);
+            const userId = (req.user && !req.user.isAnonymous) ? req.user._id : null;
+            const ip     = req.ip;
+            (async () => {
+                try {
+                    const seen = userId
+                        ? await ShareVisit.exists({ bucketId, sid, userId })
+                        : await ShareVisit.exists({ bucketId, sid, ip });
+                    if (!seen) {
+                        await ShareVisit.create({ bucketId, sid, userId, ip: userId ? null : ip });
+                        await Bucket.findByIdAndUpdate(bucketId, { $inc: { verifiedShareCount: 1 } }, { timestamps: false });
+                    }
+                } catch (_) {}
+            })();
         }
 
         const bucketUrl = `${shareBaseUrl}/v2/bucket/${bucketId}`;
@@ -2600,6 +2798,10 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
             isOwner,
             hasAccess,
             hasGrabbed,
+            canRate,
+            userRating,
+            ratingCount,
+            ratingAvg,
             isUnlisted: vis === 'unlisted',
             ogTitle: `${bucket.name} - Shared Link Collection`,
             ogDescription: '',
