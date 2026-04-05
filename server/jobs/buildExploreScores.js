@@ -133,14 +133,28 @@ export async function buildExploreScores() {
     console.log('[explore] Starting score rebuild…');
     const t0 = Date.now();
 
+    // Zero out scores for any public buckets that no longer have a thumbnail
+    // so they are immediately excluded from explore queries.
+    await Bucket.collection.updateMany(
+        {
+            $and: [
+                FILTER_PUBLIC,
+                { isDraft: { $ne: true } },
+                { $or: [{ thumbnail: { $exists: false } }, { thumbnail: '' }] }
+            ]
+        },
+        { $set: { exploreScore: 0 } }
+    );
+
     // Stream a cursor over all public, non-draft buckets.
     // Project only the fields needed to compute the score and topic.
     const cursor = Bucket.aggregate([
         {
             $match: {
                 ...FILTER_PUBLIC,
-                isDraft:  { $ne: true },
-                name:     { $ne: 'Singletons' }
+                isDraft:   { $ne: true },
+                name:      { $ne: 'Singletons' },
+                thumbnail: { $exists: true, $ne: '' }
             }
         },
         {
@@ -176,14 +190,14 @@ export async function buildExploreScores() {
         });
 
         if (ops.length >= BATCH_SIZE) {
-            await Bucket.bulkWrite(ops);
+            await Bucket.collection.bulkWrite(ops);
             total += ops.length;
             ops = [];
         }
     }
 
     if (ops.length) {
-        await Bucket.bulkWrite(ops);
+        await Bucket.collection.bulkWrite(ops);
         total += ops.length;
     }
 
@@ -199,8 +213,9 @@ export async function buildExploreScores() {
         {
             $match: {
                 ...FILTER_PUBLIC,
-                isDraft: { $ne: true },
-                topic:   { $ne: null }
+                isDraft:   { $ne: true },
+                topic:     { $ne: null },
+                thumbnail: { $exists: true, $ne: '' }
             }
         },
         {

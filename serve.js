@@ -1626,7 +1626,7 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
                     .skip(skip)
                     .limit(limit + 1)
                     .populate('userId', 'username anonymousId avatar')
-                    .select('name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags');
+                    .select('name thumbnail links isPaywalled price viewCount shareCount ratingSum ratingCount createdAt updatedAt userId grabbedBy description hashtags');
             }
         }
 
@@ -1634,7 +1634,7 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
         if (!isPersonalized && req.user?.isAnonymous) {
             isPersonalized = true;
             const gs            = req.user.guestSession || {};
-            const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags topic';
+            const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount ratingSum ratingCount createdAt updatedAt userId grabbedBy description hashtags topic';
             const BASE_FILTER   = { ...FILTER_PUBLIC, isDraft: { $ne: true }, name: { $ne: 'Singletons' } };
 
             if (gs.warmStart && gs.inferredTopic) {
@@ -1698,7 +1698,7 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
                 .skip(skip)
                 .limit(limit + 1)
                 .populate('userId', 'username anonymousId avatar')
-                .select('name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags');
+                .select('name thumbnail links isPaywalled price viewCount shareCount ratingSum ratingCount createdAt updatedAt userId grabbedBy description hashtags');
         }
 
         // Warm-start path sets _hasMore on the array itself to avoid over-slicing
@@ -1742,8 +1742,10 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
                 linkCount:   b.links.length,
                 isPaywalled: b.isPaywalled || false,
                 price:       b.price || 0,
-                viewCount:   b.viewCount  || 0,
-                shareCount:  b.shareCount || 0,
+                viewCount:   b.viewCount   || 0,
+                shareCount:  b.shareCount  || 0,
+                ratingSum:   b.ratingSum   || 0,
+                ratingCount: b.ratingCount || 0,
                 createdAt:   b.createdAt,
                 updatedAt:   b.updatedAt,
                 description: b.description || '',
@@ -1783,14 +1785,15 @@ app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
         // Phase 1: fetch candidates sorted by pre-computed exploreScore
         const candidates = await Bucket.find({
             ...FILTER_PUBLIC,
-            isDraft: { $ne: true },
-            name:    { $ne: 'Singletons' }
+            isDraft:   { $ne: true },
+            name:      { $ne: 'Singletons' },
+            thumbnail: { $exists: true, $ne: '' }
         })
             .sort({ exploreScore: -1 })
             .skip(skip)
             .limit(limit * 5)
             .populate('userId', 'username anonymousId avatar')
-            .select('name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags exploreScore')
+            .select('name thumbnail links isPaywalled price viewCount shareCount ratingSum ratingCount createdAt updatedAt userId grabbedBy description hashtags exploreScore')
             .lean();
 
         // Phase 2: filter out buckets already shown to this user in the last 2h,
@@ -1929,8 +1932,10 @@ app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
                 linkCount:   (b.links || []).length,
                 isPaywalled: b.isPaywalled || false,
                 price:       b.price || 0,
-                viewCount:   b.viewCount  || 0,
-                shareCount:  b.shareCount || 0,
+                viewCount:   b.viewCount   || 0,
+                shareCount:  b.shareCount  || 0,
+                ratingSum:   b.ratingSum   || 0,
+                ratingCount: b.ratingCount || 0,
                 createdAt:   b.createdAt,
                 updatedAt:   b.updatedAt,
                 description: b.description || '',
@@ -2116,14 +2121,18 @@ app.get('/api/v2/repositories/:domain', anonymousAuth, async (req, res) => {
 // V2 routes — server-rendered with EJS
 // ---------------------------------------------------------------------------
 const v2Pages = [
-    { path: '/v2',              view: 'v2/showroom',     title: 'Show Room',    page: 'home'         },
-    { path: '/v2/showroom',     view: 'v2/showroom',     title: 'Show Room',    page: 'home'         },
-    { path: '/v2/explore',      view: 'v2/explore',      title: 'Explore',      page: 'explore'      },
-    { path: '/v2/transactions', view: 'v2/transactions', title: 'Transactions', page: 'transactions' },
-    { path: '/v2/settings',     view: 'v2/settings',     title: 'Settings',     page: 'settings'     },
-    { path: '/v2/docs',         view: 'v2/docs',         title: 'Docs',         page: 'docs'         },
-    { path: '/v2/faq',          view: 'v2/faq',          title: 'FAQ',          page: 'faq'          },
-    { path: '/v2/contact',      view: 'v2/contact',      title: 'Contact',      page: 'contact'      },
+    { path: '/v2',                view: 'v2/showroom',        title: 'Show Room',       page: 'home'          },
+    { path: '/v2/showroom',       view: 'v2/showroom',        title: 'Show Room',       page: 'home'          },
+    { path: '/v2/explore',        view: 'v2/explore',         title: 'Explore',         page: 'explore'       },
+    { path: '/v2/transactions',   view: 'v2/transactions',    title: 'Transactions',    page: 'transactions'  },
+    { path: '/v2/settings',       view: 'v2/settings',        title: 'Settings',        page: 'settings'      },
+    { path: '/v2/docs',           view: 'v2/docs',            title: 'Docs',            page: 'docs'          },
+    { path: '/v2/faq',            view: 'v2/faq',             title: 'FAQ',             page: 'faq'           },
+    { path: '/v2/contact',        view: 'v2/contact',         title: 'Contact',         page: 'contact'       },
+    { path: '/v2/login',          view: 'v2/login',           title: 'Log In',          page: 'login'         },
+    { path: '/v2/signup',         view: 'v2/signup',          title: 'Sign Up',         page: 'signup'        },
+    { path: '/v2/reset-password', view: 'v2/reset-password',  title: 'Reset Password',  page: 'reset-password'},
+    { path: '/v2/topup',          view: 'v2/topup',           title: 'Top Up Credits',  page: 'topup'         },
 ];
 
 for (const { path: routePath, view, title, page } of v2Pages) {
@@ -2142,7 +2151,7 @@ app.get('/api/v2/search', anonymousAuth, async (req, res) => {
         return res.json({ items: [], hasMore: false });
     }
 
-    const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags isDraft visibility isPublic';
+    const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount ratingSum ratingCount createdAt updatedAt userId grabbedBy description hashtags isDraft visibility isPublic';
     const U_LIMIT = 6, B_LIMIT = 9, R_LIMIT = 3;
 
     try {
@@ -2285,7 +2294,7 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
     const searchType = (req.query.type || '').toLowerCase(); // '' | 'people' | 'buckets' | 'repos'
     if (!q) return res.redirect('/v2/explore');
 
-    const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount createdAt updatedAt userId grabbedBy description hashtags isDraft visibility isPublic';
+    const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount ratingSum ratingCount createdAt updatedAt userId grabbedBy description hashtags isDraft visibility isPublic';
     const U_LIMIT = 6, B_LIMIT = 9, R_LIMIT = 3, T_LIMIT = 18;
 
     let users   = [];

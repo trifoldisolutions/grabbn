@@ -154,6 +154,11 @@
                 ${b.hashtags && b.hashtags.length > 0 ? `<div class="flex flex-wrap gap-1">${b.hashtags.slice(0, 4).map(tag => `<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-orchid-50 text-orchid-500">#${escHtml(tag)}</span>`).join('')}</div>` : ''}
                 <!-- Action row -->
                 <div class="flex items-center gap-4 pt-1.5" onclick="event.preventDefault();event.stopPropagation()">
+                    ${(b.ratingCount > 0) ? `<span class="flex items-center gap-1 text-sm font-medium text-amber-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2L9.19 8.63L2 9.24l5.46 4.73L5.82 21z"/></svg>
+                        <span>${Math.round((b.ratingSum / b.ratingCount) * 10) / 10}</span>
+                        <span class="text-gray-400 font-normal">(${b.ratingCount})</span>
+                    </span>` : ''}
                     ${grabActionBtn}
                     <span class="flex items-center gap-1 text-sm font-medium text-gray-500">
                         ${VIEW_ICON}
