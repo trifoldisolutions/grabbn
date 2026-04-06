@@ -130,13 +130,13 @@
                     <div class="font-semibold text-sm truncate"><%= user.username %></div>
                     <div class="text-xs text-gray-400 truncate"><%= user.email %></div>
                 </div>
-                <a href="/v2/@<%= user.username %>" class="block px-4 py-2.5 text-sm text-woodsmoke-700 hover:bg-silver-50 transition-colors">My Profile</a>
+                <a href="/v2/u/<%= user.username %>" class="block px-4 py-2.5 text-sm text-woodsmoke-700 hover:bg-silver-50 transition-colors">My Profile</a>
                 <a href="/v2/settings" class="block px-4 py-2.5 text-sm text-woodsmoke-700 hover:bg-silver-50 transition-colors">Settings</a>
                 <button id="mobileProfileLogoutBtn" class="w-full px-4 py-2.5 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Log Out</button>
                 <div class="border-t border-silver-100 my-1"></div>
                 <button id="mobileProfileDeleteBtn" class="w-full px-4 py-2.5 text-sm font-medium text-left text-red-500 hover:bg-red-50 transition-colors">Delete Account</button>
             <% } else { %>
-                <a href="/login.html" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">Sign In / Log In</a>
+                <a href="/v2/login" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">Sign In / Log In</a>
             <% } %>
         </div>
     </div>

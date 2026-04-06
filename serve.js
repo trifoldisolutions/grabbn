@@ -23,7 +23,9 @@ import authRouter from './server/routes/auth.js';
 import creditsRouter, { handleWebhook } from './server/routes/credits.js';
 import connectRouter, { handleConnectWebhook } from './server/routes/stripeConnect.js';
 import notificationsRouter from './server/routes/notifications.js';
+import bucketCommentsRouter from './server/routes/bucketComments.js';
 import Notification from './server/models/notification.js';
+import BucketComment from './server/models/bucketComment.js';
 import BucketView from './server/models/bucketView.js';
 import BucketShare from './server/models/bucketShare.js';
 import FeedImpression from './server/models/feedImpression.js';
@@ -186,6 +188,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/credits', creditsRouter);
 app.use('/api/connect', connectRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/buckets/:id/comments', bucketCommentsRouter);
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -486,10 +489,6 @@ app.put('/api/buckets/:oldName', requireAuth, requireVerification, async (req, r
             return res.status(404).json({ error: 'Bucket not found' });
         }
 
-        if (existing.sourceBucketId) {
-            return res.status(403).json({ error: 'Grabbed buckets cannot be renamed' });
-        }
-
         existing.name = newName;
         await existing.save();
 
@@ -508,11 +507,6 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         // Fetch current state to detect meaningful changes before building the update
         const current = await Bucket.findOne({ _id: req.params.id, userId: req.user._id });
         if (!current) return res.status(404).json({ error: 'Bucket not found' });
-
-        // Grabbed buckets are view-only — editing is not allowed
-        if (current.sourceBucketId) {
-            return res.status(403).json({ error: 'Grabbed buckets cannot be edited' });
-        }
 
         const update = {};
         if (name        !== undefined) update.name        = name;
@@ -799,14 +793,6 @@ app.get('/api/buckets/:name/metadata', requireAuth, requireVerification, async (
             return res.status(404).json({ error: 'Bucket not found' });
         }
 
-        // Count how many times this bucket has been grabbed
-        const grabCount = await Bucket.countDocuments({
-            $or: [
-                { sourceBucketId: bucket._id },
-                { originalBucketId: bucket._id }
-            ]
-        });
-
         res.json({
             name: bucket.name,
             visibility: bucketVisibility(bucket),
@@ -816,20 +802,13 @@ app.get('/api/buckets/:name/metadata', requireAuth, requireVerification, async (
             createdAt: bucket.createdAt,
             updatedAt: bucket.updatedAt,
             linkCount: bucket.links.length,
-            grabCount,
+            grabCount: bucket.grabbedBy?.length ?? 0,
             viewCount: bucket.viewCount || 0,
             shareCount: bucket.shareCount || 0,
             curator: {
                 username: bucket.userId.username,
                 userId: bucket.userId.anonymousId
             },
-            ...(bucket.originalCuratorId && {
-                originalCurator: {
-                    username: bucket.originalCuratorName,
-                    userId: bucket.originalCuratorId
-                },
-                originalBucketId: bucket.originalBucketId || bucket.sourceBucketId
-            })
         });
     } catch (error) {
         console.error('Error fetching bucket metadata:', error);
@@ -912,6 +891,34 @@ app.patch('/api/buckets/:name/visibility', requireAuth, requireVerification, asy
 });
 
 // Lookup a bucket by name, share URL, or ObjectId
+app.get('/api/buckets/snapshots', anonymousAuth, async (req, res) => {
+    try {
+        const ids = (req.query.ids || '').split(',')
+            .map(s => s.trim())
+            .filter(id => mongoose.Types.ObjectId.isValid(id))
+            .slice(0, 50); // cap to avoid abuse
+        if (!ids.length) return res.json({});
+        const buckets = await Bucket.find({ _id: { $in: ids } })
+            .select('name ratingSum ratingCount grabbedBy')
+            .lean();
+        const result = {};
+        for (const b of buckets) {
+            const ratingAvg = b.ratingCount > 0
+                ? Math.round((b.ratingSum / b.ratingCount) * 10) / 10
+                : null;
+            result[String(b._id)] = {
+                name:      b.name,
+                ratingAvg,
+                grabCount: b.grabbedBy?.length ?? 0,
+            };
+        }
+        return res.json(result);
+    } catch (err) {
+        console.error('[snapshots]', err);
+        res.status(500).json({ error: 'Failed' });
+    }
+});
+
 app.get('/api/buckets/lookup', requireAuth, requireVerification, async (req, res) => {
     try {
         const q = (req.query.q || '').trim();
@@ -962,15 +969,7 @@ app.get('/api/buckets/lookup', requireAuth, requireVerification, async (req, res
             return res.status(404).json({ error: 'Bucket not found' });
         }
 
-        // Fetch grab counts for all buckets in parallel
-        const grabCounts = await Promise.all(
-            buckets.map(bucket => Bucket.countDocuments({
-                $or: [
-                    { sourceBucketId: bucket._id },
-                    { originalBucketId: bucket._id }
-                ]
-            }))
-        );
+        const grabCounts = buckets.map(bucket => bucket.grabbedBy?.length ?? 0);
 
         const formattedBuckets = await Promise.all(buckets.map(async (bucket, i) => {
             const isOwner = bucket.userId._id.equals(req.user._id);
@@ -1011,13 +1010,6 @@ app.get('/api/buckets/lookup', requireAuth, requireVerification, async (req, res
                     username: bucket.userId.username,
                     userId: bucket.userId.anonymousId
                 },
-                ...(bucket.originalCuratorId && {
-                    originalCurator: {
-                        username: bucket.originalCuratorName,
-                        userId: bucket.originalCuratorId
-                    },
-                    originalBucketId: bucket.originalBucketId || bucket.sourceBucketId
-                }),
                 isOwner
             };
         }));
@@ -1029,7 +1021,7 @@ app.get('/api/buckets/lookup', requireAuth, requireVerification, async (req, res
     }
 });
 
-// Grab (clone) a bucket into the current user's collection
+// Save a bucket to the current user's grabbed collection
 app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res) => {
     try {
         const { sourceBucketId } = req.body;
@@ -1038,128 +1030,69 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
             return res.status(400).json({ error: 'sourceBucketId is required' });
         }
 
-        // Check if user already grabbed this bucket
-        const existing = await Bucket.findOne({
-            userId: req.user._id,
-            sourceBucketId
-        });
-
-        if (existing) {
-            return res.status(409).json({ error: 'You already have this bucket in your collection' });
+        const bucket = await Bucket.findById(sourceBucketId).select('+topic').populate('userId', 'username anonymousId');
+        if (!bucket) {
+            return res.status(404).json({ error: 'Bucket not found' });
         }
 
-        // Fetch the source bucket (with owner info for curator attribution)
-        const source = await Bucket.findById(sourceBucketId).select('+topic').populate('userId', 'username anonymousId');
-        if (!source) {
-            return res.status(404).json({ error: 'Source bucket not found' });
-        }
-
-        // Only public buckets can be grabbed (unlisted and private cannot)
-        if (bucketVisibility(source) !== 'public') {
+        // Only public buckets can be grabbed
+        if (bucketVisibility(bucket) !== 'public') {
             return res.status(403).json({ error: 'Only public buckets can be grabbed' });
         }
 
         // Paywalled buckets require the user to have unlocked them first
-        if (source.isPaywalled) {
-            const isOwner = source.userId._id.equals(req.user._id);
+        if (bucket.isPaywalled) {
+            const isOwner = bucket.userId._id.equals(req.user._id);
             if (!isOwner) {
-                const access = await BucketAccess.findOne({ userId: req.user._id, bucketId: source._id });
+                const access = await BucketAccess.findOne({ userId: req.user._id, bucketId: bucket._id });
                 if (!access) {
                     return res.status(403).json({ error: 'Unlock this bucket before grabbing it' });
                 }
             }
         }
 
-        // Resolve the original curator — walk to the root creator
-        let curatorId, curatorName;
-        if (source.originalCuratorId) {
-            // Source was itself a grab — propagate the root creator
-            curatorId = source.originalCuratorId;
-            curatorName = source.originalCuratorName;
-        } else {
-            // Source IS the original — snapshot its owner
-            curatorId = source.userId._id;
-            const anonId = source.userId.anonymousId || '';
-            curatorName = source.userId.username
-                || (anonId.length > 8 ? `${anonId.substring(0, 4)}...${anonId.substring(anonId.length - 4)}` : anonId || 'Unknown');
+        // Check if already grabbed
+        const alreadyGrabbed = bucket.grabbedBy?.some(g => g.userId.toString() === req.user._id.toString());
+        if (alreadyGrabbed) {
+            return res.status(409).json({ error: 'You already have this bucket in your collection' });
         }
 
-        // Clone into user's collection
-        const cloned = await Bucket.create({
-            userId: req.user._id,
-            name: source.name,
-            links: source.links.map(l => ({
-                href: l.href,
-                text: l.text || '',
-                duration: l.duration || ''
-            })),
-            sourceUrl: source.sourceUrl || '',
-            thumbnail: source.thumbnail || '',
-            sourceBucketId: source._id,
-            originalCuratorId: curatorId,
-            originalCuratorName: curatorName,
-            originalBucketId: source.originalBucketId || source._id
-        });
-
-        // Track grabber on the root (original) bucket — no timestamps: grabbing doesn't constitute a content update
-        const rootBucketId = source.originalBucketId || source._id;
-        await Bucket.findByIdAndUpdate(rootBucketId, {
-            $push: { grabbedBy: { userId: req.user._id, username: req.user.username || '', avatar: req.user.avatar || '' } }
+        await Bucket.findByIdAndUpdate(bucket._id, {
+            $push: { grabbedBy: { userId: req.user._id, username: req.user.username || '', avatar: req.user.avatar || '', grabbedAt: new Date() } }
         }, { timestamps: false });
 
-        addGuestPoints(req.user, source.topic ?? null, GUEST_PTS.grab);
+        addGuestPoints(req.user, bucket.topic ?? null, GUEST_PTS.grab);
 
-        // Notify the original curator (skip self-grabs)
-        if (!curatorId.equals(req.user._id)) {
+        // Notify the curator (skip self-grabs)
+        if (!bucket.userId._id.equals(req.user._id)) {
             Notification.create({
-                userId: curatorId,
+                userId: bucket.userId._id,
                 type: 'bucket_grabbed',
                 data: {
                     grabberId:       req.user._id,
                     grabberUsername: req.user.username || '',
-                    bucketId:        source._id,
-                    bucketName:      source.name,
+                    bucketId:        bucket._id,
+                    bucketName:      bucket.name,
                 },
-            }).then(n => pushNotification(curatorId, { type: 'new_notification', notification: n }))
+            }).then(n => pushNotification(bucket.userId._id, { type: 'new_notification', notification: n }))
               .catch(err => console.error('[notif] bucket_grabbed:', err));
         }
 
-        res.status(201).json({ bucket: cloned });
+        res.status(201).json({ bucket: { _id: bucket._id, name: bucket.name } });
     } catch (error) {
-        // Handle duplicate name (same user already has a bucket with this name)
-        if (error.code === 11000) {
-            return res.status(409).json({ error: 'A bucket with this name already exists in your collection' });
-        }
         console.error('Error grabbing bucket:', error);
         res.status(500).json({ error: 'Failed to grab bucket' });
     }
 });
 
-// Ungrab (remove a previously grabbed clone of a bucket)
+// Remove a bucket from the current user's grabbed collection
 app.delete('/api/buckets/grab/:sourceBucketId', requireAuth, requireVerification, async (req, res) => {
     try {
         const { sourceBucketId } = req.params;
 
-        const cloned = await Bucket.findOneAndDelete({
-            userId: req.user._id,
-            $or: [
-                { sourceBucketId:   sourceBucketId },
-                { originalBucketId: sourceBucketId }
-            ]
-        });
-
-        if (!cloned) {
-            // Already gone — treat as success so client stays in ungrabbed state
-            return res.json({ success: true });
-        }
-
-        // Remove grabber from the root bucket's grabbedBy list — no timestamps: ungrabbing doesn't constitute a content update
-        const rootBucketId = cloned.originalBucketId || cloned.sourceBucketId;
-        if (rootBucketId) {
-            await Bucket.findByIdAndUpdate(rootBucketId, {
-                $pull: { grabbedBy: { userId: req.user._id } }
-            }, { timestamps: false });
-        }
+        await Bucket.findByIdAndUpdate(sourceBucketId, {
+            $pull: { grabbedBy: { userId: req.user._id } }
+        }, { timestamps: false });
 
         res.json({ success: true });
     } catch (error) {
@@ -1286,7 +1219,8 @@ app.post('/api/buckets/:bucketId/rate', requireAuth, requireVerification, async 
         }
 
         // Must have grabbed the bucket
-        const grabbed = await Bucket.findOne({ userId: req.user._id, sourceBucketId: bucketId }).select('_id').lean();
+        const ratedBucket = await Bucket.findById(bucketId).select('grabbedBy').lean();
+        const grabbed = ratedBucket?.grabbedBy?.some(g => g.userId.toString() === req.user._id.toString());
         if (!grabbed) {
             return res.status(403).json({ error: 'Grab this bucket before rating it' });
         }
@@ -1600,16 +1534,15 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
             const subs = await Subscription.find({ followerId: req.user._id }).select('followeeId').lean();
             const followedIds = subs.map(s => s.followeeId);
 
-            // Resolve grabbed source bucket IDs, keeping grab time to filter stale ones
+            // Find grabbed buckets and when the user grabbed them, to surface updates since then
             const grabbedBuckets = await Bucket.find({
-                userId:         req.user._id,
-                sourceBucketId: { $ne: null }
-            }).select('sourceBucketId createdAt').lean();
-            // Only surface a grabbed source bucket if it was updated after the user grabbed it
-            const updatedGrabbedConditions = grabbedBuckets.map(b => ({
-                _id:       b.sourceBucketId,
-                updatedAt: { $gt: b.createdAt }
-            }));
+                'grabbedBy.userId': req.user._id
+            }).select('_id grabbedBy').lean();
+            // Only surface a grabbed bucket if it was updated after the user grabbed it
+            const updatedGrabbedConditions = grabbedBuckets.map(b => {
+                const entry = b.grabbedBy.find(g => g.userId.toString() === req.user._id.toString());
+                return { _id: b._id, updatedAt: { $gt: entry?.grabbedAt || new Date(0) } };
+            });
 
             if (followedIds.length > 0 || updatedGrabbedConditions.length > 0) {
                 isPersonalized = true;
@@ -1708,12 +1641,12 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
 
         // Build grabbed set for current user
         let grabbedSet = new Set();
-        if (req.user?._id) {
+        if (req.user?._id && !req.user.isAnonymous) {
             const grabs = await Bucket.find({
-                userId:         req.user._id,
-                sourceBucketId: { $in: items.map(b => b._id) }
-            }).select('sourceBucketId').lean();
-            grabs.forEach(g => grabbedSet.add(String(g.sourceBucketId)));
+                _id:               { $in: items.map(b => b._id) },
+                'grabbedBy.userId': req.user._id
+            }).select('_id').lean();
+            grabs.forEach(g => grabbedSet.add(String(g._id)));
         }
 
         // Build follow set for current user
@@ -1825,8 +1758,7 @@ app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
         if (req.user?._id && !req.user.isAnonymous) {
             // Signal A: hashtag overlap with grabbed buckets
             const grabbedBuckets = await Bucket.find({
-                userId:         req.user._id,
-                sourceBucketId: { $ne: null }
+                'grabbedBy.userId': req.user._id
             }).select('hashtags').lean();
             const userHashtags = new Set(grabbedBuckets.flatMap(b => b.hashtags || []));
 
@@ -1897,12 +1829,12 @@ app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
 
         // Build grabbed set for current user
         let grabbedSet = new Set();
-        if (req.user?._id) {
+        if (req.user?._id && !req.user.isAnonymous) {
             const grabs = await Bucket.find({
-                userId:         req.user._id,
-                sourceBucketId: { $in: items.map(b => b._id) }
-            }).select('sourceBucketId').lean();
-            grabs.forEach(g => grabbedSet.add(String(g.sourceBucketId)));
+                _id:               { $in: items.map(b => b._id) },
+                'grabbedBy.userId': req.user._id
+            }).select('_id').lean();
+            grabs.forEach(g => grabbedSet.add(String(g._id)));
         }
 
         // Build follow set for current user
@@ -2212,16 +2144,14 @@ app.get('/api/v2/search', anonymousAuth, async (req, res) => {
             const hasMore = found.length > B_LIMIT;
             const buckets = found.slice(0, B_LIMIT);
 
-            const grabCounts = await Promise.all(buckets.map(b =>
-                Bucket.countDocuments({ $or: [{ sourceBucketId: b._id }, { originalBucketId: b._id }] })
-            ));
+            const grabCounts = buckets.map(b => b.grabbedBy?.length ?? 0);
             let grabbedSet = new Set();
-            if (req.user?._id && buckets.length) {
+            if (req.user?._id && !req.user.isAnonymous && buckets.length) {
                 const grabs = await Bucket.find({
-                    userId:         req.user._id,
-                    sourceBucketId: { $in: buckets.map(b => b._id) },
-                }).select('sourceBucketId').lean();
-                grabs.forEach(g => grabbedSet.add(String(g.sourceBucketId)));
+                    _id:               { $in: buckets.map(b => b._id) },
+                    'grabbedBy.userId': req.user._id,
+                }).select('_id').lean();
+                grabs.forEach(g => grabbedSet.add(String(g._id)));
             }
             let followedIds = new Set();
             if (req.user?._id && !req.user.isAnonymous) {
@@ -2307,14 +2237,14 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
         // 1. Bucket share URL  →  /share/bucket/{id}
         const shareMatch = q.match(/\/share\/bucket\/([a-f0-9]{24})/i);
 
-        // 2. Profile URL  →  /@username  or  /v2/@username
-        const profileUrlMatch = q.match(/\/@([A-Za-z0-9_.-]+)(?:[/?]|$)/);
+        // 2. Profile URL  →  /v2/u/username  or  /v2/@username (legacy)
+        const profileUrlMatch = q.match(/\/(?:u\/|@)([A-Za-z0-9_.-]+)(?:[/?]|$)/);
 
         // 3. Raw 24-char hex ObjectId
         const isObjectId = /^[a-f0-9]{24}$/i.test(q);
 
-        // 4. @username shorthand
-        const usernameAt = q.startsWith('@') ? q.slice(1) : null;
+        // 4. @username or u:username shorthand
+        const usernameAt = q.startsWith('@') ? q.slice(1) : (q.startsWith('u:') ? q.slice(2) : null);
 
         if (shareMatch) {
             const bucket = await Bucket.findById(shareMatch[1])
@@ -2373,11 +2303,7 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
         }
 
         // ── Grab counts ───────────────────────────────────────────────────────
-        const grabCounts = await Promise.all(
-            buckets.map(b => Bucket.countDocuments({
-                $or: [{ sourceBucketId: b._id }, { originalBucketId: b._id }],
-            }))
-        );
+        const grabCounts = buckets.map(b => b.grabbedBy?.length ?? 0);
 
         // ── Public bucket counts per user ─────────────────────────────────────
         const bucketCounts = await Promise.all(
@@ -2390,12 +2316,12 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
 
         // ── Which buckets has the viewer already grabbed? ─────────────────────
         let grabbedSet = new Set();
-        if (req.user?._id && buckets.length) {
+        if (req.user?._id && !req.user.isAnonymous && buckets.length) {
             const grabs = await Bucket.find({
-                userId:         req.user._id,
-                sourceBucketId: { $in: buckets.map(b => b._id) },
-            }).select('sourceBucketId').lean();
-            grabs.forEach(g => grabbedSet.add(String(g.sourceBucketId)));
+                _id:               { $in: buckets.map(b => b._id) },
+                'grabbedBy.userId': req.user._id,
+            }).select('_id').lean();
+            grabs.forEach(g => grabbedSet.add(String(g._id)));
         }
 
         // ── Which users/curators does the viewer already follow? ──────────────
@@ -2540,15 +2466,20 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
     }
 });
 
-// Profile page — redirect /v2/profile to the logged-in user's @username route
+// Profile page — redirect /v2/profile to the logged-in user's profile route
 app.get('/v2/profile', anonymousAuth, requireAuth, (req, res) => {
     const username = req.user?.username;
-    if (username) return res.redirect(`/v2/@${username}`);
+    if (username) return res.redirect(`/v2/u/${username}`);
     res.redirect('/v2');
 });
 
-// Profile page — /v2/@:username  (public — anyone can view)
-app.get('/v2/@:username', anonymousAuth, async (req, res) => {
+// Legacy @username redirect
+app.get('/v2/@:username', (req, res) => {
+    res.redirect(301, `/v2/u/${req.params.username}`);
+});
+
+// Profile page — /v2/u/:username  (public — anyone can view)
+app.get('/v2/u/:username', anonymousAuth, async (req, res) => {
     // Who is being viewed
     const profileUser = await User.findOne({ username: req.params.username, isAnonymous: false }).lean();
     if (!profileUser) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null }).catch(() => res.status(404).send('User not found'));
@@ -2568,18 +2499,29 @@ app.get('/v2/@:username', anonymousAuth, async (req, res) => {
         ? { userId: profileUser._id }
         : { userId: profileUser._id, ...FILTER_PUBLIC };
 
-    const [allBuckets, subscriberCount, followingCount] = await Promise.all([
+    const queries = [
         Bucket.find(bucketFilter)
-            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceBucketId sourceUrl originalCuratorName hashtags mature isDraft createdAt updatedAt')
+            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum createdAt updatedAt')
             .sort({ order: 1, createdAt: -1 })
             .lean(),
         Subscription.countDocuments({ followeeId: profileUser._id }),
         Subscription.countDocuments({ followerId: profileUser._id }),
-    ]);
+    ];
+    // Grabbed tab is only fetched for the profile owner
+    if (isOwner) {
+        queries.push(
+            Bucket.find({ 'grabbedBy.userId': profileUser._id })
+                .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags ratingCount ratingSum createdAt updatedAt')
+                .populate('userId', 'username')
+                .sort({ createdAt: -1 })
+                .lean()
+        );
+    }
 
-    const ownBuckets     = allBuckets.filter(b => !b.sourceBucketId).map(addDisplayThumb);
-    // Grabbed tab is only shown to the owner
-    const grabbedBuckets = isOwner ? allBuckets.filter(b => b.sourceBucketId).map(addDisplayThumb) : [];
+    const [allBuckets, subscriberCount, followingCount, rawGrabbed = []] = await Promise.all(queries);
+
+    const ownBuckets     = allBuckets.map(addDisplayThumb);
+    const grabbedBuckets = rawGrabbed.map(addDisplayThumb);
     const totalViews     = ownBuckets.reduce((sum, b) => sum + (b.viewCount       ?? 0), 0);
     const totalGrabs     = ownBuckets.reduce((sum, b) => sum + (b.grabbedBy?.length ?? 0), 0);
     const memberSince    = new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -2729,30 +2671,25 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
         const curatorAvatar      = curator?.avatar      || null;
         const curatorAnonymousId = curator?.anonymousId || null;
 
-        // Thumbnail: use raw stored value (data URL or URL) directly, fall back to first link image
         const thumbnailUrl = bucket.thumbnail || bucket.links?.find(l => l.image)?.image || null;
         const shareBaseUrl = `${req.protocol}://${req.get('host')}`;
 
         const vis = bucketVisibility(bucket);
-
-        // Private buckets are owner-only
         const isOwner = !!(req.user && !req.user.isAnonymous && bucket.userId.toString() === req.user._id.toString());
         if (vis === 'private' && !isOwner) {
             return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
         }
 
-        // Paywall access check
         const hasAccess = isOwner
             || !bucket.isPaywalled
             || (!req.user.isAnonymous && !!(await BucketAccess.findOne({ userId: req.user._id, bucketId: bucket._id })));
 
-        // Check follow + grab state (non-owners only)
         const isFollowing = !isOwner && req.user && !req.user.isAnonymous && curatorAnonymousId
             ? !!(await Subscription.exists({ followerId: req.user._id, followeeId: curator._id }))
             : false;
 
         const hasGrabbed = !isOwner && req.user && !req.user.isAnonymous
-            ? !!(await Bucket.findOne({ userId: req.user._id, sourceBucketId: bucket._id }).select('_id').lean())
+            ? !!(bucket.grabbedBy?.some(g => g.userId.toString() === req.user._id.toString()))
             : false;
 
         // Rating eligibility: grabbed + clicked >= 2 links
@@ -2760,14 +2697,15 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
         let userRating = null;
         if (hasGrabbed) {
             const [clickCount, existingRating] = await Promise.all([
-                LinkClick.countDocuments({ bucketId: bucket._id, userId: req.user._id }),
-                BucketRating.findOne({ bucketId: bucket._id, userId: req.user._id }).select('stars').lean()
+                LinkClick.countDocuments({ bucketId, userId: req.user._id }),
+                BucketRating.findOne({ bucketId, userId: req.user._id }).select('stars').lean()
             ]);
             canRate    = clickCount >= 2;
             userRating = existingRating?.stars ?? null;
         }
-        const ratingCount = bucket.ratingCount || 0;
-        const ratingAvg   = ratingCount > 0 ? Math.round((bucket.ratingSum / ratingCount) * 10) / 10 : null;
+        const ratingCount    = bucket.ratingCount || 0;
+        const ratingAvg      = ratingCount > 0 ? Math.round((bucket.ratingSum / ratingCount) * 10) / 10 : null;
+        const commentCount   = await BucketComment.countDocuments({ bucketId, deletedAt: null });
 
         // Track view (fire-and-forget, skip owner)
         if (!isOwner) {
@@ -2776,8 +2714,7 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
             trackBucketView(bucketId, userId, req.ip, viewSource).catch(() => {});
         }
 
-        // Verified share: someone arrived via a shared link — deduplicate by (bucketId, sid, visitor)
-        // so refreshing the same link doesn't inflate the count, but each distinct recipient counts once.
+        // Verified share: deduplicate by (bucketId, sid, visitor)
         if (req.query.ref === 'share' && req.query.sid) {
             const sid    = String(req.query.sid).slice(0, 32);
             const userId = (req.user && !req.user.isAnonymous) ? req.user._id : null;
@@ -2818,6 +2755,7 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
             userRating,
             ratingCount,
             ratingAvg,
+            commentCount,
             isUnlisted: vis === 'unlisted',
             ogTitle: `${bucket.name} - Shared Link Collection`,
             ogDescription: '',

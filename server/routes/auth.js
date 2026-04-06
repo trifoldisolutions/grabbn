@@ -460,7 +460,7 @@ router.post('/forgot-password', async (req, res) => {
         // Build reset URL
         const protocol = req.protocol;
         const host = req.get('host');
-        const resetUrl = `${protocol}://${host}/reset-password.html?token=${rawToken}`;
+        const resetUrl = `${protocol}://${host}/v2/reset-password?token=${rawToken}`;
 
         await sendPasswordResetEmail(user.email, resetUrl);
 

@@ -85,13 +85,13 @@
                 <!-- Profile context menu -->
                 <div id="profileContextMenu" class="hidden absolute right-0 top-full mt-2 bg-white rounded-md shadow-lg border border-silver-100 py-1 z-50 w-44">
                     <% if (user && !user.isAnonymous) { %>
-                        <a href="/v2/@<%= user.username %>" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">View Profile</a>
+                        <a href="/v2/u/<%= user.username %>" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">View Profile</a>
                         <div class="border-t border-silver-100 my-1"></div>
                         <button id="profileLogoutBtn" class="w-full px-4 py-2.5 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Log Out</button>
                         <div class="border-t border-silver-100 my-1"></div>
                         <button id="profileDeleteBtn" class="w-full px-4 py-2.5 text-sm font-medium text-left text-red-500 hover:bg-red-50 transition-colors">Delete Account</button>
                     <% } else { %>
-                        <a href="/login.html" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">Sign In / Log In</a>
+                        <a href="/v2/login" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">Sign In / Log In</a>
                     <% } %>
                 </div>
             </div>
@@ -195,7 +195,7 @@
         const BUCKET_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="text-gray-300"><g fill="none"><path fill="currentColor" d="M13 3a1 1 0 1 0-2 0v1.07A8.002 8.002 0 0 0 4 12v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1a8.002 8.002 0 0 0-7-7.93zm-1 15a3.001 3.001 0 0 0 2.83-2H9.17A3.001 3.001 0 0 0 12 18"/></g></svg>`;
 
         function avatarHtml(src, username) {
-            const href  = username ? `/v2/@${encodeURIComponent(username)}` : null;
+            const href  = username ? `/v2/u/${encodeURIComponent(username)}` : null;
             const inner = src
                 ? `<img src="${escHtml(src)}" class="w-9 h-9 rounded-full object-cover shrink-0" />`
                 : `<div class="w-9 h-9 rounded-full bg-orchid-50 shrink-0 flex items-center justify-center">${USER_ICON}</div>`;
@@ -214,7 +214,7 @@
 
         function userLink(username) {
             if (!username) return '<span class="font-semibold">Someone</span>';
-            return `<a href="/v2/@${encodeURIComponent(username)}" class="font-semibold hover:underline">@${escHtml(username)}</a>`;
+            return `<a href="/v2/u/${encodeURIComponent(username)}" class="font-semibold hover:underline">@${escHtml(username)}</a>`;
         }
 
         function bucketLink(name, bucketId) {
@@ -422,7 +422,7 @@
     })();
     <% } else { %>
     document.getElementById('notificationBtn')?.addEventListener('click', function () {
-        window.location.href = '/signup.html';
+        window.location.href = '/v2/signup';
     });
     <% } %>
 

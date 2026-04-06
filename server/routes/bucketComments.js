@@ -1,0 +1,516 @@
+// server/routes/bucketComments.js
+import express from 'express';
+import mongoose from 'mongoose';
+import Bucket from '../models/bucket.js';
+import User from '../models/user.js';
+import BucketComment from '../models/bucketComment.js';
+import CommentAgreement from '../models/commentAgreement.js';
+import CommentReport from '../models/commentReport.js';
+import LinkClick from '../models/linkClick.js';
+import Notification from '../models/notification.js';
+import { anonymousAuth, requireVerification } from '../middleware/anonymousAuth.js';
+import { pushNotification } from '../ws.js';
+
+// mergeParams: true is required so `:id` from the parent mount
+// (/api/buckets/:id/comments) is visible inside this router.
+const router = express.Router({ mergeParams: true });
+
+// All routes go through anonymousAuth so req.user is always populated
+router.use(anonymousAuth);
+
+// ── Guards ───────────────────────────────────────────────────────────────────
+
+function requireRegistered(req, res, next) {
+    if (!req.user || req.user.isAnonymous) {
+        return res.status(401).json({ error: 'Login required' });
+    }
+    next();
+}
+
+// ── Entity helpers ───────────────────────────────────────────────────────────
+
+// Escape special regex characters in a user-supplied string.
+function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Fetch name/rating/grabCount snapshot for a known bucket ID.
+async function fetchBucketSnapshot(bucketId) {
+    try {
+        const bucket = await Bucket.findById(bucketId)
+            .select('name ratingSum ratingCount grabbedBy')
+            .lean();
+        if (!bucket) return null;
+        return buildSnapshot(bucket);
+    } catch {
+        return null;
+    }
+}
+
+function buildSnapshot(bucket) {
+    const ratingAvg = bucket.ratingCount > 0
+        ? Math.round((bucket.ratingSum / bucket.ratingCount) * 10) / 10
+        : null;
+    return {
+        name:      bucket.name,
+        ratingAvg,
+        grabCount: bucket.grabbedBy?.length ?? 0,
+    };
+}
+
+// Resolve a `b:` reference (name, ID, or bucket page URL) to a { bucketId, snapshot } pair.
+async function resolveBucketRef(ref) {
+    try {
+        let bucket = null;
+        // Check if the ref is a bucket page URL and extract the ID from it
+        const urlMatch = ref.match(/\/v2\/bucket\/([a-fA-F0-9]{24})/);
+        if (urlMatch) {
+            bucket = await Bucket.findById(urlMatch[1])
+                .select('name ratingSum ratingCount grabbedBy')
+                .lean();
+        } else if (mongoose.Types.ObjectId.isValid(ref)) {
+            bucket = await Bucket.findById(ref)
+                .select('name ratingSum ratingCount grabbedBy')
+                .lean();
+        }
+        if (!bucket) {
+            bucket = await Bucket.findOne({ name: new RegExp('^' + escapeRegex(ref) + '$', 'i') })
+                .select('name ratingSum ratingCount grabbedBy')
+                .lean();
+        }
+        if (!bucket) return { bucketId: null, snapshot: null };
+        return { bucketId: String(bucket._id), snapshot: buildSnapshot(bucket) };
+    } catch {
+        return { bucketId: null, snapshot: null };
+    }
+}
+
+// Parse a comment body and resolve all entity references.
+// Returns an array of { type, raw, value, snapshot } objects.
+// userId is used to gate bucket_ref entities — only grabbed buckets can be tagged.
+async function parseAndResolveEntities(body, userId) {
+    const entities = [];
+    const seen = new Set();
+
+    // ── 1. u:username mentions ───────────────────────────────────────────────
+    const mentionRe = /\bu:([a-zA-Z0-9_]{1,30})/g;
+    let m;
+    while ((m = mentionRe.exec(body)) !== null) {
+        const raw      = m[0];          // "u:john"
+        const username = m[1];
+        const key      = `mention:${username.toLowerCase()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const user = await User.findOne({ username }).select('_id').lean();
+        if (user) {
+            entities.push({ type: 'mention', raw, value: username, snapshot: null });
+        }
+    }
+
+    // Helper: check if userId has grabbed bucketId
+    async function hasGrabbed(bucketId) {
+        if (!userId) return false;
+        const b = await Bucket.findOne({ _id: bucketId, 'grabbedBy.userId': userId }).select('_id').lean();
+        return !!b;
+    }
+
+    // ── 2. Bucket page URLs (detect before generic URL sweep) ────────────────
+    const bucketUrlRe = /https?:\/\/\S+\/v2\/bucket\/([a-fA-F0-9]{24})(?:[?#]\S*)?/g;
+    while ((m = bucketUrlRe.exec(body)) !== null) {
+        const raw      = m[0];
+        const bucketId = m[1];
+        const key      = `bucket_ref:${bucketId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (!await hasGrabbed(bucketId)) continue; // silently drop — not grabbed
+        const snapshot = await fetchBucketSnapshot(bucketId);
+        entities.push({ type: 'bucket_ref', raw, value: bucketId, snapshot });
+    }
+
+    // ── 3. b:name or b:"name with spaces" shorthand ──────────────────────────
+    // Quoted form:   b:"bucket name with spaces"  → group 1 captures the name
+    // Unquoted form: b:bucket-name                → group 2 captures the name
+    const bucketRefRe = /\bb:(?:"([^"]{1,500})"|([a-zA-Z0-9_\-]{1,100}))/g;
+    while ((m = bucketRefRe.exec(body)) !== null) {
+        const raw = m[0];  // e.g. `b:"my bucket"` or `b:frontend-tips`
+        const ref = (m[1] || m[2]).trim();  // whichever group matched
+        const key = `bucket_ref_text:${ref.toLowerCase()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const { bucketId, snapshot } = await resolveBucketRef(ref);
+        if (!bucketId || !await hasGrabbed(bucketId)) continue; // silently drop — not grabbed
+        entities.push({
+            type:     'bucket_ref',
+            raw,
+            value:    bucketId,
+            snapshot,
+        });
+    }
+
+    // ── 4. Raw URLs (skip ones already captured as bucket page URLs) ─────────
+    const urlRe = /https?:\/\/\S+/g;
+    while ((m = urlRe.exec(body)) !== null) {
+        const raw = m[0];
+        if (/\/v2\/bucket\/[a-fA-F0-9]{24}/.test(raw)) continue;
+        const key = `url:${raw}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        entities.push({ type: 'url', raw, value: raw, snapshot: null });
+    }
+
+    return entities;
+}
+
+// Send in-app @mention notifications (fire-and-forget — never throws).
+async function sendMentionNotifications(comment, bucket, commenter) {
+    try {
+        const mentions = (comment.entities || []).filter(e => e.type === 'mention');
+        if (!mentions.length) return;
+
+        for (const entity of mentions) {
+            // Skip self-mention
+            if (commenter.username && entity.value.toLowerCase() === commenter.username.toLowerCase()) continue;
+
+            const mentioned = await User.findOne({ username: entity.value }).select('_id').lean();
+            if (!mentioned) continue;
+
+            await Notification.create({
+                userId: mentioned._id,
+                type:   'comment_mention',
+                data:   {
+                    commentId:           comment._id,
+                    bucketId:            bucket._id,
+                    bucketName:          bucket.name,
+                    commenterUsername:   commenter.username || '',
+                    commenterAvatar:     commenter.avatar   || '',
+                    snippet:             comment.body.slice(0, 100),
+                },
+            });
+
+            pushNotification(String(mentioned._id), {
+                type:             'notification',
+                notificationType: 'comment_mention',
+                bucketName:       bucket.name,
+                commenterUsername: commenter.username || '',
+            });
+        }
+    } catch (err) {
+        console.error('[bucketComments] sendMentionNotifications error:', err);
+    }
+}
+
+// ── GET / — Paginated comment list ───────────────────────────────────────────
+router.get('/', async (req, res) => {
+    try {
+        const { id: bucketId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(bucketId)) {
+            return res.status(400).json({ error: 'Invalid bucket ID' });
+        }
+
+        const bucket = await Bucket.findById(bucketId).select('_id').lean();
+        if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
+
+        const isAnon = !req.user || req.user.isAnonymous;
+        const page   = Math.max(1, parseInt(req.query.page)  || 1);
+        const limit  = isAnon ? 3 : Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+        const skip   = isAnon ? 0 : (page - 1) * limit;
+
+        const filter = { bucketId, deletedAt: null };
+
+        const [comments, total] = await Promise.all([
+            BucketComment.find(filter)
+                .sort({ isPinned: -1, agreementCount: -1, createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            BucketComment.countDocuments(filter),
+        ]);
+
+        // Batch-fetch which comments the current user has agreed on
+        let agreedSet = new Set();
+        if (!isAnon && comments.length) {
+            const ids = comments.map(c => c._id);
+            const agreements = await CommentAgreement.find({
+                commentId: { $in: ids },
+                userId:    req.user._id,
+            }).select('commentId').lean();
+            agreedSet = new Set(agreements.map(a => String(a.commentId)));
+        }
+
+        const annotated = comments.map(c => ({
+            ...c,
+            userAgreed: agreedSet.has(String(c._id)),
+        }));
+
+        return res.json({
+            comments:          annotated,
+            total,
+            page,
+            hasMore:           isAnon ? false : skip + comments.length < total,
+            truncatedForAnon:  isAnon && total > 3,
+        });
+    } catch (err) {
+        console.error('[bucketComments] GET /:', err);
+        res.status(500).json({ error: 'Failed to fetch comments' });
+    }
+});
+
+// ── POST / — Create comment ───────────────────────────────────────────────────
+router.post('/', requireRegistered, requireVerification, async (req, res) => {
+    try {
+        const { id: bucketId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(bucketId)) {
+            return res.status(400).json({ error: 'Invalid bucket ID' });
+        }
+
+        const bucket = await Bucket.findById(bucketId).select('_id name userId').lean();
+        if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
+
+        // Gate: must have clicked at least 2 links in this bucket, unless owner
+        const isOwner = bucket.userId.equals(req.user._id);
+        if (!isOwner) {
+            const clickCount = await LinkClick.countDocuments({ bucketId: bucket._id, userId: req.user._id });
+            if (clickCount < 2) {
+                return res.status(403).json({
+                    code:  'NEED_MORE_CLICKS',
+                    error: 'Open at least 2 links to unlock commenting',
+                });
+            }
+        }
+
+        // Rate limit: 1 comment per minute
+        const ONE_MIN = 60 * 1000;
+        if (req.user.lastCommentAt && Date.now() - new Date(req.user.lastCommentAt).getTime() < ONE_MIN) {
+            return res.status(429).json({ error: 'Please wait a moment before posting again' });
+        }
+
+        // Validate body
+        const body = (req.body.body || '').trim();
+        if (!body)          return res.status(400).json({ error: 'Comment cannot be empty' });
+        if (body.length > 250) return res.status(400).json({ error: 'Comment too long (max 250 characters)' });
+
+        // Validate parentCommentId (if replying)
+        let parentCommentId = null;
+        if (req.body.parentCommentId) {
+            if (!mongoose.Types.ObjectId.isValid(req.body.parentCommentId)) {
+                return res.status(400).json({ error: 'Invalid parent comment ID' });
+            }
+            const parent = await BucketComment.findOne({
+                _id:       req.body.parentCommentId,
+                bucketId,
+                deletedAt: null,
+            }).select('_id').lean();
+            if (!parent) return res.status(400).json({ error: 'Parent comment not found' });
+            parentCommentId = parent._id;
+        }
+
+        // Parse + resolve entity references from the body
+        const entities    = await parseAndResolveEntities(body, req.user._id);
+        const editLockedAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+        const comment = await BucketComment.create({
+            bucketId,
+            userId:   req.user._id,
+            username: req.user.username || '',
+            avatar:   req.user.avatar   || '',
+            body,
+            parentCommentId,
+            entities,
+            editLockedAt,
+        });
+
+        // Update rate-limit timestamp (fire-and-forget)
+        User.findByIdAndUpdate(req.user._id, { lastCommentAt: new Date() }).catch(() => {});
+
+        // Send mention notifications (fire-and-forget)
+        sendMentionNotifications(comment, bucket, req.user).catch(() => {});
+
+        return res.status(201).json({ comment: { ...comment.toObject(), userAgreed: false } });
+    } catch (err) {
+        console.error('[bucketComments] POST /:', err);
+        res.status(500).json({ error: 'Failed to post comment' });
+    }
+});
+
+// ── PATCH /:commentId — Edit comment ─────────────────────────────────────────
+router.patch('/:commentId', requireRegistered, requireVerification, async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
+            return res.status(400).json({ error: 'Invalid comment ID' });
+        }
+
+        const comment = await BucketComment.findById(commentId);
+        if (!comment || comment.deletedAt) return res.status(404).json({ error: 'Comment not found' });
+        if (!comment.userId.equals(req.user._id)) return res.status(403).json({ error: 'Forbidden' });
+        if (comment.isEdited)                      return res.status(409).json({ error: 'Comment has already been edited once' });
+        if (new Date() > comment.editLockedAt)     return res.status(403).json({ error: 'Edit window has expired (48 hours)' });
+
+        const body = (req.body.body || '').trim();
+        if (!body)             return res.status(400).json({ error: 'Comment cannot be empty' });
+        if (body.length > 250) return res.status(400).json({ error: 'Comment too long (max 250 characters)' });
+
+        const entities = await parseAndResolveEntities(body, req.user._id);
+
+        const updated = await BucketComment.findByIdAndUpdate(
+            commentId,
+            { body, entities, isEdited: true, editedAt: new Date() },
+            { new: true }
+        );
+
+        return res.json({ comment: updated });
+    } catch (err) {
+        console.error('[bucketComments] PATCH /:commentId:', err);
+        res.status(500).json({ error: 'Failed to edit comment' });
+    }
+});
+
+// ── DELETE /:commentId — Soft delete ─────────────────────────────────────────
+router.delete('/:commentId', requireRegistered, requireVerification, async (req, res) => {
+    try {
+        const { id: bucketId, commentId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
+            return res.status(400).json({ error: 'Invalid comment ID' });
+        }
+
+        const comment = await BucketComment.findById(commentId);
+        if (!comment || comment.deletedAt) return res.status(404).json({ error: 'Comment not found' });
+
+        const isOwn = comment.userId.equals(req.user._id);
+        if (!isOwn) {
+            const bucket = await Bucket.findById(bucketId).select('userId').lean();
+            if (!bucket || !bucket.userId.equals(req.user._id)) {
+                return res.status(403).json({ error: 'Forbidden' });
+            }
+        }
+
+        await BucketComment.findByIdAndUpdate(commentId, { deletedAt: new Date() }, { timestamps: false });
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error('[bucketComments] DELETE /:commentId:', err);
+        res.status(500).json({ error: 'Failed to delete comment' });
+    }
+});
+
+// ── POST /:commentId/agree — Toggle agreement ─────────────────────────────────
+router.post('/:commentId/agree', requireRegistered, requireVerification, async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
+            return res.status(400).json({ error: 'Invalid comment ID' });
+        }
+
+        const comment = await BucketComment.findById(commentId).select('_id deletedAt').lean();
+        if (!comment || comment.deletedAt) return res.status(404).json({ error: 'Comment not found' });
+
+        const existing = await CommentAgreement.findOne({ commentId, userId: req.user._id });
+        if (existing) {
+            await Promise.all([
+                CommentAgreement.deleteOne({ _id: existing._id }),
+                BucketComment.findByIdAndUpdate(commentId, { $inc: { agreementCount: -1 } }, { timestamps: false }),
+            ]);
+            return res.json({ agreed: false });
+        } else {
+            await Promise.all([
+                CommentAgreement.create({ commentId, userId: req.user._id }),
+                BucketComment.findByIdAndUpdate(commentId, { $inc: { agreementCount: 1 } }, { timestamps: false }),
+            ]);
+            return res.json({ agreed: true });
+        }
+    } catch (err) {
+        console.error('[bucketComments] POST /:commentId/agree:', err);
+        res.status(500).json({ error: 'Failed to toggle agreement' });
+    }
+});
+
+// ── PATCH /:commentId/pin — Curator pin toggle ────────────────────────────────
+router.patch('/:commentId/pin', requireRegistered, requireVerification, async (req, res) => {
+    try {
+        const { id: bucketId, commentId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
+            return res.status(400).json({ error: 'Invalid comment ID' });
+        }
+
+        const bucket = await Bucket.findById(bucketId).select('userId').lean();
+        if (!bucket || !bucket.userId.equals(req.user._id)) {
+            return res.status(403).json({ error: 'Only the curator can pin comments' });
+        }
+
+        const comment = await BucketComment.findById(commentId);
+        if (!comment || comment.deletedAt) return res.status(404).json({ error: 'Comment not found' });
+
+        comment.isPinned = !comment.isPinned;
+        await comment.save();
+
+        return res.json({ isPinned: comment.isPinned });
+    } catch (err) {
+        console.error('[bucketComments] PATCH /:commentId/pin:', err);
+        res.status(500).json({ error: 'Failed to toggle pin' });
+    }
+});
+
+// ── POST /:commentId/report ───────────────────────────────────────────────────
+router.post('/:commentId/report', requireRegistered, requireVerification, async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
+            return res.status(400).json({ error: 'Invalid comment ID' });
+        }
+
+        const comment = await BucketComment.findById(commentId).select('_id userId deletedAt').lean();
+        if (!comment || comment.deletedAt) return res.status(404).json({ error: 'Comment not found' });
+        if (comment.userId.equals(req.user._id)) {
+            return res.status(400).json({ error: 'Cannot report your own comment' });
+        }
+
+        const validReasons = ['spam', 'harassment', 'inappropriate', 'other'];
+        const { reason } = req.body;
+        if (!reason || !validReasons.includes(reason)) {
+            return res.status(400).json({ error: 'Invalid reason' });
+        }
+
+        await CommentReport.create({ commentId, reporterId: req.user._id, reason });
+        return res.json({ success: true });
+    } catch (err) {
+        if (err.code === 11000) return res.status(409).json({ error: 'Already reported' });
+        console.error('[bucketComments] POST /:commentId/report:', err);
+        res.status(500).json({ error: 'Failed to submit report' });
+    }
+});
+
+// ── POST /:commentId/refresh-entity — Refresh a bucket_ref snapshot ───────────
+// The client sends the entityIndex (position in comment.entities array).
+// We re-fetch the bucket and update the stored snapshot.
+router.post('/:commentId/refresh-entity', requireRegistered, async (req, res) => {
+    try {
+        const { commentId }  = req.params;
+        const { entityIndex } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(commentId)) {
+            return res.status(400).json({ error: 'Invalid comment ID' });
+        }
+        if (typeof entityIndex !== 'number' || entityIndex < 0) {
+            return res.status(400).json({ error: 'Invalid entity index' });
+        }
+
+        const comment = await BucketComment.findById(commentId);
+        if (!comment || comment.deletedAt) return res.status(404).json({ error: 'Comment not found' });
+
+        const entity = comment.entities[entityIndex];
+        if (!entity || entity.type !== 'bucket_ref') {
+            return res.status(400).json({ error: 'Entity is not a bucket reference' });
+        }
+
+        const snapshot = await fetchBucketSnapshot(entity.value);
+        comment.entities[entityIndex].snapshot = snapshot;
+        comment.markModified('entities'); // required for Mixed-array mutation
+        await comment.save();
+
+        return res.json({ snapshot });
+    } catch (err) {
+        console.error('[bucketComments] POST /:commentId/refresh-entity:', err);
+        res.status(500).json({ error: 'Failed to refresh entity' });
+    }
+});
+
+export default router;

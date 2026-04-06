@@ -43,7 +43,7 @@ export async function sendAccountSuspendedEmail(toEmail) {
             You have <strong>70 hours</strong> to verify your email before your account is permanently deleted.
         </p>
         <div style="text-align: center; margin: 32px 0;">
-            <a href="${process.env.APP_URL || 'http://localhost:3000'}/login.html"
+            <a href="${process.env.APP_URL || 'http://localhost:3000'}/v2/login"
                style="background-color: #a21caf; color: white; padding: 12px 32px;
                       text-decoration: none; border-radius: 6px; font-weight: 600;
                       display: inline-block;">

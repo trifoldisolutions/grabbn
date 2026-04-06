@@ -30,7 +30,7 @@
                     </div>
                     <% } %>
                     <div class="flex flex-col leading-tight min-w-0 flex-1">
-                        <a href="/v2/profile/<%= curatorName %>" class="text-sm font-medium text-woodsmoke-800 hover:text-orchid-600 transition-colors truncate">@<%= curatorName %></a>
+                        <a href="/v2/u/<%= curatorName %>" class="text-sm font-medium text-woodsmoke-800 hover:text-orchid-600 transition-colors truncate">@<%= curatorName %></a>
                         <span class="text-[11px] text-woodsmoke-400 truncate" id="bvTimeAgo"></span>
                     </div>
                     <% if (!isOwner) { %>
@@ -391,10 +391,23 @@
     </div>
 </div>
 
-<!-- ── Recommendations ───────────────────────────────────────────────────── -->
+<!-- ── Recommendations / Comments tab switcher ───────────────────────────── -->
 <div class="w-full max-w-[65rem] mx-auto px-4 md:px-6 pb-10 mt-2">
-    <div>
-        <h2 class="text-sm font-semibold text-woodsmoke-400 uppercase tracking-wide mb-3">More like this</h2>
+
+    <!-- Tab bar -->
+    <div class="flex items-center border-b border-silver-200 mb-4">
+        <button id="bvTabRecs"
+            class="bv-tab px-4 py-2 text-sm font-semibold border-b-2 border-orchid-600 text-orchid-700 -mb-px transition-colors">
+            More Like This
+        </button>
+        <button id="bvTabComments"
+            class="bv-tab px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-woodsmoke-400 hover:text-woodsmoke-700 -mb-px transition-colors">
+            Comments (<span id="bvCommentCountLabel"><%= commentCount %></span>)
+        </button>
+    </div>
+
+    <!-- ── Recommendations panel ─────────────────────────────────────────── -->
+    <div id="bvPanelRecs">
         <div id="bvRecs" class="grid grid-cols-3 gap-3">
             <!-- skeleton placeholders -->
             <% for (var _i = 0; _i < 3; _i++) { %>
@@ -406,7 +419,61 @@
             <% } %>
         </div>
     </div>
-</div>
+
+    <!-- ── Comments panel (hidden initially) ─────────────────────────────── -->
+    <div id="bvPanelComments" class="hidden">
+
+        <!-- Compose box -->
+        <% if (!user || user.isAnonymous) { %>
+        <div class="mb-5 text-sm text-woodsmoke-400">
+            <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">Sign in</a>
+            to join the discussion.
+        </div>
+        <% } else { %>
+        <div id="bvCommentCompose" class="mb-5">
+            <% var canComment = canRate || isOwner; %>
+            <div class="flex items-end gap-2">
+                <div class="flex-1 flex flex-col">
+                    <textarea id="bvCommentBody" rows="1" maxlength="250"
+                        placeholder="<%= canComment ? 'Add a comment… Use u:username or b:bucket-name to mention' : 'Open at least 2 links to unlock commenting' %>"
+                        class="w-full h-10 rounded-md border border-silver-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orchid-300 focus:border-orchid-400 transition<%= canComment ? '' : ' opacity-50 cursor-not-allowed bg-silver-50' %>"
+                        <%= canComment ? '' : 'disabled' %>></textarea>
+                    <span id="bvCharCount" class="text-xs text-woodsmoke-400 mt-1">0 / 250</span>
+                </div>
+                <% if (canComment) { %>
+                <button id="bvCommentSubmit"
+                    class="shrink-0 h-10 w-10 rounded-md bg-orchid-700 hover:bg-orchid-800 text-white transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed mb-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20.235 5.686c.432-1.195-.726-2.353-1.921-1.92L3.709 9.048c-1.199.434-1.344 2.07-.241 2.709l4.662 2.699l4.163-4.163a1 1 0 0 1 1.414 1.414L9.544 15.87l2.7 4.662c.638 1.103 2.274.957 2.708-.241z"/></g></svg>
+                </button>
+                <% } %>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- Thread -->
+        <div id="bvCommentThread" class="flex flex-col gap-3"></div>
+
+        <!-- Load more -->
+        <div id="bvLoadMoreWrap" class="hidden text-center mt-5">
+            <button id="bvLoadMoreBtn"
+                class="text-sm text-orchid-600 font-semibold hover:underline">
+                Load more comments
+            </button>
+        </div>
+
+        <!-- Empty state -->
+        <div id="bvCommentEmpty" class="hidden text-sm text-woodsmoke-400 italic py-4">
+            No comments yet. Be the first!
+        </div>
+
+        <!-- Anon curtain -->
+        <div id="bvAnonCurtain" class="hidden mt-4 p-4 rounded-lg bg-orchid-50 border border-orchid-200 text-center text-sm text-woodsmoke-700">
+            <a href="/?openAuth=true" class="text-orchid-700 font-semibold hover:underline">Sign in</a>
+            to read all comments and join the discussion.
+        </div>
+
+    </div><!-- /bvPanelComments -->
+</div><!-- /tab container -->
 
 <script>
 (function () {
@@ -836,15 +903,669 @@
                 if (!grid) return;
                 grid.innerHTML = '';
                 if (!data.buckets || data.buckets.length === 0) {
-                    grid.closest('.flex.justify-center').style.display = 'none';
+                    document.getElementById('bvPanelRecs').style.display = 'none';
                     return;
                 }
                 data.buckets.forEach(function (b) { grid.appendChild(buildRecCard(b)); });
             })
             .catch(function () {
-                const grid = document.getElementById('bvRecs');
-                if (grid) grid.closest('.flex.justify-center').style.display = 'none';
+                const panel = document.getElementById('bvPanelRecs');
+                if (panel) panel.style.display = 'none';
             });
+    })();
+
+    // ── Tab switcher ─────────────────────────────────────────────────────────
+    (function () {
+        const tabRecs      = document.getElementById('bvTabRecs');
+        const tabComments  = document.getElementById('bvTabComments');
+        const panelRecs    = document.getElementById('bvPanelRecs');
+        const panelComments = document.getElementById('bvPanelComments');
+        if (!tabRecs || !tabComments) return;
+
+        let commentsLoaded = false;
+
+        function activateTab(tab) {
+            [tabRecs, tabComments].forEach(function (t) {
+                t.classList.remove('border-orchid-600', 'text-orchid-700');
+                t.classList.add('border-transparent', 'text-woodsmoke-400');
+            });
+            tab.classList.remove('border-transparent', 'text-woodsmoke-400');
+            tab.classList.add('border-orchid-600', 'text-orchid-700');
+        }
+
+        tabRecs.addEventListener('click', function () {
+            activateTab(tabRecs);
+            panelRecs.classList.remove('hidden');
+            panelComments.classList.add('hidden');
+        });
+
+        tabComments.addEventListener('click', function () {
+            activateTab(tabComments);
+            panelRecs.classList.add('hidden');
+            panelComments.classList.remove('hidden');
+            if (!commentsLoaded) {
+                commentsLoaded = true;
+                loadComments(1);
+            }
+        });
+    })();
+
+    // ── Comment system ────────────────────────────────────────────────────────
+    (function () {
+        const IS_ANON    = <%- (!user || user.isAnonymous) ? 'true' : 'false' %>;
+        const IS_OWNER   = <%- isOwner ? 'true' : 'false' %>;
+        const CAN_COMMENT = <%- (canRate || isOwner) ? 'true' : 'false' %>;
+        const BASE_URL   = '/api/buckets/' + bucketId + '/comments';
+
+        let commentPage = 1;
+        const LIMIT     = 20;
+
+        // ── Escape HTML helper ───────────────────────────────────────────────
+        function esc(s) {
+            return String(s || '').replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        // ── Relative time ────────────────────────────────────────────────────
+        function timeAgo(dateStr) {
+            const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+            if (diff < 60)       return 'just now';
+            if (diff < 3600)     return Math.floor(diff / 60) + 'm ago';
+            if (diff < 86400)    return Math.floor(diff / 3600) + 'h ago';
+            if (diff < 2592000)  return Math.floor(diff / 86400) + 'd ago';
+            if (diff < 31536000) return Math.floor(diff / 2592000) + 'mo ago';
+            return Math.floor(diff / 31536000) + 'y ago';
+        }
+
+        // ── Render comment body with entity badges ───────────────────────────
+        function renderBody(body, entities) {
+            if (!entities || !entities.length) return esc(body);
+
+            // Escape the raw body first, then replace escaped entity tokens.
+            // Sort by raw text length descending to avoid partial matches.
+            let html = esc(body);
+            const sorted = entities.slice().sort(function (a, b) {
+                return b.raw.length - a.raw.length;
+            });
+
+            sorted.forEach(function (e, idx) {
+                const escapedRaw = esc(e.raw);
+                let replacement  = '';
+
+                if (e.type === 'mention') {
+                    replacement = '<a href="/v2/u/' + esc(e.value) + '" '
+                        + 'class="inline-flex items-center p-1.5 rounded bg-orchid-100 text-orchid-700 text-xs font-semibold hover:bg-orchid-200 transition-colors no-underline">'
+                        + '@' + esc(e.value) + '</a>';
+
+                } else if (e.type === 'bucket_ref') {
+                    const BUCKET_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>';
+                    const GRAB_REF_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.5 5a2.5 2.5 0 0 1 2.461 2.058A2.5 2.5 0 0 1 21 9.5V12a8 8 0 0 1-8 8h-.674a8 8 0 0 1-7.155-4.422L2.329 9.894c-.36-.72-.093-1.683.747-2.028c1.043-.427 2.034-.507 3.055.012q.443.227.869.584V7.5a2.5 2.5 0 0 1 3.388-2.338a2.498 2.498 0 0 1 4.224 0A2.5 2.5 0 0 1 15.5 5"/></g></svg>';
+                    const REFRESH_REF_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M2 12.08c-.006-.862.91-1.356 1.618-.975l.095.058l2.678 1.804c.972.655.377 2.143-.734 2.007l-.117-.02l-1.063-.234a8.002 8.002 0 0 0 14.804.605a1 1 0 0 1 1.82.828c-1.987 4.37-6.896 6.793-11.687 5.509A10 10 0 0 1 2 12.08m.903-4.228C4.89 3.482 9.799 1.06 14.59 2.343a10 10 0 0 1 7.414 9.581c.007.863-.91 1.358-1.617.976l-.096-.058l-2.678-1.804c-.972-.655-.377-2.143.734-2.007l.117.02l1.063.234A8.002 8.002 0 0 0 4.723 8.68a1 1 0 1 1-1.82-.828"/></g></svg>';
+                    const STAR_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176z"/></g></svg>';
+                    if (e.snapshot && e.snapshot.name) {
+                        const ratingStr = e.snapshot.ratingAvg
+                            ? '<span class="inline-flex items-center gap-0.75">' + STAR_ICON + esc(String(e.snapshot.ratingAvg)) + '</span>'
+                            : 'No ratings';
+                        replacement = '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-silver-100 border border-silver-200 text-xs text-woodsmoke-700" data-bucket-id="' + esc(e.value) + '">'
+                            + '<a href="/v2/bucket/' + esc(e.value) + '" '
+                            + 'class="inline-flex items-center gap-1 font-semibold text-woodsmoke-800 hover:text-orchid-700 transition-colors">'
+                            + BUCKET_ICON + esc(e.snapshot.name) + '</a>'
+                            + '<span class="text-woodsmoke-400">·</span>'
+                            + '<span class="bv-entity-rating inline-flex items-center">' + ratingStr + '</span>'
+                            + '<span class="text-woodsmoke-400">·</span>'
+                            + '<span class="bv-entity-grabs inline-flex items-center gap-0.5">' + GRAB_REF_ICON + esc(String(e.snapshot.grabCount)) + '</span>'
+                            + '<button class="bv-refresh-entity ml-1 text-woodsmoke-400 hover:text-orchid-600 transition-colors" '
+                            + 'data-comment-id="" data-entity-index="' + idx + '" title="Refresh">'
+                            + REFRESH_REF_ICON
+                            + '</button></span>';
+                    } else {
+                        replacement = '<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-silver-100 border border-silver-200 text-xs text-woodsmoke-400 line-through">'
+                            + 'bucket not found</span>';
+                    }
+
+                } else if (e.type === 'url') {
+                    replacement = '<a href="' + esc(e.value) + '" target="_blank" rel="noopener noreferrer" '
+                        + 'class="text-orchid-600 hover:underline break-all">'
+                        + esc(e.value) + '</a>';
+                }
+
+                if (replacement) {
+                    html = html.split(escapedRaw).join(replacement);
+                }
+            });
+
+            return html;
+        }
+
+        // ── Build a comment DOM element ───────────────────────────────────────
+        function buildCommentEl(c, isReply) {
+            const wrap = document.createElement('div');
+            wrap.className = (isReply ? 'ml-8 ' : '') + 'flex flex-col gap-1 group';
+            wrap.dataset.commentId = c._id;
+
+            // Determine if current user can edit/delete
+            const userId  = '<%- (!user || user.isAnonymous) ? '' : String(user._id) %>';
+            const isOwner = IS_OWNER;
+            const isOwn   = userId && String(c.userId) === userId;
+            const canEdit = isOwn && !c.isEdited && c.editLockedAt && new Date() < new Date(c.editLockedAt);
+
+            const avatarHtml = c.avatar
+                ? '<img src="' + esc(c.avatar) + '" alt="' + esc(c.username) + '" class="w-7 h-7 rounded-full object-cover shrink-0 border border-silver-100">'
+                : '<div class="w-7 h-7 rounded-full bg-orchid-100 flex items-center justify-center shrink-0 border border-silver-100 text-orchid-600 text-xs font-bold">'
+                    + esc((c.username || '?')[0].toUpperCase()) + '</div>';
+
+            const pinnedBadge = c.isPinned
+                ? '<span class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 ml-2">'
+                    + '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="m15.66 3.09-1.06 1.06-2.83-.94-4.24 4.24.94 2.83-1.06 1.06L9.4 13.3 5.17 17.54l1.41 1.41 4.24-4.24 2.02 2.02 1.06-1.06-.94-2.83 4.24-4.24 2.83.94 1.06-1.06z"/></svg>'
+                    + 'Pinned</span>'
+                : '';
+
+            const editedBadge = c.isEdited
+                ? '<span class="text-[11px] text-woodsmoke-400 ml-1.5">· edited</span>'
+                : '';
+
+            wrap.innerHTML = '<div class="flex items-start gap-2">'
+                + avatarHtml
+                + '<div class="flex-1 min-w-0">'
+                    + '<div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5">'
+                        + '<a href="/v2/u/' + esc(c.username) + '" class="text-xs font-semibold text-woodsmoke-800 hover:text-orchid-600 transition-colors">@' + esc(c.username || 'user') + '</a>'
+                        + '<span class="text-[11px] text-woodsmoke-400">' + timeAgo(c.createdAt) + '</span>'
+                        + editedBadge
+                        + pinnedBadge
+                    + '</div>'
+                    + '<div class="bv-comment-body text-sm text-woodsmoke-800 leading-relaxed break-words" data-raw="' + esc(c.body) + '">' + renderBody(c.body, c.entities) + '</div>'
+                    + '<div class="flex items-center gap-3 mt-1.5">'
+                        // Agree button
+                        + '<button class="bv-agree-btn flex items-center gap-1 text-xs ' + (c.userAgreed ? 'text-orchid-600' : 'text-woodsmoke-400 hover:text-orchid-500') + ' transition-colors" data-id="' + esc(c._id) + '" data-agreed="' + (c.userAgreed ? 'true' : 'false') + '">'
+                            + '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="' + (c.userAgreed ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
+                            + '<span class="bv-agree-count">' + (c.agreementCount || 0) + '</span>'
+                        + '</button>'
+                        // Reply button (top-level only)
+                        + (!isReply && !IS_ANON && CAN_COMMENT
+                            ? '<button class="bv-reply-btn text-xs text-woodsmoke-400 hover:text-orchid-500 transition-colors" data-id="' + esc(c._id) + '" data-username="' + esc(c.username) + '">Reply</button>'
+                            : '')
+                        // Edit button
+                        + (canEdit
+                            ? '<button class="bv-edit-btn text-xs text-woodsmoke-400 hover:text-woodsmoke-700 transition-colors" data-id="' + esc(c._id) + '">Edit</button>'
+                            : '')
+                        // Pin button (curator only, top-level only)
+                        + (isOwner && !isReply
+                            ? '<button class="bv-pin-btn text-xs text-woodsmoke-400 hover:text-amber-600 transition-colors" data-id="' + esc(c._id) + '" data-pinned="' + (c.isPinned ? 'true' : 'false') + '">' + (c.isPinned ? 'Unpin' : 'Pin') + '</button>'
+                            : '')
+                        // Delete button
+                        + (isOwn || isOwner
+                            ? '<button class="bv-delete-btn text-xs text-woodsmoke-400 hover:text-red-500 transition-colors" data-id="' + esc(c._id) + '">Delete</button>'
+                            : '')
+                        // Report button
+                        + (!isOwn && !IS_ANON
+                            ? '<button class="bv-report-btn text-xs text-woodsmoke-400 hover:text-red-400 transition-colors" data-id="' + esc(c._id) + '">Report</button>'
+                            : '')
+                    + '</div>'
+                    // Reply compose (injected here by JS)
+                    + '<div class="bv-reply-compose-wrap"></div>'
+                    // Replies container
+                    + (!isReply ? '<div class="bv-replies mt-2 flex flex-col gap-2"></div>' : '')
+                + '</div>'
+            + '</div>';
+
+            return wrap;
+        }
+
+        // ── Build inline reply compose box ────────────────────────────────────
+        function buildReplyCompose(parentId, parentUsername) {
+            const wrap = document.createElement('div');
+            wrap.className = 'mt-2 flex flex-col gap-1.5';
+            wrap.innerHTML = '<textarea class="bv-reply-body w-full rounded-lg border border-silver-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orchid-300 focus:border-orchid-400 transition" rows="2" maxlength="250" placeholder="Reply to @' + esc(parentUsername) + '…"></textarea>'
+                + '<div class="flex items-center justify-between">'
+                    + '<span class="bv-reply-char text-xs text-woodsmoke-400">0 / 250</span>'
+                    + '<div class="flex gap-2">'
+                        + '<button class="bv-reply-cancel h-7 px-3 text-xs text-woodsmoke-500 hover:text-woodsmoke-800 border border-silver-200 rounded-md transition-colors">Cancel</button>'
+                        + '<button class="bv-reply-submit h-7 px-3 text-xs font-semibold bg-orchid-700 hover:bg-orchid-800 text-white rounded-md transition-colors">Reply</button>'
+                    + '</div>'
+                + '</div>';
+
+            const textarea = wrap.querySelector('.bv-reply-body');
+            const charEl   = wrap.querySelector('.bv-reply-char');
+            textarea.addEventListener('input', function () {
+                charEl.textContent = textarea.value.length + ' / 250';
+            });
+
+            wrap.querySelector('.bv-reply-cancel').addEventListener('click', function () {
+                wrap.remove();
+            });
+
+            wrap.querySelector('.bv-reply-submit').addEventListener('click', function () {
+                submitComment(textarea.value, parentId, wrap);
+            });
+
+            return wrap;
+        }
+
+        // ── Submit a comment or reply ─────────────────────────────────────────
+        async function submitComment(body, parentCommentId, composeEl) {
+            body = (body || '').trim();
+            if (!body) return;
+
+            const submitBtn = composeEl ? composeEl.querySelector('button[class*="submit"]') : document.getElementById('bvCommentSubmit');
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.classList.add('opacity-50', 'cursor-not-allowed'); submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><circle cx="4" cy="12" r="3" fill="currentColor"><animate id="SVG9IgbRbsl" attributeName="r" begin="0;SVGFUNpCWdG.end-0.25s" dur="0.75s" values="3;.2;3"/></circle><circle cx="12" cy="12" r="3" fill="currentColor"><animate attributeName="r" begin="SVG9IgbRbsl.end-0.6s" dur="0.75s" values="3;.2;3"/></circle><circle cx="20" cy="12" r="3" fill="currentColor"><animate id="SVGFUNpCWdG" attributeName="r" begin="SVG9IgbRbsl.end-0.45s" dur="0.75s" values="3;.2;3"/></circle></svg>'; }
+
+            try {
+                const payload = { body };
+                if (parentCommentId) payload.parentCommentId = parentCommentId;
+
+                const res  = await fetch(BASE_URL, {
+                    method:      'POST',
+                    credentials: 'include',
+                    headers:     { 'Content-Type': 'application/json' },
+                    body:        JSON.stringify(payload),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    alert(data.error || 'Failed to post comment');
+                    return;
+                }
+
+                // Clear compose
+                if (parentCommentId && composeEl) {
+                    composeEl.remove();
+                } else {
+                    const textarea = document.getElementById('bvCommentBody');
+                    if (textarea) { textarea.value = ''; document.getElementById('bvCharCount').textContent = '0 / 250'; }
+                }
+
+                // Inject the new comment into the thread
+                injectComment(data.comment, parentCommentId);
+
+                // Update tab count
+                const countEl = document.getElementById('bvCommentCountLabel');
+                if (countEl) countEl.textContent = String(parseInt(countEl.textContent || '0') + 1);
+
+                // Hide empty state if showing
+                document.getElementById('bvCommentEmpty').classList.add('hidden');
+
+            } catch (_) {
+                alert('Network error — please try again');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    submitBtn.innerHTML = parentCommentId ? 'Reply' : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20.235 5.686c.432-1.195-.726-2.353-1.921-1.92L3.709 9.048c-1.199.434-1.344 2.07-.241 2.709l4.662 2.699l4.163-4.163a1 1 0 0 1 1.414 1.414L9.544 15.87l2.7 4.662c.638 1.103 2.274.957 2.708-.241z"/></g></svg>';
+                }
+            }
+        }
+
+        // ── Inject a new comment into the right place in the thread ──────────
+        function injectComment(c, parentCommentId) {
+            const thread = document.getElementById('bvCommentThread');
+            if (parentCommentId) {
+                // Append as a reply under the parent
+                const parentEl = thread.querySelector('[data-comment-id="' + parentCommentId + '"]');
+                if (parentEl) {
+                    const repliesWrap = parentEl.querySelector('.bv-replies');
+                    if (repliesWrap) repliesWrap.appendChild(buildCommentEl(c, true));
+                }
+            } else {
+                // Prepend new top-level comment
+                thread.insertBefore(buildCommentEl(c, false), thread.firstChild);
+            }
+            attachCommentActions(thread.querySelector('[data-comment-id="' + c._id + '"]'));
+        }
+
+        // ── Attach all action listeners to a rendered comment element ─────────
+        function attachCommentActions(el) {
+            if (!el) return;
+
+            // Agree toggle
+            const agreeBtn = el.querySelector('.bv-agree-btn');
+            if (agreeBtn) {
+                agreeBtn.addEventListener('click', async function () {
+                    if (IS_ANON) { window.location.href = '/?openAuth=true'; return; }
+                    const id       = agreeBtn.dataset.id;
+                    const agreed   = agreeBtn.dataset.agreed === 'true';
+                    const countEl  = agreeBtn.querySelector('.bv-agree-count');
+                    const svgEl    = agreeBtn.querySelector('svg');
+
+                    // Optimistic update
+                    agreeBtn.dataset.agreed = (!agreed).toString();
+                    const newCount = Math.max(0, parseInt(countEl.textContent || '0') + (agreed ? -1 : 1));
+                    countEl.textContent = newCount;
+                    if (svgEl) svgEl.setAttribute('fill', agreed ? 'none' : 'currentColor');
+                    agreeBtn.className = agreeBtn.className.replace(/text-(orchid-600|woodsmoke-400 hover:text-orchid-500)/, !agreed ? 'text-orchid-600' : 'text-woodsmoke-400 hover:text-orchid-500');
+
+                    try {
+                        const res = await fetch(BASE_URL + '/' + id + '/agree', { method: 'POST', credentials: 'include' });
+                        if (!res.ok) throw new Error();
+                    } catch {
+                        // Rollback
+                        agreeBtn.dataset.agreed = agreed.toString();
+                        countEl.textContent = Math.max(0, newCount + (agreed ? 1 : -1));
+                        if (svgEl) svgEl.setAttribute('fill', agreed ? 'currentColor' : 'none');
+                    }
+                });
+            }
+
+            // Reply button
+            const replyBtn = el.querySelector('.bv-reply-btn');
+            if (replyBtn) {
+                replyBtn.addEventListener('click', function () {
+                    const composeWrap = el.querySelector('.bv-reply-compose-wrap');
+                    if (!composeWrap) return;
+                    // Toggle off if already open
+                    if (composeWrap.querySelector('textarea')) { composeWrap.innerHTML = ''; return; }
+                    composeWrap.appendChild(buildReplyCompose(replyBtn.dataset.id, replyBtn.dataset.username));
+                    composeWrap.querySelector('textarea').focus();
+                });
+            }
+
+            // Edit button
+            const editBtn = el.querySelector('.bv-edit-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', function () {
+                    const id      = editBtn.dataset.id;
+                    const bodyEl  = el.querySelector('.bv-comment-body');
+                    if (!bodyEl) return;
+                    const current = bodyEl.dataset.raw || bodyEl.textContent.trim();
+                    const textarea = document.createElement('textarea');
+                    textarea.className = 'w-full rounded-lg border border-silver-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orchid-300 focus:border-orchid-400 transition';
+                    textarea.rows = 2; textarea.maxLength = 250; textarea.value = current;
+                    const actions = document.createElement('div');
+                    actions.className = 'flex items-center justify-between mt-1';
+                    actions.innerHTML = '<span class="text-xs text-woodsmoke-400">' + current.length + ' / 250</span>'
+                        + '<div class="flex gap-2">'
+                        + '<button class="h-7 px-3 text-xs border border-silver-200 rounded-md text-woodsmoke-500 hover:text-woodsmoke-800">Cancel</button>'
+                        + '<button class="h-7 px-3 text-xs font-semibold bg-orchid-700 hover:bg-orchid-800 text-white rounded-md">Save</button>'
+                        + '</div>';
+                    textarea.addEventListener('input', function () {
+                        actions.querySelector('span').textContent = textarea.value.length + ' / 250';
+                    });
+                    actions.querySelector('button').addEventListener('click', function () {
+                        textarea.replaceWith(bodyEl);
+                        actions.remove();
+                    });
+                    actions.querySelectorAll('button')[1].addEventListener('click', async function () {
+                        const newBody = textarea.value.trim();
+                        if (!newBody) return;
+                        try {
+                            const res  = await fetch(BASE_URL + '/' + id, {
+                                method: 'PATCH', credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ body: newBody }),
+                            });
+                            const data = await res.json();
+                            if (!res.ok) { alert(data.error || 'Failed to edit'); return; }
+                            // Re-render body
+                            bodyEl.innerHTML = renderBody(data.comment.body, data.comment.entities);
+                            bodyEl.dataset.raw = data.comment.body;
+                            // Show edited badge
+                            const metaRow = el.querySelector('.flex.items-center.flex-wrap');
+                            if (metaRow && !metaRow.querySelector('.bv-edited-badge')) {
+                                const badge = document.createElement('span');
+                                badge.className = 'bv-edited-badge text-[11px] text-woodsmoke-400 ml-1.5';
+                                badge.textContent = '· edited';
+                                metaRow.appendChild(badge);
+                            }
+                            textarea.replaceWith(bodyEl);
+                            actions.remove();
+                            editBtn.remove();
+                        } catch { alert('Network error'); }
+                    });
+                    bodyEl.replaceWith(textarea);
+                    textarea.after(actions);
+                    textarea.focus();
+                });
+            }
+
+            // Pin button
+            const pinBtn = el.querySelector('.bv-pin-btn');
+            if (pinBtn) {
+                pinBtn.addEventListener('click', async function () {
+                    const id = pinBtn.dataset.id;
+                    try {
+                        const res  = await fetch(BASE_URL + '/' + id + '/pin', { method: 'PATCH', credentials: 'include' });
+                        const data = await res.json();
+                        if (!res.ok) { alert(data.error || 'Failed'); return; }
+                        pinBtn.textContent     = data.isPinned ? 'Unpin' : 'Pin';
+                        pinBtn.dataset.pinned  = data.isPinned.toString();
+                        // Update pinned badge
+                        const metaRow = el.querySelector('.flex.items-center.flex-wrap');
+                        const existing = metaRow && metaRow.querySelector('.bv-pin-badge');
+                        if (data.isPinned && metaRow && !existing) {
+                            const badge = document.createElement('span');
+                            badge.className = 'bv-pin-badge inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 ml-2';
+                            badge.textContent = '📌 Pinned';
+                            metaRow.appendChild(badge);
+                        } else if (!data.isPinned && existing) {
+                            existing.remove();
+                        }
+                    } catch { alert('Network error'); }
+                });
+            }
+
+            // Delete button
+            const deleteBtn = el.querySelector('.bv-delete-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async function () {
+                    if (!confirm('Delete this comment?')) return;
+                    const id = deleteBtn.dataset.id;
+                    try {
+                        const res = await fetch(BASE_URL + '/' + id, { method: 'DELETE', credentials: 'include' });
+                        if (!res.ok) { const d = await res.json(); alert(d.error || 'Failed'); return; }
+                        el.remove();
+                        const countEl = document.getElementById('bvCommentCountLabel');
+                        if (countEl) countEl.textContent = String(Math.max(0, parseInt(countEl.textContent || '0') - 1));
+                        const thread = document.getElementById('bvCommentThread');
+                        if (thread && !thread.children.length) {
+                            document.getElementById('bvCommentEmpty').classList.remove('hidden');
+                        }
+                    } catch { alert('Network error'); }
+                });
+            }
+
+            // Report button
+            const reportBtn = el.querySelector('.bv-report-btn');
+            if (reportBtn) {
+                reportBtn.addEventListener('click', async function () {
+                    const reason = prompt('Report reason:\n1. spam\n2. harassment\n3. inappropriate\n4. other\n\nType the reason:');
+                    const valid = ['spam', 'harassment', 'inappropriate', 'other'];
+                    if (!reason || !valid.includes(reason.toLowerCase().trim())) return;
+                    const id = reportBtn.dataset.id;
+                    try {
+                        const res  = await fetch(BASE_URL + '/' + id + '/report', {
+                            method: 'POST', credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ reason: reason.toLowerCase().trim() }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) { alert(data.error || 'Failed'); return; }
+                        reportBtn.textContent = 'Reported';
+                        reportBtn.disabled    = true;
+                    } catch { alert('Network error'); }
+                });
+            }
+
+            // Bucket entity refresh buttons
+            el.querySelectorAll('.bv-refresh-entity').forEach(function (btn) {
+                const commentId   = el.dataset.commentId;
+                btn.dataset.commentId = commentId;
+                btn.addEventListener('click', async function (e) {
+                    e.preventDefault();
+                    const idx      = parseInt(btn.dataset.entityIndex);
+                    const bucketId = btn.closest('[data-bucket-id]')?.dataset.bucketId;
+                    btn.disabled = true;
+                    try {
+                        const res  = await fetch(BASE_URL + '/' + commentId + '/refresh-entity', {
+                            method: 'POST', credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ entityIndex: idx }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) return;
+                        if (data.snapshot && data.snapshot.name) {
+                            // Update ALL chips for this bucket, not just the clicked one
+                            if (bucketId) applySnapshot(bucketId, data.snapshot);
+                        } else {
+                            const badgeWrap = btn.closest('span');
+                            if (badgeWrap) badgeWrap.outerHTML = '<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-silver-100 border border-silver-200 text-xs text-woodsmoke-400 line-through">bucket not found</span>';
+                        }
+                    } catch { /* silent */ } finally {
+                        if (btn.isConnected) btn.disabled = false;
+                    }
+                });
+            });
+        }
+
+        // ── Apply a snapshot to ALL chips for a given bucketId ───────────────
+        const BUCKET_ICON_HTML  = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>';
+        const STAR_ICON_HTML    = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176z"/></g></svg>';
+        const GRAB_ICON_HTML    = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M15.5 5a2.5 2.5 0 0 1 2.461 2.058A2.5 2.5 0 0 1 21 9.5V12a8 8 0 0 1-8 8h-.674a8 8 0 0 1-7.155-4.422L2.329 9.894c-.36-.72-.093-1.683.747-2.028c1.043-.427 2.034-.507 3.055.012q.443.227.869.584V7.5a2.5 2.5 0 0 1 3.388-2.338a2.498 2.498 0 0 1 4.224 0A2.5 2.5 0 0 1 15.5 5"/></g></svg>';
+
+        function applySnapshot(bucketId, snapshot) {
+            const thread = document.getElementById('bvCommentThread');
+            if (!thread) return;
+            thread.querySelectorAll('[data-bucket-id="' + bucketId + '"]').forEach(function (chip) {
+                const nameLink = chip.querySelector('a');
+                const ratingEl = chip.querySelector('.bv-entity-rating');
+                const grabsEl  = chip.querySelector('.bv-entity-grabs');
+                if (nameLink) nameLink.innerHTML = BUCKET_ICON_HTML + esc(snapshot.name);
+                if (ratingEl) ratingEl.innerHTML = snapshot.ratingAvg
+                    ? '<span class="inline-flex items-center gap-0.75">' + STAR_ICON_HTML + esc(String(snapshot.ratingAvg)) + '</span>'
+                    : 'No ratings';
+                if (grabsEl)  grabsEl.innerHTML  = GRAB_ICON_HTML + esc(String(snapshot.grabCount));
+            });
+        }
+
+        async function refreshAllBucketChips() {
+            const thread = document.getElementById('bvCommentThread');
+            if (!thread) return;
+            const chips = thread.querySelectorAll('[data-bucket-id]');
+            if (!chips.length) return;
+            // Collect unique IDs
+            const ids = [...new Set([...chips].map(c => c.dataset.bucketId))];
+            try {
+                const res = await fetch('/api/buckets/snapshots?ids=' + ids.join(','), { credentials: 'include' });
+                if (!res.ok) return;
+                const map = await res.json();
+                Object.entries(map).forEach(function ([bucketId, snapshot]) {
+                    applySnapshot(bucketId, snapshot);
+                });
+            } catch { /* silent */ }
+        }
+
+        // ── Load comments from API ────────────────────────────────────────────
+        const COMMENTS_LOADING_SVG = '<div class="flex justify-center py-6 text-woodsmoke-400"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="4" cy="12" r="3" fill="currentColor"><animate id="SVG9IgbRbsl" attributeName="r" begin="0;SVGFUNpCWdG.end-0.25s" dur="0.75s" values="3;.2;3"/></circle><circle cx="12" cy="12" r="3" fill="currentColor"><animate attributeName="r" begin="SVG9IgbRbsl.end-0.6s" dur="0.75s" values="3;.2;3"/></circle><circle cx="20" cy="12" r="3" fill="currentColor"><animate id="SVGFUNpCWdG" attributeName="r" begin="SVG9IgbRbsl.end-0.45s" dur="0.75s" values="3;.2;3"/></circle></svg></div>';
+
+        window.loadComments = async function (page) {
+            const thread   = document.getElementById('bvCommentThread');
+            const emptyEl  = document.getElementById('bvCommentEmpty');
+            const moreWrap = document.getElementById('bvLoadMoreWrap');
+            const curtain  = document.getElementById('bvAnonCurtain');
+
+            if (page === 1) thread.innerHTML = COMMENTS_LOADING_SVG;
+
+            try {
+                const res  = await fetch(BASE_URL + '?page=' + page + '&limit=' + LIMIT, { credentials: 'include' });
+                const data = await res.json();
+                if (page === 1) thread.innerHTML = '';
+                if (!res.ok) return;
+
+                if (!data.comments || !data.comments.length) {
+                    if (page === 1) emptyEl.classList.remove('hidden');
+                    moreWrap.classList.add('hidden');
+                    return;
+                }
+
+                emptyEl.classList.add('hidden');
+
+                // Build top-level map and replies list
+                const topLevel = [];
+                const replies  = {};
+                data.comments.forEach(function (c) {
+                    if (!c.parentCommentId) {
+                        topLevel.push(c);
+                    } else {
+                        const pid = String(c.parentCommentId);
+                        if (!replies[pid]) replies[pid] = [];
+                        replies[pid].push(c);
+                    }
+                });
+
+                topLevel.forEach(function (c) {
+                    const el = buildCommentEl(c, false);
+                    thread.appendChild(el);
+                    // Inject replies under this comment
+                    const repliesWrap = el.querySelector('.bv-replies');
+                    if (repliesWrap && replies[String(c._id)]) {
+                        replies[String(c._id)].forEach(function (r) {
+                            const replyEl = buildCommentEl(r, true);
+                            repliesWrap.appendChild(replyEl);
+                            attachCommentActions(replyEl);
+                        });
+                    }
+                    attachCommentActions(el);
+                });
+
+                // Handle any replies whose parent wasn't in the current page
+                Object.keys(replies).forEach(function (pid) {
+                    if (!thread.querySelector('[data-comment-id="' + pid + '"]')) {
+                        replies[pid].forEach(function (r) {
+                            const replyEl = buildCommentEl(r, false); // show at top level if orphaned
+                            thread.appendChild(replyEl);
+                            attachCommentActions(replyEl);
+                        });
+                    }
+                });
+
+                // Anon curtain
+                if (data.truncatedForAnon && curtain) {
+                    curtain.classList.remove('hidden');
+                    moreWrap.classList.add('hidden');
+                } else if (data.hasMore) {
+                    moreWrap.classList.remove('hidden');
+                } else {
+                    moreWrap.classList.add('hidden');
+                }
+
+                // Auto-refresh all bucket chip snapshots after render
+                refreshAllBucketChips();
+
+            } catch (err) {
+                console.error('[comments] loadComments error:', err);
+            }
+        };
+
+        // ── Load more button ──────────────────────────────────────────────────
+        const loadMoreBtn = document.getElementById('bvLoadMoreBtn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', function () {
+                commentPage++;
+                loadMoreBtn.disabled   = true;
+                loadMoreBtn.textContent = 'Loading…';
+                loadComments(commentPage).then(function () {
+                    loadMoreBtn.disabled   = false;
+                    loadMoreBtn.textContent = 'Load more comments';
+                });
+            });
+        }
+
+        // ── Compose — char counter + submit ──────────────────────────────────
+        const composeBody   = document.getElementById('bvCommentBody');
+        const composeSubmit = document.getElementById('bvCommentSubmit');
+        const charCount     = document.getElementById('bvCharCount');
+
+        if (composeBody && charCount) {
+            composeBody.addEventListener('input', function () {
+                charCount.textContent = composeBody.value.length + ' / 250';
+            });
+        }
+
+        if (composeSubmit && composeBody) {
+            composeSubmit.addEventListener('click', function () {
+                submitComment(composeBody.value, null, document.getElementById('bvCommentCompose'));
+            });
+        }
+
     })();
 
     // Unlock button (paywalled, logged-in user without access)

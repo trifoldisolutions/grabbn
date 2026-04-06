@@ -361,7 +361,7 @@
             if (btn) {
                 btn.addEventListener('click', function (e) {
                     e.stopImmediatePropagation();
-                    window.location.href = '/signup.html';
+                    window.location.href = '/v2/signup';
                 }, true);
             }
         });
@@ -1666,7 +1666,7 @@
                 clearDraft(); // prevent closeModal() from deleting the just-saved bucket
                 closeModal();
                 // Reload the profile page to reflect changes
-                if (window.location.pathname.startsWith('/v2/@')) {
+                if (window.location.pathname.startsWith('/v2/u/')) {
                     window.location.reload();
                 }
             } else if (res.status === 409) {

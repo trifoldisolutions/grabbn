@@ -96,9 +96,10 @@ const bucketSchema = new mongoose.Schema(
       default: 0
     },
     grabbedBy: [{
-      userId:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-      username: { type: String, default: '' },
-      avatar:   { type: String, default: '' }
+      userId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      username:  { type: String, default: '' },
+      avatar:    { type: String, default: '' },
+      grabbedAt: { type: Date, default: Date.now }
     }],
     isDraft: {
       type: Boolean,
