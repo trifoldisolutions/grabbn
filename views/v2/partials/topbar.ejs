@@ -248,32 +248,31 @@
 
             // comment-related notifications — use actor avatar on the left
             if (['comment_mention', 'bucket_tagged', 'comment_reply', 'comment_agreed'].includes(n.type)) {
-                const commentLink = d.bucketId
-                    ? `/v2/bucket/${escHtml(String(d.bucketId))}#comments`
-                    : '#';
-                const actorAvatar   = d.commenterAvatar  || d.replierAvatar  || d.agreerAvatar  || '';
-                const actorUsername = d.commenterUsername || d.replierUsername || d.agreerUsername || '';
+                const commentLink   = d.bucketId ? `/v2/bucket/${escHtml(String(d.bucketId))}#comments` : '';
+                const actorAvatar   = d.commenterAvatar   || d.replierAvatar   || d.agreerAvatar   || '';
+                const actorUsername = d.commenterUsername  || d.replierUsername  || d.agreerUsername  || '';
+                // Use plain bold spans — outer row is clickable, so no nested <a> tags
+                const actor  = actorUsername  ? `<span class="font-semibold">@${escHtml(actorUsername)}</span>`  : '<span class="font-semibold">Someone</span>';
+                const bucket = d.bucketName   ? `<span class="font-semibold">${escHtml(d.bucketName)}</span>`   : '<span class="font-semibold">a bucket</span>';
                 let bodyText = '';
-                if (n.type === 'comment_mention') {
-                    bodyText = `${userLink(actorUsername)} mentioned you in ${bucketLink(d.bucketName, d.bucketId)}`;
-                } else if (n.type === 'bucket_tagged') {
-                    bodyText = `${userLink(actorUsername)} tagged ${bucketLink(d.bucketName, d.bucketId)} in a comment`;
-                } else if (n.type === 'comment_reply') {
-                    bodyText = `${userLink(actorUsername)} replied to your comment in ${bucketLink(d.bucketName, d.bucketId)}`;
-                } else if (n.type === 'comment_agreed') {
-                    bodyText = `${userLink(actorUsername)} agreed with your comment in ${bucketLink(d.bucketName, d.bucketId)}`;
-                }
-                const snippet = d.snippet
-                    ? `<p class="text-xs text-woodsmoke-500 mt-0.5 truncate">"${escHtml(d.snippet)}"</p>`
+                if      (n.type === 'comment_mention') bodyText = `${actor} mentioned you in ${bucket}`;
+                else if (n.type === 'bucket_tagged')   bodyText = `${actor} tagged ${bucket} in a comment`;
+                else if (n.type === 'comment_reply')   bodyText = `${actor} replied to your comment in ${bucket}`;
+                else if (n.type === 'comment_agreed')  bodyText = `${actor} agreed with your comment in ${bucket}`;
+                // Strip entity syntax (u:x, b:x) from snippet for clean display
+                const rawSnippet = (d.snippet || '').replace(/\bu:[a-zA-Z0-9_]{1,30}/g, '').replace(/\bb:(?:"[^"]{1,500}"|[a-zA-Z0-9_\-]{1,100})/g, '').replace(/https?:\/\/\S+/g, '').trim();
+                const snippet = rawSnippet
+                    ? `<p class="text-xs text-woodsmoke-500 mt-0.5 truncate">"${escHtml(rawSnippet)}"</p>`
                     : '';
-                return `<a href="${commentLink}" class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors no-underline" data-notif-id="${nid}">
+                const clickAttr = commentLink ? `onclick="location.href='${commentLink}'"` : '';
+                return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors ${commentLink ? 'cursor-pointer' : ''}" data-notif-id="${nid}" ${clickAttr}>
                     ${avatarHtml(actorAvatar, actorUsername)}
                     <div class="flex-1 min-w-0">
                         <p class="text-sm text-woodsmoke-800 leading-snug">${bodyText}</p>
                         ${snippet}
                         <p class="text-xs text-gray-400 mt-0.5">${timeAgo(n.createdAt)}</p>
                     </div>
-                </a>`;
+                </div>`;
             }
 
             switch (n.type) {
