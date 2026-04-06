@@ -2697,7 +2697,7 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
         let canComment = false;
         let canRate    = false;
         let userRating = null;
-        if (!isOwner && !isAnon) {
+        if (!isOwner && req.user && !req.user.isAnonymous) {
             const clickCount = await LinkClick.countDocuments({ bucketId, userId: req.user._id });
             canComment = clickCount >= 2;
             if (hasGrabbed) {
