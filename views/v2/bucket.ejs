@@ -954,7 +954,7 @@
     (function () {
         const IS_ANON    = <%- (!user || user.isAnonymous) ? 'true' : 'false' %>;
         const IS_OWNER   = <%- isOwner ? 'true' : 'false' %>;
-        const CAN_COMMENT = <%- (canRate || isOwner) ? 'true' : 'false' %>;
+        const CAN_COMMENT = <%- (canComment || isOwner) ? 'true' : 'false' %>;
         const BASE_URL   = '/api/buckets/' + bucketId + '/comments';
 
         let commentPage = 1;

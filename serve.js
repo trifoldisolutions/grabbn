@@ -2692,16 +2692,19 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
             ? !!(bucket.grabbedBy?.some(g => g.userId.toString() === req.user._id.toString()))
             : false;
 
+        // Comment eligibility: clicked >= 2 links (no grab required)
         // Rating eligibility: grabbed + clicked >= 2 links
+        let canComment = false;
         let canRate    = false;
         let userRating = null;
-        if (hasGrabbed) {
-            const [clickCount, existingRating] = await Promise.all([
-                LinkClick.countDocuments({ bucketId, userId: req.user._id }),
-                BucketRating.findOne({ bucketId, userId: req.user._id }).select('stars').lean()
-            ]);
-            canRate    = clickCount >= 2;
-            userRating = existingRating?.stars ?? null;
+        if (!isOwner && !isAnon) {
+            const clickCount = await LinkClick.countDocuments({ bucketId, userId: req.user._id });
+            canComment = clickCount >= 2;
+            if (hasGrabbed) {
+                const existingRating = await BucketRating.findOne({ bucketId, userId: req.user._id }).select('stars').lean();
+                canRate    = clickCount >= 2;
+                userRating = existingRating?.stars ?? null;
+            }
         }
         const ratingCount    = bucket.ratingCount || 0;
         const ratingAvg      = ratingCount > 0 ? Math.round((bucket.ratingSum / ratingCount) * 10) / 10 : null;
@@ -2751,6 +2754,7 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
             isOwner,
             hasAccess,
             hasGrabbed,
+            canComment,
             canRate,
             userRating,
             ratingCount,
