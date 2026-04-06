@@ -9,6 +9,7 @@ const notificationSchema = new mongoose.Schema({
         'new_bucket_published',
         'grabbed_bucket_updated',
         'comment_mention',
+        'bucket_tagged',
     ]},
     data:      { type: mongoose.Schema.Types.Mixed, required: true },
     seen:      { type: Boolean, default: false }, // true after first modal open

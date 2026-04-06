@@ -178,24 +178,59 @@ async function sendMentionNotifications(comment, bucket, commenter) {
                 userId: mentioned._id,
                 type:   'comment_mention',
                 data:   {
-                    commentId:           comment._id,
-                    bucketId:            bucket._id,
-                    bucketName:          bucket.name,
-                    commenterUsername:   commenter.username || '',
-                    commenterAvatar:     commenter.avatar   || '',
-                    snippet:             comment.body.slice(0, 100),
+                    commentId:         comment._id,
+                    bucketId:          bucket._id,
+                    bucketName:        bucket.name,
+                    commenterUsername: commenter.username || '',
+                    commenterAvatar:   commenter.avatar   || '',
+                    snippet:           comment.body.slice(0, 100),
                 },
             });
 
-            pushNotification(String(mentioned._id), {
-                type:             'notification',
-                notificationType: 'comment_mention',
-                bucketName:       bucket.name,
-                commenterUsername: commenter.username || '',
-            });
+            pushNotification(String(mentioned._id), { type: 'new_notification' });
         }
     } catch (err) {
         console.error('[bucketComments] sendMentionNotifications error:', err);
+    }
+}
+
+// Notify bucket owners when their bucket is tagged in a comment (fire-and-forget — never throws).
+async function sendBucketTagNotifications(comment, commenter) {
+    try {
+        const refs = (comment.entities || []).filter(e => e.type === 'bucket_ref');
+        if (!refs.length) return;
+
+        // De-dupe by bucket ID in case the same bucket is tagged multiple times
+        const seen = new Set();
+        for (const entity of refs) {
+            if (seen.has(entity.value)) continue;
+            seen.add(entity.value);
+
+            const taggedBucket = await Bucket.findById(entity.value)
+                .select('_id name userId')
+                .lean();
+            if (!taggedBucket) continue;
+
+            // Skip if commenter is the bucket owner (no self-notification)
+            if (taggedBucket.userId.equals(commenter._id)) continue;
+
+            await Notification.create({
+                userId: taggedBucket.userId,
+                type:   'bucket_tagged',
+                data:   {
+                    commentId:         comment._id,
+                    bucketId:          taggedBucket._id,
+                    bucketName:        taggedBucket.name,
+                    commenterUsername: commenter.username || '',
+                    commenterAvatar:   commenter.avatar   || '',
+                    snippet:           comment.body.slice(0, 100),
+                },
+            });
+
+            pushNotification(String(taggedBucket.userId), { type: 'new_notification' });
+        }
+    } catch (err) {
+        console.error('[bucketComments] sendBucketTagNotifications error:', err);
     }
 }
 
@@ -322,8 +357,9 @@ router.post('/', requireRegistered, requireVerification, async (req, res) => {
         // Update rate-limit timestamp (fire-and-forget)
         User.findByIdAndUpdate(req.user._id, { lastCommentAt: new Date() }).catch(() => {});
 
-        // Send mention notifications (fire-and-forget)
+        // Send mention + bucket-tag notifications (fire-and-forget)
         sendMentionNotifications(comment, bucket, req.user).catch(() => {});
+        sendBucketTagNotifications(comment, req.user).catch(() => {});
 
         return res.status(201).json({ comment: { ...comment.toObject(), userAgreed: false } });
     } catch (err) {
@@ -357,6 +393,14 @@ router.patch('/:commentId', requireRegistered, requireVerification, async (req, 
             { body, entities, isEdited: true, editedAt: new Date() },
             { new: true }
         );
+
+        // Send mention + bucket-tag notifications for edited comment (fire-and-forget)
+        const { id: bucketId } = req.params;
+        const editBucket = await Bucket.findById(bucketId).select('_id name').lean();
+        if (editBucket) {
+            sendMentionNotifications(updated, editBucket, req.user).catch(() => {});
+            sendBucketTagNotifications(updated, req.user).catch(() => {});
+        }
 
         return res.json({ comment: updated });
     } catch (err) {
