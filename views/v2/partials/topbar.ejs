@@ -246,19 +246,28 @@
             let text      = '';
             let bucketId  = d.bucketId || d.sourceBucketId || null;
 
-            // mention / bucket-tag use commenter avatar on the left
-            if (n.type === 'comment_mention' || n.type === 'bucket_tagged') {
+            // comment-related notifications — use actor avatar on the left
+            if (['comment_mention', 'bucket_tagged', 'comment_reply', 'comment_agreed'].includes(n.type)) {
                 const commentLink = d.bucketId
                     ? `/v2/bucket/${escHtml(String(d.bucketId))}#comments`
                     : '#';
-                const bodyText = n.type === 'comment_mention'
-                    ? `${userLink(d.commenterUsername)} mentioned you in ${bucketLink(d.bucketName, d.bucketId)}`
-                    : `${userLink(d.commenterUsername)} tagged ${bucketLink(d.bucketName, d.bucketId)} in a comment`;
+                const actorAvatar   = d.commenterAvatar  || d.replierAvatar  || d.agreerAvatar  || '';
+                const actorUsername = d.commenterUsername || d.replierUsername || d.agreerUsername || '';
+                let bodyText = '';
+                if (n.type === 'comment_mention') {
+                    bodyText = `${userLink(actorUsername)} mentioned you in ${bucketLink(d.bucketName, d.bucketId)}`;
+                } else if (n.type === 'bucket_tagged') {
+                    bodyText = `${userLink(actorUsername)} tagged ${bucketLink(d.bucketName, d.bucketId)} in a comment`;
+                } else if (n.type === 'comment_reply') {
+                    bodyText = `${userLink(actorUsername)} replied to your comment in ${bucketLink(d.bucketName, d.bucketId)}`;
+                } else if (n.type === 'comment_agreed') {
+                    bodyText = `${userLink(actorUsername)} agreed with your comment in ${bucketLink(d.bucketName, d.bucketId)}`;
+                }
                 const snippet = d.snippet
                     ? `<p class="text-xs text-woodsmoke-500 mt-0.5 truncate">"${escHtml(d.snippet)}"</p>`
                     : '';
                 return `<a href="${commentLink}" class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors no-underline" data-notif-id="${nid}">
-                    ${avatarHtml(d.commenterAvatar, d.commenterUsername)}
+                    ${avatarHtml(actorAvatar, actorUsername)}
                     <div class="flex-1 min-w-0">
                         <p class="text-sm text-woodsmoke-800 leading-snug">${bodyText}</p>
                         ${snippet}

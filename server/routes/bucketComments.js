@@ -234,6 +234,57 @@ async function sendBucketTagNotifications(comment, commenter) {
     }
 }
 
+// Notify the parent comment author when someone replies (fire-and-forget — never throws).
+async function sendReplyNotification(replyComment, parentCommentId, bucket, replier) {
+    try {
+        if (!parentCommentId) return;
+        const parent = await BucketComment.findById(parentCommentId).select('userId username').lean();
+        if (!parent) return;
+        // Skip self-reply
+        if (parent.userId.equals(replier._id)) return;
+
+        await Notification.create({
+            userId: parent.userId,
+            type:   'comment_reply',
+            data:   {
+                commentId:      replyComment._id,
+                bucketId:       bucket._id,
+                bucketName:     bucket.name,
+                replierUsername: replier.username || '',
+                replierAvatar:   replier.avatar   || '',
+                snippet:         replyComment.body.slice(0, 100),
+            },
+        });
+        pushNotification(String(parent.userId), { type: 'new_notification' });
+    } catch (err) {
+        console.error('[bucketComments] sendReplyNotification error:', err);
+    }
+}
+
+// Notify comment author when someone agrees with their comment (fire-and-forget — never throws).
+async function sendAgreementNotification(comment, bucket, agreer) {
+    try {
+        // Skip self-agree (shouldn't happen, but guard anyway)
+        if (comment.userId.equals(agreer._id)) return;
+
+        await Notification.create({
+            userId: comment.userId,
+            type:   'comment_agreed',
+            data:   {
+                commentId:     comment._id,
+                bucketId:      bucket._id,
+                bucketName:    bucket.name,
+                agreerUsername: agreer.username || '',
+                agreerAvatar:   agreer.avatar   || '',
+                snippet:        comment.body.slice(0, 100),
+            },
+        });
+        pushNotification(String(comment.userId), { type: 'new_notification' });
+    } catch (err) {
+        console.error('[bucketComments] sendAgreementNotification error:', err);
+    }
+}
+
 // ── GET / — Paginated comment list ───────────────────────────────────────────
 router.get('/', async (req, res) => {
     try {
@@ -357,9 +408,10 @@ router.post('/', requireRegistered, requireVerification, async (req, res) => {
         // Update rate-limit timestamp (fire-and-forget)
         User.findByIdAndUpdate(req.user._id, { lastCommentAt: new Date() }).catch(() => {});
 
-        // Send mention + bucket-tag notifications (fire-and-forget)
+        // Send notifications (fire-and-forget)
         sendMentionNotifications(comment, bucket, req.user).catch(() => {});
         sendBucketTagNotifications(comment, req.user).catch(() => {});
+        sendReplyNotification(comment, parentCommentId, bucket, req.user).catch(() => {});
 
         return res.status(201).json({ comment: { ...comment.toObject(), userAgreed: false } });
     } catch (err) {
@@ -444,7 +496,7 @@ router.post('/:commentId/agree', requireRegistered, requireVerification, async (
             return res.status(400).json({ error: 'Invalid comment ID' });
         }
 
-        const comment = await BucketComment.findById(commentId).select('_id deletedAt').lean();
+        const comment = await BucketComment.findById(commentId).select('_id userId body deletedAt bucketId').lean();
         if (!comment || comment.deletedAt) return res.status(404).json({ error: 'Comment not found' });
 
         const existing = await CommentAgreement.findOne({ commentId, userId: req.user._id });
@@ -459,6 +511,10 @@ router.post('/:commentId/agree', requireRegistered, requireVerification, async (
                 CommentAgreement.create({ commentId, userId: req.user._id }),
                 BucketComment.findByIdAndUpdate(commentId, { $inc: { agreementCount: 1 } }, { timestamps: false }),
             ]);
+            // Notify comment author (fire-and-forget)
+            Bucket.findById(comment.bucketId).select('_id name').lean().then(b => {
+                if (b) sendAgreementNotification(comment, b, req.user).catch(() => {});
+            }).catch(() => {});
             return res.json({ agreed: true });
         }
     } catch (err) {
