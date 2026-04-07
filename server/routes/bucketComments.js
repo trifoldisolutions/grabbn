@@ -8,8 +8,10 @@ import CommentAgreement from '../models/commentAgreement.js';
 import CommentReport from '../models/commentReport.js';
 import LinkClick from '../models/linkClick.js';
 import Notification from '../models/notification.js';
+import Block from '../models/block.js';
 import { anonymousAuth, requireVerification } from '../middleware/anonymousAuth.js';
 import { pushNotification } from '../ws.js';
+import { parseAndResolveEntities, fetchBucketSnapshot, buildSnapshot } from '../utils/entityParser.js';
 
 // mergeParams: true is required so `:id` from the parent mount
 // (/api/buckets/:id/comments) is visible inside this router.
@@ -25,140 +27,6 @@ function requireRegistered(req, res, next) {
         return res.status(401).json({ error: 'Login required' });
     }
     next();
-}
-
-// ── Entity helpers ───────────────────────────────────────────────────────────
-
-// Escape special regex characters in a user-supplied string.
-function escapeRegex(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// Fetch name/rating/grabCount snapshot for a known bucket ID.
-async function fetchBucketSnapshot(bucketId) {
-    try {
-        const bucket = await Bucket.findById(bucketId)
-            .select('name ratingSum ratingCount grabbedBy')
-            .lean();
-        if (!bucket) return null;
-        return buildSnapshot(bucket);
-    } catch {
-        return null;
-    }
-}
-
-function buildSnapshot(bucket) {
-    const ratingAvg = bucket.ratingCount > 0
-        ? Math.round((bucket.ratingSum / bucket.ratingCount) * 10) / 10
-        : null;
-    return {
-        name:      bucket.name,
-        ratingAvg,
-        grabCount: bucket.grabbedBy?.length ?? 0,
-    };
-}
-
-// Resolve a `b:` reference (name, ID, or bucket page URL) to a { bucketId, snapshot } pair.
-async function resolveBucketRef(ref) {
-    try {
-        let bucket = null;
-        // Check if the ref is a bucket page URL and extract the ID from it
-        const urlMatch = ref.match(/\/v2\/bucket\/([a-fA-F0-9]{24})/);
-        if (urlMatch) {
-            bucket = await Bucket.findById(urlMatch[1])
-                .select('name ratingSum ratingCount grabbedBy')
-                .lean();
-        } else if (mongoose.Types.ObjectId.isValid(ref)) {
-            bucket = await Bucket.findById(ref)
-                .select('name ratingSum ratingCount grabbedBy')
-                .lean();
-        }
-        if (!bucket) {
-            bucket = await Bucket.findOne({ name: new RegExp('^' + escapeRegex(ref) + '$', 'i') })
-                .select('name ratingSum ratingCount grabbedBy')
-                .lean();
-        }
-        if (!bucket) return { bucketId: null, snapshot: null };
-        return { bucketId: String(bucket._id), snapshot: buildSnapshot(bucket) };
-    } catch {
-        return { bucketId: null, snapshot: null };
-    }
-}
-
-// Parse a comment body and resolve all entity references.
-// Returns an array of { type, raw, value, snapshot } objects.
-// userId is used to gate bucket_ref entities — only grabbed buckets can be tagged.
-async function parseAndResolveEntities(body, userId) {
-    const entities = [];
-    const seen = new Set();
-
-    // ── 1. u:username mentions ───────────────────────────────────────────────
-    const mentionRe = /\bu:([a-zA-Z0-9_]{1,30})/g;
-    let m;
-    while ((m = mentionRe.exec(body)) !== null) {
-        const raw      = m[0];          // "u:john"
-        const username = m[1];
-        const key      = `mention:${username.toLowerCase()}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        const user = await User.findOne({ username }).select('_id').lean();
-        if (user) {
-            entities.push({ type: 'mention', raw, value: username, snapshot: null });
-        }
-    }
-
-    // Helper: check if userId has grabbed bucketId
-    async function hasGrabbed(bucketId) {
-        if (!userId) return false;
-        const b = await Bucket.findOne({ _id: bucketId, 'grabbedBy.userId': userId }).select('_id').lean();
-        return !!b;
-    }
-
-    // ── 2. Bucket page URLs (detect before generic URL sweep) ────────────────
-    const bucketUrlRe = /https?:\/\/\S+\/v2\/bucket\/([a-fA-F0-9]{24})(?:[?#]\S*)?/g;
-    while ((m = bucketUrlRe.exec(body)) !== null) {
-        const raw      = m[0];
-        const bucketId = m[1];
-        const key      = `bucket_ref:${bucketId}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        if (!await hasGrabbed(bucketId)) continue; // silently drop — not grabbed
-        const snapshot = await fetchBucketSnapshot(bucketId);
-        entities.push({ type: 'bucket_ref', raw, value: bucketId, snapshot });
-    }
-
-    // ── 3. b:name or b:"name with spaces" shorthand ──────────────────────────
-    // Quoted form:   b:"bucket name with spaces"  → group 1 captures the name
-    // Unquoted form: b:bucket-name                → group 2 captures the name
-    const bucketRefRe = /\bb:(?:"([^"]{1,500})"|([a-zA-Z0-9_\-]{1,100}))/g;
-    while ((m = bucketRefRe.exec(body)) !== null) {
-        const raw = m[0];  // e.g. `b:"my bucket"` or `b:frontend-tips`
-        const ref = (m[1] || m[2]).trim();  // whichever group matched
-        const key = `bucket_ref_text:${ref.toLowerCase()}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        const { bucketId, snapshot } = await resolveBucketRef(ref);
-        if (!bucketId || !await hasGrabbed(bucketId)) continue; // silently drop — not grabbed
-        entities.push({
-            type:     'bucket_ref',
-            raw,
-            value:    bucketId,
-            snapshot,
-        });
-    }
-
-    // ── 4. Raw URLs (skip ones already captured as bucket page URLs) ─────────
-    const urlRe = /https?:\/\/\S+/g;
-    while ((m = urlRe.exec(body)) !== null) {
-        const raw = m[0];
-        if (/\/v2\/bucket\/[a-fA-F0-9]{24}/.test(raw)) continue;
-        const key = `url:${raw}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        entities.push({ type: 'url', raw, value: raw, snapshot: null });
-    }
-
-    return entities;
 }
 
 // Send in-app @mention notifications (fire-and-forget — never throws).
@@ -302,6 +170,14 @@ router.get('/', async (req, res) => {
         const skip   = isAnon ? 0 : (page - 1) * limit;
 
         const filter = { bucketId, deletedAt: null };
+
+        // Exclude comments from users who have blocked the viewer
+        if (!isAnon) {
+            const blocks = await Block.find({ blockedId: req.user._id }).select('blockerId').lean();
+            if (blocks.length) {
+                filter.userId = { $nin: blocks.map(b => b.blockerId) };
+            }
+        }
 
         const [comments, total] = await Promise.all([
             BucketComment.find(filter)

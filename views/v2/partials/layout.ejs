@@ -34,4 +34,4 @@
 
     <div class="flex flex-col flex-1 overflow-hidden">
         <%- include('topbar') %>
-        <main class="flex-1 overflow-y-auto pb-16 md:pb-0">
+        <main class="<%= page === 'messages' ? 'flex flex-col flex-1 overflow-hidden' : 'flex-1 overflow-y-auto pb-16 md:pb-0' %>">

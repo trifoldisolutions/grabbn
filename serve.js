@@ -24,7 +24,12 @@ import creditsRouter, { handleWebhook } from './server/routes/credits.js';
 import connectRouter, { handleConnectWebhook } from './server/routes/stripeConnect.js';
 import notificationsRouter from './server/routes/notifications.js';
 import bucketCommentsRouter from './server/routes/bucketComments.js';
+import dmRouter from './server/routes/dm.js';
+import blockRouter from './server/routes/block.js';
 import Notification from './server/models/notification.js';
+import Block from './server/models/block.js';
+import Conversation from './server/models/conversation.js';
+import DirectMessage from './server/models/directMessage.js';
 import BucketComment from './server/models/bucketComment.js';
 import BucketView from './server/models/bucketView.js';
 import BucketShare from './server/models/bucketShare.js';
@@ -84,7 +89,14 @@ wss.on('connection', (ws, req) => {
 
     ws.on('close', () => {
         const set = wsClients.get(userId);
-        if (set) { set.delete(ws); if (!set.size) wsClients.delete(userId); }
+        if (set) {
+            set.delete(ws);
+            if (!set.size) {
+                wsClients.delete(userId);
+                // Stamp lastActive so "last seen" is accurate
+                User.findByIdAndUpdate(userId, { lastActive: new Date() }, { timestamps: false }).catch(() => {});
+            }
+        }
     });
 
     ws.on('error', () => ws.terminate());
@@ -189,6 +201,29 @@ app.use('/api/credits', creditsRouter);
 app.use('/api/connect', connectRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/buckets/:id/comments', bucketCommentsRouter);
+app.use('/api/dm', dmRouter);
+app.use('/api/users', blockRouter);
+
+// Online presence — checks wsClients for an active connection
+app.get('/api/users/:userId/online-status', anonymousAuth, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+        const connections = wsClients.get(String(userId));
+        const online = !!(connections && connections.size > 0);
+        let lastSeenAt = null;
+        if (!online) {
+            const u = await User.findById(userId).select('lastActive').lean();
+            lastSeenAt = u?.lastActive ?? null;
+        }
+        return res.json({ online, lastSeenAt });
+    } catch (err) {
+        console.error('[online-status]', err);
+        res.json({ online: false, lastSeenAt: null });
+    }
+});
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -2099,7 +2134,17 @@ app.get('/api/v2/search', anonymousAuth, async (req, res) => {
 
         // ── People ────────────────────────────────────────────────────────────
         if (type === 'people') {
-            const found  = await User.find({ username: new RegExp(escaped, 'i'), isAnonymous: false })
+            // Build exclusion set: users who have blocked the viewer
+            let blockedByIds = [];
+            if (req.user && !req.user.isAnonymous) {
+                const blocks = await Block.find({ blockedId: req.user._id }).select('blockerId').lean();
+                blockedByIds = blocks.map(b => b.blockerId);
+            }
+
+            const userFilter = { username: new RegExp(escaped, 'i'), isAnonymous: false };
+            if (blockedByIds.length) userFilter._id = { $nin: blockedByIds };
+
+            const found  = await User.find(userFilter)
                 .skip(skip).limit(U_LIMIT + 1).lean();
             const hasMore = found.length > U_LIMIT;
             const users   = found.slice(0, U_LIMIT);
@@ -2131,11 +2176,21 @@ app.get('/api/v2/search', anonymousAuth, async (req, res) => {
 
         // ── Buckets ───────────────────────────────────────────────────────────
         if (type === 'buckets') {
-            const found = await Bucket.find({
+            // Exclude buckets from users who have blocked the viewer
+            let blockedByUserIds = [];
+            if (req.user && !req.user.isAnonymous) {
+                const blocks = await Block.find({ blockedId: req.user._id }).select('blockerId').lean();
+                blockedByUserIds = blocks.map(b => b.blockerId);
+            }
+
+            const bucketFilter = {
                 name:    new RegExp(escaped, 'i'),
                 isDraft: { $ne: true },
                 $or:     FILTER_PUBLIC.$or,
-            })
+            };
+            if (blockedByUserIds.length) bucketFilter.userId = { $nin: blockedByUserIds };
+
+            const found = await Bucket.find(bucketFilter)
             .select(BUCKET_SELECT)
             .skip(skip).limit(B_LIMIT + 1)
             .populate('userId', 'username anonymousId avatar')
@@ -2488,6 +2543,12 @@ app.get('/v2/u/:username', anonymousAuth, async (req, res) => {
     const viewer  = req.user ?? null;
     const isOwner = !!(viewer && !viewer.isAnonymous && viewer._id.toString() === profileUser._id.toString());
 
+    // Block check: if profileUser has blocked the viewer, treat as 404
+    if (!isOwner && viewer && !viewer.isAnonymous) {
+        const blocked = await Block.exists({ blockerId: profileUser._id, blockedId: viewer._id });
+        if (blocked) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: viewer });
+    }
+
     const addDisplayThumb = (b) => ({
         ...b,
         _id: b._id.toString(),
@@ -2680,6 +2741,12 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
             return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
         }
 
+        // Block check: if bucket's curator has blocked the viewer, treat as 404
+        if (!isOwner && req.user && !req.user.isAnonymous) {
+            const blocked = await Block.exists({ blockerId: bucket.userId, blockedId: req.user._id });
+            if (blocked) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+        }
+
         const hasAccess = isOwner
             || !bucket.isPaywalled
             || (!req.user.isAnonymous && !!(await BucketAccess.findOne({ userId: req.user._id, bucketId: bucket._id })));
@@ -2769,6 +2836,48 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
     } catch (err) {
         console.error('Error loading bucket view:', err);
         res.status(500).send('Error loading bucket');
+    }
+});
+
+// Messages — shared template for both inbox and active conversation
+const MSG_DEFAULTS = { activeConversationId: null, conversation: null, otherUser: null };
+
+app.get('/v2/messages', anonymousAuth, requireAuth, requireVerification, (req, res) => {
+    res.render('v2/messages', { title: 'Messages', page: 'messages', user: req.user, ...MSG_DEFAULTS });
+});
+
+app.get('/v2/messages/:conversationId', anonymousAuth, requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(conversationId)) {
+            return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user });
+        }
+
+        const conversation = await Conversation.findById(conversationId).lean();
+        if (!conversation) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user });
+
+        const isParticipant = conversation.participants.some(p => p.toString() === req.user._id.toString());
+        if (!isParticipant) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user });
+
+        const otherId = conversation.participants.find(p => p.toString() !== req.user._id.toString());
+        if (otherId) {
+            const blocked = await Block.exists({ blockerId: otherId, blockedId: req.user._id });
+            if (blocked) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user });
+        }
+
+        const otherUser = otherId ? await User.findById(otherId).select('username avatar anonymousId').lean() : null;
+
+        res.render('v2/messages', {
+            title:                `Chat with @${otherUser?.username || 'User'}`,
+            page:                 'messages',
+            user:                 req.user,
+            activeConversationId: String(conversationId),
+            conversation,
+            otherUser,
+        });
+    } catch (err) {
+        console.error('Error loading conversation page:', err);
+        res.status(500).send('Error loading conversation');
     }
 });
 

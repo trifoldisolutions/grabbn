@@ -12,6 +12,7 @@ const notificationSchema = new mongoose.Schema({
         'bucket_tagged',
         'comment_reply',
         'comment_agreed',
+        'new_dm',
     ]},
     data:      { type: mongoose.Schema.Types.Mixed, required: true },
     seen:      { type: Boolean, default: false }, // true after first modal open
