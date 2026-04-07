@@ -598,9 +598,11 @@
         const newUrl = `/v2/messages/${convId}`;
         if (location.pathname !== newUrl) history.pushState({ convId }, '', newUrl);
 
-        // Mobile: slide to chat panel
+        // Mobile: slide to chat panel. On md+ both columns stay side-by-side —
+        // 'hidden' hides below md, but 'md:flex' overrides it above md.
         convPanel.classList.add('hidden');
         convPanel.classList.remove('flex');
+        convPanel.classList.add('md:flex');
         chatPanel.classList.remove('hidden');
         chatPanel.classList.add('flex');
 
