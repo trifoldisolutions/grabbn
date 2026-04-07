@@ -5,6 +5,9 @@
 <style>
   /* Hide the mobile bottom nav on the messages page — the chat input replaces it */
   nav.fixed.bottom-0 { display: none !important; }
+  /* Hide scrollbar in the messages area while keeping it scrollable */
+  #messagesArea::-webkit-scrollbar { display: none; }
+  #messagesArea { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
 <script>
   // Tell the browser to resize the layout viewport when the keyboard opens,
@@ -116,20 +119,20 @@
                         <p id="ctxBody" class="text-xs text-woodsmoke-500 truncate"></p>
                     </div>
                 </div>
-                <div class="flex items-end gap-2">
+                <div class="flex items-center gap-2">
                     <div class="flex-1 relative">
                         <textarea
                             id="msgInput"
                             placeholder="Message… (u:user · b:bucket · paste a link)"
                             maxlength="350"
                             rows="1"
-                            class="w-full resize-none text-sm bg-silver-50 border border-silver-200 rounded-2xl px-4 py-2.5 focus:outline-none focus:border-orchid-300 transition-colors placeholder-silver-400 leading-relaxed"
+                            class="w-full h-12 resize-none text-sm bg-silver-50 border border-silver-200 rounded-md px-4 py-2.5 focus:outline-none focus:border-orchid-300 transition-colors placeholder-silver-400 leading-relaxed"
                             style="max-height: 120px; overflow-y: auto;"
                         ></textarea>
                         <span id="charCounter" class="hidden absolute bottom-2.5 right-3 text-[10px] text-silver-400 pointer-events-none"></span>
                     </div>
                     <button id="sendBtn"
-                        class="h-10 w-10 flex items-center justify-center bg-orchid-600 text-white rounded-full hover:bg-orchid-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0">
+                        class="h-12 aspect-square flex items-center justify-center bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.405z"/></svg>
                     </button>
                 </div>
@@ -682,7 +685,7 @@
 
     msgInput.addEventListener('input', function () {
         this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        this.style.height = Math.max(48, Math.min(this.scrollHeight, 120)) + 'px';
         const len = this.value.length;
         charCounter.textContent = len + '/350';
         charCounter.classList.toggle('hidden', len < 280);
