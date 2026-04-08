@@ -97,6 +97,23 @@
                 <div id="chatHeaderActions" class="flex items-center gap-1.5 shrink-0"></div>
             </div>
 
+            <!-- Chat search bar — shown when user clicks the search icon -->
+            <div id="chatSearchBar" class="hidden items-center gap-2 px-4 py-2 border-b border-silver-100 bg-white shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="text-silver-400 shrink-0" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path fill="currentColor" d="M10.5 2a8.5 8.5 0 1 0 5.262 15.176l3.652 3.652a1 1 0 0 0 1.414-1.414l-3.652-3.652A8.5 8.5 0 0 0 10.5 2M4 10.5a6.5 6.5 0 1 1 13 0a6.5 6.5 0 0 1-13 0"/></g></svg>
+                <input id="chatSearchInput" type="text" placeholder="Search messages…"
+                    class="flex-1 text-sm bg-transparent focus:outline-none placeholder-silver-400 min-w-0" />
+                <span id="chatSearchCount" class="text-xs text-silver-400 shrink-0 hidden"></span>
+                <button id="chatSearchPrev" class="p-1 rounded text-silver-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors disabled:opacity-30" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M11.293 7.293a1 1 0 0 1 1.414 0l6 6a1 1 0 0 1-1.414 1.414L12 9.414l-5.293 5.293a1 1 0 0 1-1.414-1.414z"/></g></svg>
+                </button>
+                <button id="chatSearchNext" class="p-1 rounded text-silver-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors disabled:opacity-30" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12.707 16.707a1 1 0 0 1-1.414 0l-6-6a1 1 0 0 1 1.414-1.414L12 14.586l5.293-5.293a1 1 0 0 1 1.414 1.414z"/></g></svg>
+                </button>
+                <button id="chatSearchClose" class="p-1 rounded text-silver-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M6.707 5.293a1 1 0 0 0-1.414 1.414L10.586 12l-5.293 5.293a1 1 0 1 0 1.414 1.414L12 13.414l5.293 5.293a1 1 0 0 0 1.414-1.414L13.414 12l5.293-5.293a1 1 0 0 0-1.414-1.414L12 10.586z"/></g></svg>
+                </button>
+            </div>
+
             <!-- Centering wrapper — caps messages + input at 75% on wide screens -->
             <div class="flex flex-col flex-1 min-h-0 overflow-hidden w-full xl:w-3/4 xl:mx-auto">
 
@@ -738,6 +755,7 @@
     // ── Open a conversation ───────────────────────────────────────────────────
 
     function openConversation(convId, other, ctx) {
+        closeChatSearch();
         activeConvId  = convId;
         activeOther   = other;
         activeAnonId  = other.anonymousId || null;
@@ -949,6 +967,10 @@
         const uname  = esc(other.username || '');
 
         actionsDiv.innerHTML = `
+            <button id="chatSearchBtn" title="Search messages"
+                class="h-8 w-8 flex items-center justify-center rounded-md text-silver-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path fill="currentColor" d="M10.5 2a8.5 8.5 0 1 0 5.262 15.176l3.652 3.652a1 1 0 0 0 1.414-1.414l-3.652-3.652A8.5 8.5 0 0 0 10.5 2M4 10.5a6.5 6.5 0 1 1 13 0a6.5 6.5 0 0 1-13 0"/></g></svg>
+            </button>
             ${anonId ? `<button id="chatFollowBtn" data-following="0" data-anonid="${esc(anonId)}"
                 class="px-5 py-2 text-sm font-semibold rounded-md transition-colors bg-orchid-600 text-white hover:bg-orchid-700 opacity-50 cursor-not-allowed" disabled>
                 Follow
@@ -1052,7 +1074,166 @@
             moreMenu?.classList.add('hidden');
             window.location.href = `/v2/report/${this.dataset.userid}`;
         });
+
+        // ── Search button ────────────────────────────────────────────────────
+        document.getElementById('chatSearchBtn')?.addEventListener('click', () => {
+            openChatSearch();
+        });
     }
+
+    // ── Chat search ───────────────────────────────────────────────────────────
+    const chatSearchBar   = document.getElementById('chatSearchBar');
+    const chatSearchInput = document.getElementById('chatSearchInput');
+    const chatSearchCount = document.getElementById('chatSearchCount');
+    const chatSearchPrev  = document.getElementById('chatSearchPrev');
+    const chatSearchNext  = document.getElementById('chatSearchNext');
+    const chatSearchClose = document.getElementById('chatSearchClose');
+
+    let searchMatches = [];   // array of { row, mark } elements
+    let searchCursor  = -1;
+
+    function openChatSearch() {
+        chatSearchBar.classList.remove('hidden');
+        chatSearchBar.classList.add('flex');
+        chatSearchInput.value = '';
+        chatSearchInput.focus();
+        clearSearchHighlights();
+    }
+
+    function closeChatSearch() {
+        chatSearchBar.classList.add('hidden');
+        chatSearchBar.classList.remove('flex');
+        chatSearchInput.value = '';
+        clearSearchHighlights();
+    }
+
+    function clearSearchHighlights() {
+        // Restore original text in every highlighted bubble
+        messagesList.querySelectorAll('[data-msg-id] .msg-bubble-wrap mark.chat-match').forEach(mark => {
+            const parent = mark.parentNode;
+            parent.replaceChild(document.createTextNode(mark.textContent), mark);
+            parent.normalize();
+        });
+        searchMatches = [];
+        searchCursor  = -1;
+        chatSearchCount.classList.add('hidden');
+        chatSearchPrev.disabled = true;
+        chatSearchNext.disabled = true;
+    }
+
+    function runSearch(q) {
+        clearSearchHighlights();
+        if (!q) return;
+
+        const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+
+        // Walk only text nodes inside bubble wrap divs
+        messagesList.querySelectorAll('[data-msg-id] .msg-bubble-wrap').forEach(wrap => {
+            highlightTextNodes(wrap, re);
+        });
+
+        searchMatches = Array.from(messagesList.querySelectorAll('mark.chat-match'));
+
+        if (!searchMatches.length) {
+            chatSearchCount.textContent = 'No results';
+            chatSearchCount.classList.remove('hidden');
+            chatSearchPrev.disabled = true;
+            chatSearchNext.disabled = true;
+            return;
+        }
+
+        chatSearchPrev.disabled = false;
+        chatSearchNext.disabled = false;
+        // Jump to the last (most recent visible) match
+        searchCursor = searchMatches.length - 1;
+        scrollToMatch(searchCursor);
+        updateSearchCount();
+    }
+
+    function highlightTextNodes(root, re) {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+            acceptNode(node) {
+                // Skip inside <a> tags so links stay clickable
+                if (node.parentElement.closest('a')) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
+        const hits = [];
+        let node;
+        while ((node = walker.nextNode())) {
+            if (re.test(node.textContent)) hits.push(node);
+            re.lastIndex = 0;
+        }
+        hits.forEach(textNode => {
+            const frag = document.createDocumentFragment();
+            let last = 0;
+            let m;
+            re.lastIndex = 0;
+            const txt = textNode.textContent;
+            while ((m = re.exec(txt)) !== null) {
+                if (m.index > last) frag.appendChild(document.createTextNode(txt.slice(last, m.index)));
+                const mark = document.createElement('mark');
+                mark.className = 'chat-match bg-yellow-200 text-woodsmoke-900 rounded px-0.5 not-italic';
+                mark.textContent = m[0];
+                frag.appendChild(mark);
+                last = m.index + m[0].length;
+            }
+            if (last < txt.length) frag.appendChild(document.createTextNode(txt.slice(last)));
+            textNode.parentNode.replaceChild(frag, textNode);
+        });
+    }
+
+    function scrollToMatch(idx) {
+        // Remove active highlight from previous
+        searchMatches.forEach(m => m.classList.remove('bg-orange-300'));
+        const el = searchMatches[idx];
+        if (!el) return;
+        el.classList.add('bg-orange-300');
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    function updateSearchCount() {
+        chatSearchCount.textContent = `${searchCursor + 1} / ${searchMatches.length}`;
+        chatSearchCount.classList.remove('hidden');
+    }
+
+    let searchDebounce;
+    chatSearchInput?.addEventListener('input', function () {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(() => runSearch(this.value.trim()), 200);
+    });
+
+    chatSearchInput?.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (!searchMatches.length) return;
+            if (e.shiftKey) {
+                searchCursor = (searchCursor - 1 + searchMatches.length) % searchMatches.length;
+            } else {
+                searchCursor = (searchCursor + 1) % searchMatches.length;
+            }
+            scrollToMatch(searchCursor);
+            updateSearchCount();
+        } else if (e.key === 'Escape') {
+            closeChatSearch();
+        }
+    });
+
+    chatSearchPrev?.addEventListener('click', () => {
+        if (!searchMatches.length) return;
+        searchCursor = (searchCursor - 1 + searchMatches.length) % searchMatches.length;
+        scrollToMatch(searchCursor);
+        updateSearchCount();
+    });
+
+    chatSearchNext?.addEventListener('click', () => {
+        if (!searchMatches.length) return;
+        searchCursor = (searchCursor + 1) % searchMatches.length;
+        scrollToMatch(searchCursor);
+        updateSearchCount();
+    });
+
+    chatSearchClose?.addEventListener('click', closeChatSearch);
 
     // ── Conv list controls ────────────────────────────────────────────────────
 
