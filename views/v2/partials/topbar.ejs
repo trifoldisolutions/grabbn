@@ -51,12 +51,31 @@
             </div>
 
             <!-- Messages -->
-            <div class="relative">
-                <a href="/v2/messages" id="messagesBtnLink" class="h-8 w-8 flex items-center justify-center text-woodsmoke-800">
+            <div id="messagesBtnContainer" class="relative">
+                <button id="messagesBtn" class="h-8 w-8 flex items-center justify-center text-woodsmoke-800">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19 3a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-3.697l-2.61 1.74c-.42.28-.966.28-1.386 0L8.697 19H5a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zM8.5 10a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3m7 0a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3"/></g></svg>
-                </a>
+                </button>
                 <!-- unread dot — shown/hidden by JS -->
                 <span id="dmDot" class="hidden absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-orchid-600 ring-2 ring-white pointer-events-none"></span>
+
+                <!-- Messages modal (logged-in users only) -->
+                <% if (user && !user.isAnonymous) { %>
+                <div id="messagesModal" class="hidden absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-silver-100 z-50" style="width:380px;max-width:calc(100vw - 1rem)">
+                    <div class="px-4 py-3 border-b border-silver-100 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-semibold text-woodsmoke-900">Messages</span>
+                            <span id="dmUnreadBadge" class="hidden text-xs font-semibold bg-orchid-100 text-orchid-600 rounded-full px-2 py-0.5"></span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button id="dmMarkReadBtn" class="text-xs text-gray-400 hover:text-woodsmoke-700 transition-colors">Mark all read</button>
+                            <a href="/v2/messages" onclick="event.stopPropagation()" class="text-xs text-gray-400 hover:text-woodsmoke-700 transition-colors">Open inbox</a>
+                        </div>
+                    </div>
+                    <div id="dmNotifList" class="overflow-y-auto max-h-[440px]">
+                        <div class="py-8 text-center text-sm text-gray-400">Loading…</div>
+                    </div>
+                </div>
+                <% } %>
             </div>
 
             <!-- Avatar (hidden on mobile — lives in bottom tab bar) -->
@@ -478,23 +497,188 @@
             fetch('/api/notifications?limit=20')
                 .then(r => r.ok ? r.json() : Promise.reject())
                 .then(({ notifications }) => {
-                    if (!notifications.length) {
+                    // DM notifications live in the messages modal, not here
+                    const filtered = notifications.filter(n => n.type !== 'new_dm');
+                    if (!filtered.length) {
                         list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">No notifications yet</p>';
                         return;
                     }
-                    list.innerHTML = notifications.map(renderItem).join('') +
-                        (notifications.length === 20
+                    list.innerHTML = filtered.map(renderItem).join('') +
+                        (filtered.length === 20
                             ? '<p class="py-2 text-center text-xs text-gray-400">Showing latest 20</p>'
                             : '');
-                    setBadge(notifications.filter(n => !n.read).length);
+                    setBadge(filtered.filter(n => !n.read).length);
                 })
                 .catch(() => {
                     list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">Failed to load</p>';
                 });
         }
     })();
+
+    // ── Messages modal ────────────────────────────────────────────────────────
+    (function () {
+        const btn         = document.getElementById('messagesBtn');
+        const modal       = document.getElementById('messagesModal');
+        const list        = document.getElementById('dmNotifList');
+        const dot         = document.getElementById('dmDot');
+        const badge       = document.getElementById('dmUnreadBadge');
+        const markReadBtn = document.getElementById('dmMarkReadBtn');
+
+        if (!btn || !modal) return;
+
+        let loaded = false;
+
+        function escDm(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function dmTimeAgo(dateStr) {
+            const diff = Date.now() - new Date(dateStr).getTime();
+            const m = Math.floor(diff / 60000);
+            if (m < 1)  return 'just now';
+            if (m < 60) return m + 'm ago';
+            const h = Math.floor(m / 60);
+            if (h < 24) return h + 'h ago';
+            return Math.floor(h / 24) + 'd ago';
+        }
+
+        const DM_USER_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="text-orchid-400"><g fill="none"><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>`;
+
+        function avatarDm(src, username) {
+            const inner = src
+                ? `<img src="${escDm(src)}" class="w-9 h-9 rounded-full object-cover shrink-0" />`
+                : `<div class="w-9 h-9 rounded-full bg-orchid-50 shrink-0 flex items-center justify-center">${DM_USER_ICON}</div>`;
+            if (!username) return inner;
+            return `<a href="/v2/u/${encodeURIComponent(username)}" class="shrink-0" onclick="event.stopPropagation()">${inner}</a>`;
+        }
+
+        function setBadge(count) {
+            if (count > 0) {
+                badge.textContent = count + ' unread';
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function setDot(hasUnread) {
+            if (!window.location.pathname.startsWith('/v2/messages')) {
+                dot.classList.toggle('hidden', !hasUnread);
+            }
+        }
+
+        function positionModal() {
+            if (window.innerWidth < 768) {
+                const w = window.innerWidth * 0.85;
+                modal.style.position  = 'fixed';
+                modal.style.width     = w + 'px';
+                modal.style.top       = '4.5rem';
+                modal.style.right     = 'auto';
+                modal.style.left      = '50%';
+                modal.style.transform = 'translateX(-50%)';
+            } else {
+                modal.style.position  = 'absolute';
+                modal.style.width     = '400px';
+                modal.style.top       = '';
+                modal.style.left      = 'auto';
+                modal.style.right     = '0';
+                modal.style.transform = 'none';
+            }
+        }
+
+        function renderDmNotif(c) {
+            const convId  = escDm(String(c._id));
+            const sender  = c.otherUser?.username || 'Someone';
+            const avatar  = c.otherUser?.avatar || null;
+            const preview = (c.lastMessagePreview || '').slice(0, 80);
+            const href    = `/v2/messages/${convId}`;
+            const count   = c.unreadCount || 0;
+            return `<div class="flex items-center gap-3 px-4 py-3 bg-orchid-50 hover:bg-silver-50 transition-colors" data-dm-conv-id="${convId}">
+                ${avatarDm(avatar, sender)}
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-woodsmoke-800 leading-snug"><span class="font-semibold">@${escDm(sender)}</span> sent you a message</p>
+                    ${preview ? `<p class="text-xs text-woodsmoke-500 mt-0.5 truncate">"${escDm(preview)}"</p>` : ''}
+                    ${c.lastMessageAt ? `<p class="text-xs text-gray-400 mt-0.5">${dmTimeAgo(c.lastMessageAt)}</p>` : ''}
+                </div>
+                ${count > 1 ? `<span class="text-xs font-bold bg-orchid-500 text-white rounded-full px-2 py-0.5 shrink-0">${count}</span>` : ''}
+                <a href="${href}" onclick="event.stopPropagation()"
+                   class="text-xs font-semibold px-3 py-1.5 rounded-md border border-silver-200 text-woodsmoke-700 hover:bg-silver-100 transition-colors shrink-0 whitespace-nowrap">
+                    Reply
+                </a>
+            </div>`;
+        }
+
+        function loadDmNotifs() {
+            loaded = true;
+            fetch('/api/dm/conversations')
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(({ conversations }) => {
+                    // Show conversations that have unread messages — always accurate
+                    // regardless of whether the user was online or offline when the DM arrived
+                    const unread = conversations.filter(c => c.unreadCount > 0);
+                    if (!unread.length) {
+                        list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">No new messages</p>';
+                        setBadge(0);
+                        return;
+                    }
+                    list.innerHTML = unread.map(renderDmNotif).join('');
+                    setBadge(unread.length);
+                })
+                .catch(() => {
+                    list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">Failed to load</p>';
+                });
+        }
+
+        function onModalClose() {
+            setDot(false);
+        }
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const opening = modal.classList.toggle('hidden') === false;
+            if (opening) {
+                positionModal();
+                if (!loaded) loadDmNotifs();
+            } else {
+                onModalClose();
+            }
+        });
+
+        document.addEventListener('click', function () {
+            if (!modal.classList.contains('hidden')) onModalClose();
+            modal.classList.add('hidden');
+        });
+
+        modal.addEventListener('click', function (e) { e.stopPropagation(); });
+
+        if (markReadBtn) {
+            markReadBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                fetch('/api/dm/read-all', { method: 'POST' }).catch(() => {});
+                list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">No new messages</p>';
+                setBadge(0);
+                setDot(false);
+                loaded = false; // force re-fetch next open to reflect the read state
+            });
+        }
+
+        // Invalidate cache on new DM
+        window.addEventListener('grabbn:new_dm', function () {
+            loaded = false;
+            if (!modal.classList.contains('hidden')) {
+                loadDmNotifs();
+            }
+        });
+    })();
     <% } else { %>
     document.getElementById('notificationBtn')?.addEventListener('click', function () {
+        window.location.href = '/v2/signup';
+    });
+    document.getElementById('messagesBtn')?.addEventListener('click', function () {
         window.location.href = '/v2/signup';
     });
     <% } %>
