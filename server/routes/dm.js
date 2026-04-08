@@ -393,4 +393,39 @@ router.get('/unread-count', requireRegistered, async (req, res) => {
     }
 });
 
+// ── DELETE /api/dm/message/:messageId — delete own message ───────────────────
+router.delete('/message/:messageId', requireRegistered, async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(messageId)) {
+            return res.status(400).json({ error: 'Invalid message ID' });
+        }
+
+        const message = await DirectMessage.findById(messageId).lean();
+        if (!message) return res.status(404).json({ error: 'Message not found' });
+
+        // Only the sender can delete their own message
+        if (String(message.senderId) !== String(req.user._id)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        await DirectMessage.deleteOne({ _id: messageId });
+
+        // If this was the last message, clear the preview on the conversation
+        const lastMsg = await DirectMessage.findOne({ conversationId: message.conversationId })
+            .sort({ createdAt: -1 }).lean();
+
+        await Conversation.findByIdAndUpdate(message.conversationId, {
+            lastMessagePreview:  lastMsg ? lastMsg.body.slice(0, 60) : '',
+            lastMessageAt:       lastMsg ? lastMsg.createdAt : null,
+            lastMessageSenderId: lastMsg ? lastMsg.senderId : null,
+        }, { timestamps: false });
+
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error('[dm] DELETE /message/:messageId:', err);
+        res.status(500).json({ error: 'Failed to delete message' });
+    }
+});
+
 export default router;

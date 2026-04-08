@@ -537,8 +537,10 @@
     function buildBubble(msg) {
         const isMine = String(msg.senderId) === me;
         const el = document.createElement('div');
-        el.className = `flex ${isMine ? 'justify-end' : 'justify-start'}`;
-        el.dataset.msgId = String(msg._id);
+        el.className = `flex flex-col ${isMine ? 'items-end' : 'items-start'}`;
+        el.dataset.msgId   = String(msg._id);
+        el.dataset.msgBody = msg.body;
+        el.dataset.isMine  = isMine ? '1' : '';
 
         const bubbleCls = isMine
             ? 'bg-orchid-600 text-white rounded-2xl rounded-br-sm'
@@ -550,7 +552,7 @@
         const hasText  = !!textHtml.trim();
 
         el.innerHTML = `
-            <div class="max-w-[72%]">
+            <div class="msg-bubble-wrap max-w-[72%] cursor-pointer select-none">
                 <div class="${bubbleCls} text-sm leading-relaxed overflow-hidden">
                     ${hasText || !hasCards ? `<div class="px-3.5 pt-2 ${hasCards ? 'pb-1' : 'pb-1.5 flex items-end gap-2'}">
                         <span class="${hasCards ? 'break-words' : 'flex-1 break-words'}">${textHtml}</span>
@@ -562,6 +564,106 @@
             </div>`;
         return el;
     }
+
+    // ── Bubble action bar (Copy / Delete / Report) ────────────────────────────
+    (function () {
+        let activeActionBar = null;
+
+        function closeActionBar() {
+            if (activeActionBar) {
+                activeActionBar.remove();
+                activeActionBar = null;
+            }
+        }
+
+        messagesArea.addEventListener('click', function (e) {
+            const wrap = e.target.closest('.msg-bubble-wrap');
+
+            // Clicking outside any bubble closes the open bar
+            if (!wrap) { closeActionBar(); return; }
+
+            // Clicking a link inside the bubble — don't intercept
+            if (e.target.closest('a')) return;
+
+            const row    = wrap.closest('[data-msg-id]');
+            const msgId  = row?.dataset?.msgId;
+            const body   = row?.dataset?.msgBody || '';
+            const isMine = row?.dataset?.isMine === '1';
+
+            // If this bubble is already open, toggle it closed
+            if (activeActionBar && activeActionBar.closest('[data-msg-id]') === row) {
+                closeActionBar();
+                return;
+            }
+
+            closeActionBar();
+
+            const bar = document.createElement('div');
+            bar.className = 'msg-action-bar flex items-center gap-1 mt-1 mb-0.5 animate-fade-in';
+
+            const btnBase = 'text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors whitespace-nowrap';
+
+            // Copy — always shown
+            const copyBtn = document.createElement('button');
+            copyBtn.className = `${btnBase} border-silver-200 text-woodsmoke-600 hover:bg-silver-100`;
+            copyBtn.textContent = 'Copy';
+            copyBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                navigator.clipboard.writeText(body).catch(() => {});
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => closeActionBar(), 1200);
+            });
+
+            bar.appendChild(copyBtn);
+
+            // Delete — only for own messages
+            if (isMine) {
+                const delBtn = document.createElement('button');
+                delBtn.className = `${btnBase} border-red-200 text-red-500 hover:bg-red-50`;
+                delBtn.textContent = 'Delete';
+                delBtn.addEventListener('click', async (ev) => {
+                    ev.stopPropagation();
+                    delBtn.textContent = '…';
+                    delBtn.disabled = true;
+                    try {
+                        const res = await fetch(`/api/dm/message/${msgId}`, { method: 'DELETE' });
+                        if (res.ok) {
+                            row.remove();
+                        } else {
+                            delBtn.textContent = 'Error';
+                            setTimeout(() => closeActionBar(), 1500);
+                        }
+                    } catch (_) {
+                        delBtn.textContent = 'Error';
+                        setTimeout(() => closeActionBar(), 1500);
+                    }
+                });
+                bar.appendChild(delBtn);
+            }
+
+            // Report — only for others' messages
+            if (!isMine) {
+                const repBtn = document.createElement('button');
+                repBtn.className = `${btnBase} border-silver-200 text-gray-400 hover:bg-silver-100`;
+                repBtn.textContent = 'Report';
+                repBtn.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    // TODO: hook into your report flow
+                    repBtn.textContent = 'Reported';
+                    repBtn.disabled = true;
+                    setTimeout(() => closeActionBar(), 1500);
+                });
+                bar.appendChild(repBtn);
+            }
+
+            activeActionBar = bar;
+            row.appendChild(bar);
+        });
+
+        // Close on scroll or send
+        messagesArea.addEventListener('scroll', closeActionBar, { passive: true });
+        document.getElementById('sendBtn')?.addEventListener('click', closeActionBar);
+    })();
 
     function scrollBottom(smooth) {
         messagesArea.scrollTo({ top: messagesArea.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
