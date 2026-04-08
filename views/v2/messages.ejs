@@ -618,11 +618,11 @@
             const bar = document.createElement('div');
             bar.className = 'msg-action-bar flex items-center gap-1 mt-1 mb-0.5 animate-fade-in';
 
-            const btnBase = 'text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors whitespace-nowrap';
+            const btnBase = 'text-[11px] font-medium px-2 py-0.5 transition-colors whitespace-nowrap';
 
             // Copy — always shown
             const copyBtn = document.createElement('button');
-            copyBtn.className = `${btnBase} border-silver-200 text-woodsmoke-600 hover:bg-silver-100`;
+            copyBtn.className = `${btnBase} text-woodsmoke-500 hover:text-woodsmoke-900`;
             copyBtn.textContent = 'Copy';
             copyBtn.addEventListener('click', (ev) => {
                 ev.stopPropagation();
@@ -636,7 +636,7 @@
             // Delete — only for own messages
             if (isMine) {
                 const delBtn = document.createElement('button');
-                delBtn.className = `${btnBase} border-red-200 text-red-500 hover:bg-red-50`;
+                delBtn.className = `${btnBase} text-red-400 hover:text-red-600`;
                 delBtn.textContent = 'Delete';
                 delBtn.addEventListener('click', async (ev) => {
                     ev.stopPropagation();
@@ -661,7 +661,7 @@
             // Report — only for others' messages
             if (!isMine) {
                 const repBtn = document.createElement('button');
-                repBtn.className = `${btnBase} border-silver-200 text-gray-400 hover:bg-silver-100`;
+                repBtn.className = `${btnBase} text-gray-400 hover:text-woodsmoke-700`;
                 repBtn.textContent = 'Report';
                 repBtn.addEventListener('click', (ev) => {
                     ev.stopPropagation();
@@ -677,8 +677,7 @@
             row.appendChild(bar);
         });
 
-        // Close on scroll or send
-        messagesArea.addEventListener('scroll', closeActionBar, { passive: true });
+        // Close only when sending a new message
         document.getElementById('sendBtn')?.addEventListener('click', closeActionBar);
     })();
 
