@@ -590,21 +590,21 @@
             }
         }
 
-        function renderDmNotif(c) {
-            const convId  = escDm(String(c._id));
-            const sender  = c.otherUser?.username || 'Someone';
-            const avatar  = c.otherUser?.avatar || null;
-            const preview = (c.lastMessagePreview || '').slice(0, 80);
-            const href    = `/v2/messages/${convId}`;
-            const count   = c.unreadCount || 0;
-            return `<div class="flex items-center gap-3 px-4 py-3 bg-orchid-50 hover:bg-silver-50 transition-colors" data-dm-conv-id="${convId}">
-                ${avatarDm(avatar, sender)}
+        function renderDmNotif(n) {
+            const d       = n.data || {};
+            const convId  = escDm(d.conversationId || '');
+            const sender  = d.senderUsername || 'Someone';
+            const preview = (d.preview || '').slice(0, 80);
+            const href    = convId ? `/v2/messages/${convId}` : '/v2/messages';
+            const base    = n.read ? '' : 'bg-orchid-50';
+            const nid     = escDm(String(n._id));
+            return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors" data-dm-notif-id="${nid}">
+                ${avatarDm(d.senderAvatar, sender)}
                 <div class="flex-1 min-w-0">
                     <p class="text-sm text-woodsmoke-800 leading-snug"><span class="font-semibold">@${escDm(sender)}</span> sent you a message</p>
                     ${preview ? `<p class="text-xs text-woodsmoke-500 mt-0.5 truncate">"${escDm(preview)}"</p>` : ''}
-                    ${c.lastMessageAt ? `<p class="text-xs text-gray-400 mt-0.5">${dmTimeAgo(c.lastMessageAt)}</p>` : ''}
+                    <p class="text-xs text-gray-400 mt-0.5">${dmTimeAgo(n.createdAt)}</p>
                 </div>
-                ${count > 1 ? `<span class="text-xs font-bold bg-orchid-500 text-white rounded-full px-2 py-0.5 shrink-0">${count}</span>` : ''}
                 <a href="${href}" onclick="event.stopPropagation()"
                    class="text-xs font-semibold px-3 py-1.5 rounded-md border border-silver-200 text-woodsmoke-700 hover:bg-silver-100 transition-colors shrink-0 whitespace-nowrap">
                     Reply
@@ -614,19 +614,17 @@
 
         function loadDmNotifs() {
             loaded = true;
-            fetch('/api/dm/conversations')
+            fetch('/api/notifications?limit=30')
                 .then(r => r.ok ? r.json() : Promise.reject())
-                .then(({ conversations }) => {
-                    // Show conversations that have unread messages — always accurate
-                    // regardless of whether the user was online or offline when the DM arrived
-                    const unread = conversations.filter(c => c.unreadCount > 0);
-                    if (!unread.length) {
-                        list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">No new messages</p>';
+                .then(({ notifications }) => {
+                    const dms = notifications.filter(n => n.type === 'new_dm');
+                    if (!dms.length) {
+                        list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">No messages yet</p>';
                         setBadge(0);
                         return;
                     }
-                    list.innerHTML = unread.map(renderDmNotif).join('');
-                    setBadge(unread.length);
+                    list.innerHTML = dms.map(renderDmNotif).join('');
+                    setBadge(dms.filter(n => !n.read).length);
                 })
                 .catch(() => {
                     list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">Failed to load</p>';
@@ -634,6 +632,8 @@
         }
 
         function onModalClose() {
+            if (!loaded) return;
+            fetch('/api/notifications/seen', { method: 'POST' }).catch(() => {});
             setDot(false);
         }
 
@@ -658,13 +658,29 @@
         if (markReadBtn) {
             markReadBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
-                fetch('/api/dm/read-all', { method: 'POST' }).catch(() => {});
-                list.innerHTML = '<p class="py-8 text-center text-sm text-gray-400">No new messages</p>';
+                fetch('/api/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+                    .catch(() => {});
+                list.querySelectorAll('.bg-orchid-50').forEach(el => el.classList.remove('bg-orchid-50'));
                 setBadge(0);
                 setDot(false);
-                loaded = false; // force re-fetch next open to reflect the read state
             });
         }
+
+        // Mark individual notif as read when Reply is clicked
+        list.addEventListener('click', function (e) {
+            if (!e.target.closest('a[href*="/v2/messages"]')) return;
+            const item = e.target.closest('[data-dm-notif-id]');
+            if (!item) return;
+            const id = item.dataset.dmNotifId;
+            fetch('/api/notifications/read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: [id] }),
+            }).catch(() => {});
+            item.classList.remove('bg-orchid-50');
+            const current = parseInt((badge.textContent || '').split(' ')[0]) || 0;
+            setBadge(Math.max(0, current - 1));
+        });
 
         // Invalidate cache on new DM
         window.addEventListener('grabbn:new_dm', function () {

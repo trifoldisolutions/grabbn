@@ -269,20 +269,19 @@ router.post('/send', requireRegistered, requireVerification, async (req, res) =>
             messageId:      String(message._id),
         });
 
-        // Persist notification for recipient only when offline (no active WS connection)
-        // If they're online they receive the real-time push; no need to pollute the bell
-        if (!wsClients.has(String(recipientId))) {
-            Notification.create({
-                userId: recipientId,
-                type:   'new_dm',
-                data:   {
-                    conversationId:  String(conversation._id),
-                    senderUsername:  req.user.username || '',
-                    senderAvatar:    req.user.avatar   || null,
-                    preview:         text.slice(0, 60),
-                },
-            }).catch(() => {});
-        }
+        // Always persist a notification for the recipient so the messages modal
+        // can display a history of DM notifications even after the chat is opened.
+        // (DM notifications no longer appear in the bell — they live in their own modal.)
+        Notification.create({
+            userId: recipientId,
+            type:   'new_dm',
+            data:   {
+                conversationId:  String(conversation._id),
+                senderUsername:  req.user.username || '',
+                senderAvatar:    req.user.avatar   || null,
+                preview:         text.slice(0, 60),
+            },
+        }).catch(() => {});
 
         return res.status(201).json({
             message: {
