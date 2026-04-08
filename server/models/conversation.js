@@ -4,8 +4,9 @@ const conversationSchema = new mongoose.Schema({
     // Always exactly 2 participants
     participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
 
-    lastMessageAt:      { type: Date, default: Date.now },
-    lastMessagePreview: { type: String, default: '' }, // ~60-char snapshot
+    lastMessageAt:       { type: Date, default: Date.now },
+    lastMessagePreview:  { type: String, default: '' }, // ~60-char snapshot
+    lastMessageSenderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
     // Per-participant unread counts
     unreadCounts: {

@@ -84,8 +84,22 @@ wss.on('connection', (ws, req) => {
     const userId = params.get('userId');
     if (!userId) { ws.close(); return; }
 
+    const isFirstTab = !wsClients.has(userId);
     if (!wsClients.has(userId)) wsClients.set(userId, new Set());
     wsClients.get(userId).add(ws);
+
+    // Notify conversation partners that this user just came online (first tab only)
+    if (isFirstTab) {
+        Conversation.find({ participants: userId }).select('participants').lean()
+            .then(convs => {
+                const partners = [...new Set(
+                    convs.flatMap(c => c.participants.map(String).filter(id => id !== userId))
+                )];
+                for (const partnerId of partners) {
+                    pushNotification(partnerId, { type: 'user_online', userId });
+                }
+            }).catch(() => {});
+    }
 
     ws.on('close', () => {
         const set = wsClients.get(userId);
@@ -94,7 +108,18 @@ wss.on('connection', (ws, req) => {
             if (!set.size) {
                 wsClients.delete(userId);
                 // Stamp lastActive so "last seen" is accurate
-                User.findByIdAndUpdate(userId, { lastActive: new Date() }, { timestamps: false }).catch(() => {});
+                const lastSeenAt = new Date();
+                User.findByIdAndUpdate(userId, { lastActive: lastSeenAt }, { timestamps: false }).catch(() => {});
+                // Notify conversation partners that this user went offline
+                Conversation.find({ participants: userId }).select('participants').lean()
+                    .then(convs => {
+                        const partners = [...new Set(
+                            convs.flatMap(c => c.participants.map(String).filter(id => id !== userId))
+                        )];
+                        for (const partnerId of partners) {
+                            pushNotification(partnerId, { type: 'user_offline', userId, lastSeenAt: lastSeenAt.toISOString() });
+                        }
+                    }).catch(() => {});
             }
         }
     });

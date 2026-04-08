@@ -49,6 +49,33 @@ router.get('/conversations', requireRegistered, async (req, res) => {
 
         if (!conversations.length) return res.json({ conversations: [] });
 
+        // One-time backfill: conversations created before lastMessageSenderId was added
+        // have the field as null. Run a single aggregate to resolve them all at once,
+        // then write the result back so this only ever happens once per conversation.
+        const needsBackfill = conversations.filter(c => !c.lastMessageSenderId && c.lastMessagePreview);
+        if (needsBackfill.length) {
+            const lastSenders = await DirectMessage.aggregate([
+                { $match: { conversationId: { $in: needsBackfill.map(c => c._id) } } },
+                { $sort:  { createdAt: -1 } },
+                { $group: { _id: '$conversationId', senderId: { $first: '$senderId' } } },
+            ]);
+            const senderMap = new Map(lastSenders.map(r => [String(r._id), r.senderId]));
+            // Apply to in-memory result so this response is already correct
+            for (const c of conversations) {
+                if (!c.lastMessageSenderId && senderMap.has(String(c._id))) {
+                    c.lastMessageSenderId = senderMap.get(String(c._id));
+                }
+            }
+            // Persist asynchronously — fire-and-forget, runs once per affected conv
+            const bulkOps = lastSenders.map(r => ({
+                updateOne: {
+                    filter: { _id: r._id, lastMessageSenderId: null },
+                    update: { $set: { lastMessageSenderId: r.senderId } },
+                },
+            }));
+            if (bulkOps.length) Conversation.bulkWrite(bulkOps, { timestamps: false }).catch(() => {});
+        }
+
         // Collect other participant IDs
         const otherIds = conversations.map(c =>
             c.participants.find(p => String(p) !== String(userId))
@@ -82,10 +109,12 @@ router.get('/conversations', requireRegistered, async (req, res) => {
                         avatar:      other.avatar      || null,
                         anonymousId: other.anonymousId || null,
                     },
-                    lastMessageAt:      c.lastMessageAt,
-                    lastMessagePreview: c.lastMessagePreview,
-                    unreadCount:        c.unreadCounts?.get?.(String(userId)) ?? (c.unreadCounts?.[String(userId)] ?? 0),
-                    hasContext:         !!c.contextCommentId,
+                    lastMessageAt:       c.lastMessageAt,
+                    lastMessagePreview:  c.lastMessagePreview,
+                    lastMessageSenderId: c.lastMessageSenderId ? String(c.lastMessageSenderId) : null,
+                    unreadCount:         c.unreadCounts?.get?.(String(userId))    ?? (c.unreadCounts?.[String(userId)]    ?? 0),
+                    otherUnreadCount:    c.unreadCounts?.get?.(String(otherId))   ?? (c.unreadCounts?.[String(otherId)]   ?? 0),
+                    hasContext:          !!c.contextCommentId,
                 };
             });
 
@@ -180,6 +209,7 @@ router.post('/send', requireRegistered, requireVerification, async (req, res) =>
                 participants: participantPair,
                 lastMessageAt: new Date(),
                 lastMessagePreview: text.slice(0, 60),
+                lastMessageSenderId: senderId,
                 unreadCounts: { [String(recipientId)]: 1, [String(senderId)]: 0 },
             };
 
@@ -204,8 +234,9 @@ router.post('/send', requireRegistered, requireVerification, async (req, res) =>
             const currentUnread = conversation.unreadCounts?.get?.(String(recipientId))
                 ?? (conversation.unreadCounts?.[String(recipientId)] ?? 0);
             await Conversation.findByIdAndUpdate(conversation._id, {
-                lastMessageAt:      new Date(),
-                lastMessagePreview: text.slice(0, 60),
+                lastMessageAt:       new Date(),
+                lastMessagePreview:  text.slice(0, 60),
+                lastMessageSenderId: senderId,
                 [`unreadCounts.${String(recipientId)}`]: currentUnread + 1,
             }, { timestamps: false });
         }
@@ -261,6 +292,7 @@ router.post('/send', requireRegistered, requireVerification, async (req, res) =>
                 body:           message.body,
                 entities:       message.entities,
                 createdAt:      message.createdAt,
+                readAt:         message.readAt || null,
             },
             conversationId: conversation._id,
             isNewConversation,
@@ -290,10 +322,21 @@ router.post('/:conversationId/read', requireRegistered, async (req, res) => {
         }, { timestamps: false });
 
         // Mark all unread messages in this conversation as read
+        const readAt = new Date();
         await DirectMessage.updateMany(
             { conversationId, senderId: { $ne: req.user._id }, readAt: null },
-            { readAt: new Date() }
+            { readAt }
         );
+
+        // Notify the sender in real-time that their messages were read
+        const senderId = conversation.participants.find(p => String(p) !== String(req.user._id));
+        if (senderId) {
+            pushNotification(String(senderId), {
+                type:           'dm_read',
+                conversationId: String(conversationId),
+                readAt:         readAt.toISOString(),
+            });
+        }
 
         return res.json({ ok: true });
     } catch (err) {

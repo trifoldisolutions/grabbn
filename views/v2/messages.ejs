@@ -119,22 +119,23 @@
                         <p id="ctxBody" class="text-xs text-woodsmoke-500 truncate"></p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <div class="flex-1 relative">
-                        <textarea
-                            id="msgInput"
-                            placeholder="Message… (u:user · b:bucket · paste a link)"
-                            maxlength="350"
-                            rows="1"
-                            class="w-full h-12 resize-none text-sm bg-silver-50 border border-silver-200 rounded-md px-4 py-2.5 focus:outline-none focus:border-orchid-300 transition-colors placeholder-silver-400 leading-relaxed"
-                            style="max-height: 120px; overflow-y: auto;"
-                        ></textarea>
-                        <span id="charCounter" class="hidden absolute bottom-2.5 right-3 text-[10px] text-silver-400 pointer-events-none"></span>
+                <!-- Fake single-item input: textarea + send btn inside one styled container -->
+                <div class="flex items-end gap-2 bg-silver-50 border border-silver-200 rounded-md px-3 py-2 focus-within:border-orchid-300 transition-colors">
+                    <textarea
+                        id="msgInput"
+                        placeholder="Message… (u:user · b:bucket · paste a link)"
+                        maxlength="350"
+                        autocomplete="off"
+                        rows="1"
+                        class="flex-1 resize-none text-sm bg-transparent focus:outline-none placeholder-silver-400 leading-relaxed max-h-36 overflow-y-auto"
+                    ></textarea>
+                    <div class="flex items-center gap-2 shrink-0 self-end pb-0.5">
+                        <span id="charCounter" class="hidden text-[10px] text-silver-400 pointer-events-none"></span>
+                        <button id="sendBtn"
+                            class="size-8 flex items-center justify-center bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.405z"/></svg>
+                        </button>
                     </div>
-                    <button id="sendBtn"
-                        class="h-12 aspect-square flex items-center justify-center bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.405z"/></svg>
-                    </button>
                 </div>
             </div>
 
@@ -241,6 +242,16 @@
         if (d < 7)  return d + 'd ago';
         return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
+
+    // ── Live time refresh — no DB calls, pure client-side recalculation ────────
+    // Any element with data-live-time="<ISO>" gets its text refreshed every minute.
+    // Optional data-live-prefix="Last seen " prepends a label.
+    setInterval(() => {
+        document.querySelectorAll('[data-live-time]').forEach(el => {
+            const prefix = el.dataset.livePrefix || '';
+            el.textContent = prefix + timeAgo(el.dataset.liveTime);
+        });
+    }, 60_000);
 
     function avatarEl(username, avatar, size) {
         const sz = size || 'w-10 h-10';
@@ -389,12 +400,18 @@
                 if (data.online) {
                     el.textContent = 'Online';
                     el.className = 'text-[11px] text-emerald-500 leading-none';
+                    delete el.dataset.liveTime;
+                    delete el.dataset.livePrefix;
                 } else if (data.lastSeenAt) {
                     el.textContent = 'Last seen ' + timeAgo(data.lastSeenAt);
                     el.className = 'text-[11px] text-silver-400 leading-none';
+                    el.dataset.liveTime   = data.lastSeenAt;
+                    el.dataset.livePrefix = 'Last seen ';
                 } else {
                     el.textContent = 'Offline';
                     el.className = 'text-[11px] text-silver-400 leading-none';
+                    delete el.dataset.liveTime;
+                    delete el.dataset.livePrefix;
                 }
             }).catch(() => {});
     }
@@ -402,9 +419,24 @@
     // ── Conversation list ─────────────────────────────────────────────────────
 
     function renderConvItem(c, isActive) {
-        const unread = c.unreadCount || 0;
-        const preview = (c.lastMessagePreview || '').slice(0, 55);
-        const active = isActive ? 'bg-white border-r-2 border-r-orchid-500' : (unread ? 'bg-orchid-50' : '');
+        const unread   = c.unreadCount || 0;
+        const preview  = (c.lastMessagePreview || '').slice(0, 55);
+        const active   = isActive ? 'bg-white border-r-2 border-r-orchid-500' : (unread ? 'bg-orchid-50' : '');
+        const isMySent = c.lastMessageSenderId && String(c.lastMessageSenderId) === me;
+        const isRead   = isMySent && !(c.otherUnreadCount > 0);
+
+        let previewContent;
+        if (isMySent) {
+            const iconCls = isRead ? 'text-orchid-400' : 'text-silver-400';
+            const icon    = isRead ? _readSvg : _sentSvg;
+            const txtCls  = unread ? 'font-medium text-woodsmoke-700' : 'text-silver-500';
+            previewContent = `
+                <span class="text-xs truncate flex-1 ${txtCls}">You: ${esc(preview)}</span>
+                <span class="shrink-0 flex items-center ${iconCls}">${icon}</span>`;
+        } else {
+            previewContent = `<span class="text-xs truncate flex-1 ${unread ? 'font-medium text-woodsmoke-700' : 'text-silver-500'}">${preview || '<span class="italic text-silver-400">No messages yet</span>'}</span>`;
+        }
+
         return `
         <button class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white transition-colors text-left group conv-item ${active}"
                 data-conv-id="${esc(String(c._id))}"
@@ -416,10 +448,10 @@
             <div class="flex-1 min-w-0">
                 <div class="flex items-baseline justify-between gap-1">
                     <span class="font-semibold text-sm truncate ${unread ? 'text-woodsmoke-900' : 'text-woodsmoke-700'}">@${esc(c.otherUser.username)}</span>
-                    <span class="text-[10px] text-silver-400 shrink-0">${timeAgo(c.lastMessageAt)}</span>
+                    <span data-live-time="${c.lastMessageAt}" class="text-[10px] text-silver-400 shrink-0">${timeAgo(c.lastMessageAt)}</span>
                 </div>
                 <div class="flex items-center gap-1.5 mt-0.5">
-                    <p class="text-xs truncate flex-1 ${unread ? 'font-medium text-woodsmoke-700' : 'text-silver-500'}">${preview || '<span class="italic text-silver-400">No messages yet</span>'}</p>
+                    ${previewContent}
                     ${unread ? `<span class="shrink-0 min-w-[1.1rem] h-[1.1rem] rounded-full bg-orchid-600 text-white text-[9px] font-bold flex items-center justify-center px-1">${unread > 9 ? '9+' : unread}</span>` : ''}
                 </div>
             </div>
@@ -485,6 +517,17 @@
             }).catch(() => {});
     }
 
+    // ── Message status icon (sent / seen) ────────────────────────────────────
+
+    const _sentSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M21.192 5.465a1 1 0 0 1 0 1.414L9.95 18.122a1.1 1.1 0 0 1-1.556 0l-5.586-5.586a1 1 0 1 1 1.415-1.415l4.95 4.95L19.777 5.465a1 1 0 0 1 1.414 0Z"/></g></svg>`;
+    const _readSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M2.222 11.121a1 1 0 0 1 1.32-.083l.094.083l4.242 4.243a1 1 0 0 1-1.32 1.497l-.094-.083l-4.242-4.242a1 1 0 0 1 0-1.415m20.556-5.656a1 1 0 0 1 .083 1.32l-.083.094l-9.829 9.828a1.1 1.1 0 0 1-1.46.086l-.096-.085l-4.171-4.172a1 1 0 0 1 1.32-1.498l.094.083l3.535 3.536l9.193-9.192a1 1 0 0 1 1.414 0m-5 0a1 1 0 0 1 .083 1.32l-.083.094l-4.95 4.95a1 1 0 0 1-1.497-1.32l.083-.095l4.95-4.95a1 1 0 0 1 1.414 0Z"/></g></svg>`;
+
+    function msgStatusHtml(msg, isMine) {
+        if (!isMine) return '';
+        const isRead = !!msg.readAt;
+        return `<span data-msg-status class="inline-flex items-center text-white ${isRead ? 'opacity-100' : 'opacity-70'}">${isRead ? _readSvg : _sentSvg}</span>`;
+    }
+
     // ── Message bubble ────────────────────────────────────────────────────────
 
     function buildBubble(msg) {
@@ -507,10 +550,10 @@
                 <div class="${bubbleCls} text-sm leading-relaxed overflow-hidden">
                     ${hasText || !hasCards ? `<div class="px-3.5 pt-2 ${hasCards ? 'pb-1' : 'pb-1.5 flex items-end gap-2'}">
                         <span class="${hasCards ? 'break-words' : 'flex-1 break-words'}">${textHtml}</span>
-                        ${!hasCards ? `<span class="text-[10px] ${timeCls} shrink-0 leading-none mb-0.5">${formatTime(msg.createdAt)}</span>` : ''}
+                        ${!hasCards ? `<span class="text-[10px] ${timeCls} shrink-0 leading-none mb-0.5 flex items-center gap-0.5">${formatTime(msg.createdAt)}${msgStatusHtml(msg, isMine)}</span>` : ''}
                     </div>` : ''}
                     ${hasCards ? cardsHtml : ''}
-                    ${hasCards ? `<div class="flex justify-end px-3.5 pt-1 pb-1.5"><span class="text-[10px] ${timeCls}">${formatTime(msg.createdAt)}</span></div>` : ''}
+                    ${hasCards ? `<div class="flex justify-end px-3.5 pt-1 pb-1.5"><span class="text-[10px] ${timeCls} flex items-center gap-0.5">${formatTime(msg.createdAt)}${msgStatusHtml(msg, isMine)}</span></div>` : ''}
                 </div>
             </div>`;
         return el;
@@ -683,9 +726,13 @@
 
     // ── Send message ──────────────────────────────────────────────────────────
 
+    function autoResizeMsgInput() {
+        msgInput.style.height = 'auto';
+        msgInput.style.height = msgInput.scrollHeight + 'px';
+    }
+
     msgInput.addEventListener('input', function () {
-        this.style.height = 'auto';
-        this.style.height = Math.max(48, Math.min(this.scrollHeight, 120)) + 'px';
+        autoResizeMsgInput();
         const len = this.value.length;
         charCounter.textContent = len + '/350';
         charCounter.classList.toggle('hidden', len < 280);
@@ -732,8 +779,18 @@
             messagesList.appendChild(buildBubble(data.message));
             scrollBottom(true);
 
-            // Refresh conversation list to update preview
-            loadConversations();
+            // Update local conversation state immediately — no extra network call
+            conversations = conversations.map(c => {
+                if (String(c._id) !== String(activeConvId)) return c;
+                return {
+                    ...c,
+                    lastMessageAt:       data.message.createdAt,
+                    lastMessagePreview:  body,
+                    lastMessageSenderId: me,
+                    otherUnreadCount:    (c.otherUnreadCount || 0) + 1,
+                };
+            });
+            renderConvList();
         })
         .catch(err => alert(err?.error || 'Failed to send'))
         .finally(() => {
@@ -939,6 +996,47 @@
                     scrollBottom(true);
                     fetch(`/api/dm/${activeConvId}/read`, { method: 'POST' }).catch(() => {});
                 }).catch(() => {});
+        }
+    });
+
+    // ── Real-time: recipient read our messages ────────────────────────────────
+
+    window.addEventListener('grabbn:dm_read', function (e) {
+        const { conversationId } = e.detail;
+        // Flip every sent-status icon in the active conversation to the "read" (double-check) state
+        if (activeConvId && String(activeConvId) === String(conversationId)) {
+            messagesList.querySelectorAll('[data-msg-status]').forEach(el => {
+                el.innerHTML = _readSvg;
+                el.classList.remove('opacity-70');
+                el.classList.add('opacity-100');
+            });
+        }
+        // Update conversation list preview icon — works even if another conv is active
+        conversations = conversations.map(c =>
+            String(c._id) === String(conversationId) ? { ...c, otherUnreadCount: 0 } : c
+        );
+        renderConvList();
+    });
+
+    // ── Real-time: presence change (other user online / offline) ─────────────
+
+    window.addEventListener('grabbn:presence', function (e) {
+        const { type, userId, lastSeenAt } = e.detail;
+        // Only update the header if this event is about the person we're chatting with
+        if (!activeOther || String(activeOther._id) !== String(userId)) return;
+        const el = document.getElementById('chatStatusText');
+        if (!el) return;
+        if (type === 'user_online') {
+            el.textContent = 'Online';
+            el.className = 'text-[11px] text-emerald-500 leading-none';
+            delete el.dataset.liveTime;
+            delete el.dataset.livePrefix;
+        } else {
+            const ts = lastSeenAt || new Date().toISOString();
+            el.textContent = 'Last seen just now';
+            el.className = 'text-[11px] text-silver-400 leading-none';
+            el.dataset.liveTime   = ts;
+            el.dataset.livePrefix = 'Last seen ';
         }
     });
 
