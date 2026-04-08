@@ -3,8 +3,8 @@
 %>
 <%- include('partials/layout') %>
 <style>
-  /* Hide the mobile bottom nav on the messages page — the chat input replaces it */
-  nav.fixed.bottom-0 { display: none !important; }
+  /* Hide the mobile bottom nav only when the chat panel is active — the chat input replaces it */
+  body.chat-open nav.fixed.bottom-0 { display: none !important; }
   /* Hide scrollbar in the messages area while keeping it scrollable */
   #messagesArea::-webkit-scrollbar { display: none; }
   #messagesArea { -ms-overflow-style: none; scrollbar-width: none; }
@@ -17,6 +17,10 @@
     const vp = document.querySelector('meta[name="viewport"]');
     if (vp) vp.content = 'width=device-width, initial-scale=1.0, interactive-widget=resizes-content';
   })();
+  // If a conversation is already active on page load, mark body so the bottom nav hides immediately
+  <% if (activeConversationId) { %>
+  document.body.classList.add('chat-open');
+  <% } %>
 </script>
 
 <script>
@@ -651,6 +655,7 @@
         convPanel.classList.add('md:flex');
         chatPanel.classList.remove('hidden');
         chatPanel.classList.add('flex');
+        document.body.classList.add('chat-open');
 
         // Hide empty, show active
         chatEmpty.classList.add('hidden');
@@ -703,6 +708,7 @@
         chatPanel.classList.remove('flex');
         convPanel.classList.remove('hidden');
         convPanel.classList.add('flex');
+        document.body.classList.remove('chat-open');
         chatEmpty.classList.remove('hidden');
         chatActive.classList.add('hidden');
         chatActive.classList.remove('flex');
