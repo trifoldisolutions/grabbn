@@ -415,11 +415,23 @@ router.delete('/message/:messageId', requireRegistered, async (req, res) => {
         const lastMsg = await DirectMessage.findOne({ conversationId: message.conversationId })
             .sort({ createdAt: -1 }).lean();
 
-        await Conversation.findByIdAndUpdate(message.conversationId, {
+        const conversation = await Conversation.findByIdAndUpdate(message.conversationId, {
             lastMessagePreview:  lastMsg ? lastMsg.body.slice(0, 60) : '',
             lastMessageAt:       lastMsg ? lastMsg.createdAt : null,
             lastMessageSenderId: lastMsg ? lastMsg.senderId : null,
-        }, { timestamps: false });
+        }, { timestamps: false, new: false }).lean();
+
+        // Push real-time deletion event to both participants
+        const payload = {
+            type:           'dm_deleted',
+            messageId:      String(messageId),
+            conversationId: String(message.conversationId),
+        };
+        if (conversation) {
+            for (const participantId of conversation.participants) {
+                pushNotification(String(participantId), payload);
+            }
+        }
 
         return res.json({ ok: true });
     } catch (err) {

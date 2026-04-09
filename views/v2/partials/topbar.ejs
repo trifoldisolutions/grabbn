@@ -386,6 +386,8 @@
                     } else if (msg.type === 'dm_read') {
                         // Notify message page that the recipient has read our messages
                         window.dispatchEvent(new CustomEvent('grabbn:dm_read', { detail: msg }));
+                    } else if (msg.type === 'dm_deleted') {
+                        window.dispatchEvent(new CustomEvent('grabbn:dm_deleted', { detail: msg }));
                     } else if (msg.type === 'user_online' || msg.type === 'user_offline') {
                         // Presence change — let the messages page react
                         window.dispatchEvent(new CustomEvent('grabbn:presence', { detail: msg }));

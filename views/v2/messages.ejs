@@ -1306,6 +1306,19 @@
         renderConvList();
     });
 
+    // ── Real-time: message deleted by either participant ─────────────────────
+
+    window.addEventListener('grabbn:dm_deleted', function (e) {
+        const { messageId, conversationId } = e.detail;
+        // Remove from the active chat view if it's the open conversation
+        if (String(activeConvId) === String(conversationId)) {
+            const bubble = messagesList.querySelector(`[data-msg-id="${messageId}"]`);
+            if (bubble) bubble.remove();
+        }
+        // Refresh conv list so the preview updates for everyone
+        loadConversations();
+    });
+
     // ── Real-time: presence change (other user online / offline) ─────────────
 
     window.addEventListener('grabbn:presence', function (e) {
