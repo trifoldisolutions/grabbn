@@ -15,6 +15,9 @@ const conversationSchema = new mongoose.Schema({
         default: {},
     },
 
+    // Users who have muted this conversation (no new_dm notifications)
+    mutedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
     // Pinned message — either participant can pin/unpin
     pinnedMessage: {
         messageId:      { type: mongoose.Schema.Types.ObjectId, default: null },

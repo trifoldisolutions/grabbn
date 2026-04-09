@@ -115,6 +115,7 @@ router.get('/conversations', requireRegistered, async (req, res) => {
                     unreadCount:         c.unreadCounts?.get?.(String(userId))    ?? (c.unreadCounts?.[String(userId)]    ?? 0),
                     otherUnreadCount:    c.unreadCounts?.get?.(String(otherId))   ?? (c.unreadCounts?.[String(otherId)]   ?? 0),
                     hasContext:          !!c.contextCommentId,
+                    isMuted:             (c.mutedBy || []).some(id => String(id) === String(userId)),
                     pinnedMessage:       c.pinnedMessage?.messageId ? {
                         messageId:      String(c.pinnedMessage.messageId),
                         body:           c.pinnedMessage.body || '',
@@ -275,19 +276,20 @@ router.post('/send', requireRegistered, requireVerification, async (req, res) =>
             messageId:      String(message._id),
         });
 
-        // Always persist a notification for the recipient so the messages modal
-        // can display a history of DM notifications even after the chat is opened.
-        // (DM notifications no longer appear in the bell — they live in their own modal.)
-        Notification.create({
-            userId: recipientId,
-            type:   'new_dm',
-            data:   {
-                conversationId:  String(conversation._id),
-                senderUsername:  req.user.username || '',
-                senderAvatar:    req.user.avatar   || null,
-                preview:         text.slice(0, 60),
-            },
-        }).catch(() => {});
+        // Persist notification only if recipient hasn't muted this conversation
+        const isMutedByRecipient = (conversation.mutedBy || []).some(id => String(id) === String(recipientId));
+        if (!isMutedByRecipient) {
+            Notification.create({
+                userId: recipientId,
+                type:   'new_dm',
+                data:   {
+                    conversationId:  String(conversation._id),
+                    senderUsername:  req.user.username || '',
+                    senderAvatar:    req.user.avatar   || null,
+                    preview:         text.slice(0, 60),
+                },
+            }).catch(() => {});
+        }
 
         return res.status(201).json({
             message: {
@@ -396,6 +398,48 @@ router.get('/unread-count', requireRegistered, async (req, res) => {
     } catch (err) {
         console.error('[dm] GET /unread-count:', err);
         res.json({ unread: 0 });
+    }
+});
+
+// ── POST /api/dm/:conversationId/mute — mute conversation ────────────────────
+router.post('/:conversationId/mute', requireRegistered, async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(conversationId)) return res.status(400).json({ error: 'Invalid ID' });
+
+        const conversation = await Conversation.findById(conversationId).lean();
+        if (!conversation) return res.status(404).json({ error: 'Not found' });
+        if (!conversation.participants.some(p => String(p) === String(req.user._id))) return res.status(403).json({ error: 'Forbidden' });
+
+        await Conversation.findByIdAndUpdate(conversationId,
+            { $addToSet: { mutedBy: req.user._id } },
+            { timestamps: false }
+        );
+        return res.json({ ok: true, muted: true });
+    } catch (err) {
+        console.error('[dm] POST /:conversationId/mute:', err);
+        res.status(500).json({ error: 'Failed to mute' });
+    }
+});
+
+// ── DELETE /api/dm/:conversationId/mute — unmute conversation ─────────────────
+router.delete('/:conversationId/mute', requireRegistered, async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(conversationId)) return res.status(400).json({ error: 'Invalid ID' });
+
+        const conversation = await Conversation.findById(conversationId).lean();
+        if (!conversation) return res.status(404).json({ error: 'Not found' });
+        if (!conversation.participants.some(p => String(p) === String(req.user._id))) return res.status(403).json({ error: 'Forbidden' });
+
+        await Conversation.findByIdAndUpdate(conversationId,
+            { $pull: { mutedBy: req.user._id } },
+            { timestamps: false }
+        );
+        return res.json({ ok: true, muted: false });
+    } catch (err) {
+        console.error('[dm] DELETE /:conversationId/mute:', err);
+        res.status(500).json({ error: 'Failed to unmute' });
     }
 });
 
