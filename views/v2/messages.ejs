@@ -240,8 +240,8 @@
         activePinnedMsg = pinned;
         if (!pinned || !pinnedBanner) return;
         const avatarHtml = pinned.senderAvatar
-            ? `<img src="${esc(pinned.senderAvatar)}" class="w-7 h-7 rounded-full object-cover" />`
-            : `<div class="w-7 h-7 rounded-full bg-orchid-100 flex items-center justify-center text-[11px] font-bold text-orchid-600">${esc((pinned.senderUsername[0] || '?').toUpperCase())}</div>`;
+            ? `<img src="${esc(pinned.senderAvatar)}" class="w-7 h-7 rounded-full object-cover shrink-0" />`
+            : `<div class="w-7 h-7 rounded-full bg-orchid-100 flex items-center justify-center shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="text-orchid-500"><g fill="none"><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg></div>`;
         pinnedAvatarEl.innerHTML = avatarHtml;
         pinnedBodyEl.textContent = pinned.body;
         pinnedBanner.classList.remove('hidden');
@@ -458,14 +458,16 @@
             ? `<span id="chatStatusText" class="text-[11px] ${statusText === 'Online' ? 'text-emerald-500' : 'text-silver-400'} leading-none">${esc(statusText)}</span>`
             : `<span id="chatStatusText" class="text-[11px] text-silver-300 leading-none">—</span>`;
         chatHeader.innerHTML = `
-            <a href="/v2/u/${esc(other.username)}" class="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity flex-1">
-                ${avatarEl(other.username, other.avatar, 'w-11 h-11')}
-                <div class="flex flex-col gap-1 min-w-0">
-                    <span class="font-semibold leading-none truncate">@${esc(other.username)}</span>
-                    ${statusHtml}
-                </div>
-            </a>
-            <div id="chatFollowSlot" class="shrink-0"></div>`;
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <a href="/v2/u/${esc(other.username)}" class="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity shrink-0">
+                    ${avatarEl(other.username, other.avatar, 'w-11 h-11')}
+                    <div class="flex flex-col gap-1 min-w-0">
+                        <span class="font-semibold leading-none truncate">@${esc(other.username)}</span>
+                        ${statusHtml}
+                    </div>
+                </a>
+                <div id="chatFollowSlot" class="shrink-0"></div>
+            </div>`;
     }
 
     function fetchAndSetStatus(other) {
