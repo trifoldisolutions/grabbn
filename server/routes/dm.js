@@ -115,6 +115,12 @@ router.get('/conversations', requireRegistered, async (req, res) => {
                     unreadCount:         c.unreadCounts?.get?.(String(userId))    ?? (c.unreadCounts?.[String(userId)]    ?? 0),
                     otherUnreadCount:    c.unreadCounts?.get?.(String(otherId))   ?? (c.unreadCounts?.[String(otherId)]   ?? 0),
                     hasContext:          !!c.contextCommentId,
+                    pinnedMessage:       c.pinnedMessage?.messageId ? {
+                        messageId:      String(c.pinnedMessage.messageId),
+                        body:           c.pinnedMessage.body || '',
+                        senderUsername: c.pinnedMessage.senderUsername || '',
+                        senderAvatar:   c.pinnedMessage.senderAvatar   || null,
+                    } : null,
                 };
             });
 
@@ -390,6 +396,79 @@ router.get('/unread-count', requireRegistered, async (req, res) => {
     } catch (err) {
         console.error('[dm] GET /unread-count:', err);
         res.json({ unread: 0 });
+    }
+});
+
+// ── POST /api/dm/:conversationId/pin — pin a message ─────────────────────────
+router.post('/:conversationId/pin', requireRegistered, async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const { messageId } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(conversationId) || !mongoose.Types.ObjectId.isValid(messageId)) {
+            return res.status(400).json({ error: 'Invalid ID' });
+        }
+
+        const conversation = await Conversation.findById(conversationId).lean();
+        if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+
+        const isParticipant = conversation.participants.some(p => String(p) === String(req.user._id));
+        if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
+
+        const message = await DirectMessage.findById(messageId).lean();
+        if (!message) return res.status(404).json({ error: 'Message not found' });
+
+        const sender = await User.findById(message.senderId).select('username avatar').lean();
+
+        const pinnedMessage = {
+            messageId:      message._id,
+            body:           message.body.slice(0, 200),
+            senderUsername: sender?.username || '',
+            senderAvatar:   sender?.avatar   || null,
+        };
+
+        await Conversation.findByIdAndUpdate(conversationId, { pinnedMessage }, { timestamps: false });
+
+        const payload = {
+            type:           'dm_pinned',
+            conversationId: String(conversationId),
+            pinnedMessage:  { ...pinnedMessage, messageId: String(pinnedMessage.messageId) },
+        };
+        for (const pid of conversation.participants) pushNotification(String(pid), payload);
+
+        return res.json({ ok: true, pinnedMessage: payload.pinnedMessage });
+    } catch (err) {
+        console.error('[dm] POST /:conversationId/pin:', err);
+        res.status(500).json({ error: 'Failed to pin message' });
+    }
+});
+
+// ── DELETE /api/dm/:conversationId/pin — unpin ────────────────────────────────
+router.delete('/:conversationId/pin', requireRegistered, async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(conversationId)) {
+            return res.status(400).json({ error: 'Invalid ID' });
+        }
+
+        const conversation = await Conversation.findById(conversationId).lean();
+        if (!conversation) return res.status(404).json({ error: 'Conversation not found' });
+
+        const isParticipant = conversation.participants.some(p => String(p) === String(req.user._id));
+        if (!isParticipant) return res.status(403).json({ error: 'Forbidden' });
+
+        await Conversation.findByIdAndUpdate(conversationId,
+            { $unset: { 'pinnedMessage.messageId': '', 'pinnedMessage.body': '', 'pinnedMessage.senderUsername': '', 'pinnedMessage.senderAvatar': '' } },
+            { timestamps: false }
+        );
+
+        const payload = { type: 'dm_unpinned', conversationId: String(conversationId) };
+        for (const pid of conversation.participants) pushNotification(String(pid), payload);
+
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error('[dm] DELETE /:conversationId/pin:', err);
+        res.status(500).json({ error: 'Failed to unpin message' });
     }
 });
 

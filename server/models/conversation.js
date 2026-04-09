@@ -15,6 +15,14 @@ const conversationSchema = new mongoose.Schema({
         default: {},
     },
 
+    // Pinned message — either participant can pin/unpin
+    pinnedMessage: {
+        messageId:      { type: mongoose.Schema.Types.ObjectId, default: null },
+        body:           { type: String, default: null },
+        senderUsername: { type: String, default: null },
+        senderAvatar:   { type: String, default: null },
+    },
+
     // Optional: DM-from-comment context (captured at conversation creation, never changes)
     contextCommentId:       { type: mongoose.Schema.Types.ObjectId, ref: 'BucketComment', default: null },
     contextCommentBody:     { type: String, default: null },      // snapshot at creation time

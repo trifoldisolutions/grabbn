@@ -97,6 +97,19 @@
                 <div id="chatHeaderActions" class="flex items-center gap-1.5 shrink-0"></div>
             </div>
 
+            <!-- Pinned message banner -->
+            <div id="pinnedMsgBanner" class="hidden items-center gap-3 px-4 py-2 border-b border-silver-100 bg-white shrink-0 cursor-pointer hover:bg-silver-50 transition-colors">
+                <div id="pinnedMsgAvatar" class="shrink-0"></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[10px] font-semibold text-orchid-500 leading-none mb-0.5">Pinned message</p>
+                    <p id="pinnedMsgBody" class="text-xs text-woodsmoke-700 truncate"></p>
+                </div>
+                <button id="pinnedMsgUnpinBtn" title="Unpin"
+                    class="shrink-0 p-1 rounded text-silver-400 hover:text-red-400 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M6.707 5.293a1 1 0 0 0-1.414 1.414L10.586 12l-5.293 5.293a1 1 0 1 0 1.414 1.414L12 13.414l5.293 5.293a1 1 0 0 0 1.414-1.414L13.414 12l5.293-5.293a1 1 0 0 0-1.414-1.414L12 10.586z"/></g></svg>
+                </button>
+            </div>
+
             <!-- Chat search bar — shown when user clicks the search icon -->
             <div id="chatSearchBar" class="hidden items-center gap-2 px-4 py-2 border-b border-silver-100 bg-white shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="text-silver-400 shrink-0" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path fill="currentColor" d="M10.5 2a8.5 8.5 0 1 0 5.262 15.176l3.652 3.652a1 1 0 0 0 1.414-1.414l-3.652-3.652A8.5 8.5 0 0 0 10.5 2M4 10.5a6.5 6.5 0 1 1 13 0a6.5 6.5 0 0 1-13 0"/></g></svg>
@@ -214,8 +227,52 @@
     let contextSent    = false;
     let conversations  = [];
     let activeContext  = M.context;
+    let activePinnedMsg = null; // { messageId, body, senderUsername, senderAvatar } | null
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    const pinnedBanner     = document.getElementById('pinnedMsgBanner');
+    const pinnedAvatarEl   = document.getElementById('pinnedMsgAvatar');
+    const pinnedBodyEl     = document.getElementById('pinnedMsgBody');
+    const pinnedUnpinBtn   = document.getElementById('pinnedMsgUnpinBtn');
+
+    function renderPinnedBanner(pinned) {
+        activePinnedMsg = pinned;
+        if (!pinned || !pinnedBanner) return;
+        const avatarHtml = pinned.senderAvatar
+            ? `<img src="${esc(pinned.senderAvatar)}" class="w-7 h-7 rounded-full object-cover" />`
+            : `<div class="w-7 h-7 rounded-full bg-orchid-100 flex items-center justify-center text-[11px] font-bold text-orchid-600">${esc((pinned.senderUsername[0] || '?').toUpperCase())}</div>`;
+        pinnedAvatarEl.innerHTML = avatarHtml;
+        pinnedBodyEl.textContent = pinned.body;
+        pinnedBanner.classList.remove('hidden');
+        pinnedBanner.classList.add('flex');
+    }
+
+    function clearPinnedBanner() {
+        activePinnedMsg = null;
+        if (!pinnedBanner) return;
+        pinnedBanner.classList.add('hidden');
+        pinnedBanner.classList.remove('flex');
+    }
+
+    // Clicking the banner scrolls to the pinned message in the feed
+    pinnedBanner?.addEventListener('click', function (e) {
+        if (e.target.closest('#pinnedMsgUnpinBtn')) return;
+        if (!activePinnedMsg) return;
+        const el = messagesList.querySelector(`[data-msg-id="${activePinnedMsg.messageId}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    // Unpin button
+    pinnedUnpinBtn?.addEventListener('click', async function (e) {
+        e.stopPropagation();
+        if (!activeConvId) return;
+        try {
+            await fetch(`/api/dm/${activeConvId}/pin`, { method: 'DELETE' });
+            // WS event will update both sides; clear optimistically on our side too
+            clearPinnedBanner();
+        } catch (_) {}
+    });
 
     function msgDateKey(dateStr) {
         const d = new Date(dateStr);
@@ -401,13 +458,14 @@
             ? `<span id="chatStatusText" class="text-[11px] ${statusText === 'Online' ? 'text-emerald-500' : 'text-silver-400'} leading-none">${esc(statusText)}</span>`
             : `<span id="chatStatusText" class="text-[11px] text-silver-300 leading-none">—</span>`;
         chatHeader.innerHTML = `
-            <a href="/v2/u/${esc(other.username)}" class="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity">
+            <a href="/v2/u/${esc(other.username)}" class="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity flex-1">
                 ${avatarEl(other.username, other.avatar, 'w-11 h-11')}
                 <div class="flex flex-col gap-1 min-w-0">
                     <span class="font-semibold leading-none truncate">@${esc(other.username)}</span>
                     ${statusHtml}
                 </div>
-            </a>`;
+            </a>
+            <div id="chatFollowSlot" class="shrink-0"></div>`;
     }
 
     function fetchAndSetStatus(other) {
@@ -633,6 +691,38 @@
 
             bar.appendChild(copyBtn);
 
+            // Pin / Unpin
+            const isAlreadyPinned = activePinnedMsg?.messageId === msgId;
+            const pinBtn = document.createElement('button');
+            pinBtn.className = `${btnBase} ${isAlreadyPinned ? 'text-orchid-500 hover:text-orchid-700' : 'text-woodsmoke-500 hover:text-woodsmoke-900'}`;
+            pinBtn.textContent = isAlreadyPinned ? 'Unpin' : 'Pin';
+            pinBtn.addEventListener('click', async (ev) => {
+                ev.stopPropagation();
+                pinBtn.disabled = true;
+                pinBtn.textContent = '…';
+                try {
+                    if (isAlreadyPinned) {
+                        await fetch(`/api/dm/${activeConvId}/pin`, { method: 'DELETE' });
+                        clearPinnedBanner();
+                    } else {
+                        const res = await fetch(`/api/dm/${activeConvId}/pin`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ messageId: msgId }),
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            renderPinnedBanner(data.pinnedMessage);
+                        }
+                    }
+                    closeActionBar();
+                } catch (_) {
+                    pinBtn.textContent = isAlreadyPinned ? 'Unpin' : 'Pin';
+                    pinBtn.disabled = false;
+                }
+            });
+            bar.appendChild(pinBtn);
+
             // Delete — only for own messages
             if (isMine) {
                 const delBtn = document.createElement('button');
@@ -785,6 +875,11 @@
         renderChatHeader(other);
         fetchAndSetStatus(other);
         renderHeaderActions(other);
+
+        // Pinned message — sourced from the conversations list (already loaded)
+        clearPinnedBanner();
+        const convData = conversations.find(c => String(c._id) === String(convId));
+        if (convData?.pinnedMessage) renderPinnedBanner(convData.pinnedMessage);
 
         // Context badge in input area
         if (ctx && !contextSent) {
@@ -965,15 +1060,22 @@
         const userId = esc(String(other._id));
         const uname  = esc(other.username || '');
 
+        // Follow btn lives next to the user info, not in the actions strip
+        const followSlot = document.getElementById('chatFollowSlot');
+        if (followSlot) {
+            followSlot.innerHTML = anonId
+                ? `<button id="chatFollowBtn" data-following="0" data-anonid="${esc(anonId)}"
+                        class="px-4 py-1.5 text-sm font-semibold rounded-md transition-colors bg-orchid-600 text-white hover:bg-orchid-700 opacity-50 cursor-not-allowed" disabled>
+                        Follow
+                   </button>`
+                : '';
+        }
+
         actionsDiv.innerHTML = `
             <button id="chatSearchBtn" title="Search messages"
                 class="h-8 w-8 flex items-center justify-center rounded-md text-silver-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path fill="currentColor" d="M10.5 2a8.5 8.5 0 1 0 5.262 15.176l3.652 3.652a1 1 0 0 0 1.414-1.414l-3.652-3.652A8.5 8.5 0 0 0 10.5 2M4 10.5a6.5 6.5 0 1 1 13 0a6.5 6.5 0 0 1-13 0"/></g></svg>
             </button>
-            ${anonId ? `<button id="chatFollowBtn" data-following="0" data-anonid="${esc(anonId)}"
-                class="px-5 py-2 text-sm font-semibold rounded-md transition-colors bg-orchid-600 text-white hover:bg-orchid-700 opacity-50 cursor-not-allowed" disabled>
-                Follow
-            </button>` : ''}
             <div class="relative">
                 <button id="chatMoreBtn" title="More options"
                     class="h-8 w-8 flex items-center justify-center rounded-md text-silver-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors">
@@ -1317,6 +1419,31 @@
         }
         // Refresh conv list so the preview updates for everyone
         loadConversations();
+    });
+
+    // ── Real-time: message pinned ─────────────────────────────────────────────
+
+    window.addEventListener('grabbn:dm_pinned', function (e) {
+        const { conversationId, pinnedMessage } = e.detail;
+        if (String(activeConvId) === String(conversationId)) {
+            renderPinnedBanner(pinnedMessage);
+        }
+        // Keep conversations list in sync so re-opening shows the pin
+        conversations = conversations.map(c =>
+            String(c._id) === String(conversationId) ? { ...c, pinnedMessage } : c
+        );
+    });
+
+    // ── Real-time: message unpinned ───────────────────────────────────────────
+
+    window.addEventListener('grabbn:dm_unpinned', function (e) {
+        const { conversationId } = e.detail;
+        if (String(activeConvId) === String(conversationId)) {
+            clearPinnedBanner();
+        }
+        conversations = conversations.map(c =>
+            String(c._id) === String(conversationId) ? { ...c, pinnedMessage: null } : c
+        );
     });
 
     // ── Real-time: presence change (other user online / offline) ─────────────
