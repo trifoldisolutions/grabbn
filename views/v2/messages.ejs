@@ -519,6 +519,8 @@
             previewContent = `<span class="text-xs truncate flex-1 ${unread ? 'font-medium text-woodsmoke-700' : 'text-silver-500'}">${preview || '<span class="italic text-silver-400">No messages yet</span>'}</span>`;
         }
 
+        const MUTE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" class="text-silver-400 shrink-0"><g fill="none"><path fill="currentColor" d="M13.26 3.3a1.1 1.1 0 0 1 1.734.78l.006.114v15.612a1.1 1.1 0 0 1-1.643.957l-.096-.062L6.68 16H4a2 2 0 0 1-1.995-1.85L2 14v-4a2 2 0 0 1 1.85-1.994L4 8h2.68zm4.326 5.872L19 10.586l1.414-1.414a1 1 0 1 1 1.414 1.414L20.414 12l1.414 1.414a1 1 0 0 1-1.414 1.415L19 13.414l-1.414 1.415a1 1 0 0 1-1.414-1.415L17.586 12l-1.414-1.414a1 1 0 1 1 1.414-1.414"/></g></svg>`;
+
         return `
         <button class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white transition-colors text-left group conv-item ${active}"
                 data-conv-id="${esc(String(c._id))}"
@@ -529,7 +531,10 @@
             ${avatarEl(c.otherUser.username, c.otherUser.avatar)}
             <div class="flex-1 min-w-0">
                 <div class="flex items-baseline justify-between gap-1">
-                    <span class="font-semibold text-sm truncate ${unread ? 'text-woodsmoke-900' : 'text-woodsmoke-700'}">@${esc(c.otherUser.username)}</span>
+                    <div class="flex items-center gap-1 min-w-0">
+                        <span class="font-semibold text-sm truncate ${unread ? 'text-woodsmoke-900' : 'text-woodsmoke-700'}">@${esc(c.otherUser.username)}</span>
+                        ${c.isMuted ? MUTE_ICON : ''}
+                    </div>
                     <span data-live-time="${c.lastMessageAt}" class="text-[10px] text-silver-400 shrink-0">${timeAgo(c.lastMessageAt)}</span>
                 </div>
                 <div class="flex items-center gap-1.5 mt-0.5">
@@ -1400,7 +1405,32 @@
 
     window.addEventListener('grabbn:new_dm', function (e) {
         const detail = e.detail;
-        loadConversations();
+
+        // Update the conversation list in-place so we control ordering.
+        // Muted conversations stay in their current position — no bubbling to top.
+        const idx = conversations.findIndex(c => String(c._id) === detail.conversationId);
+        if (idx !== -1) {
+            const conv = { ...conversations[idx] };
+            // Update preview + unread count
+            conv.lastMessagePreview  = detail.preview || conv.lastMessagePreview;
+            conv.lastMessageAt       = new Date().toISOString();
+            conv.lastMessageSenderId = null; // incoming — not from me
+            if (String(activeConvId) !== detail.conversationId) {
+                conv.unreadCount = (conv.unreadCount || 0) + 1;
+            }
+            // Only bubble to top if NOT muted
+            if (!conv.isMuted) {
+                conversations.splice(idx, 1);
+                conversations.unshift(conv);
+            } else {
+                conversations[idx] = conv;
+            }
+        } else {
+            // New conversation — fall back to a full reload
+            loadConversations();
+            return;
+        }
+        renderConvList();
 
         // If we're already viewing this conversation, fetch and append the message
         if (detail.conversationId === String(activeConvId)) {
