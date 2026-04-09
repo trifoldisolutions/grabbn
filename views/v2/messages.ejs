@@ -1129,10 +1129,11 @@
             // Update label immediately
             const label = document.getElementById('chatMuteBtnLabel');
             if (label) label.textContent = activeMuted ? 'Unmute Chat' : 'Mute Chat';
-            // Update conversations state
+            // Update conversations state and re-render the list so the icon appears/disappears
             conversations = conversations.map(c =>
                 String(c._id) === String(activeConvId) ? { ...c, isMuted: activeMuted } : c
             );
+            renderConvList();
             try {
                 await fetch(`/api/dm/${activeConvId}/mute`, {
                     method: activeMuted ? 'POST' : 'DELETE',
@@ -1141,6 +1142,10 @@
                 // Revert on failure
                 activeMuted = wasMuted;
                 if (label) label.textContent = activeMuted ? 'Unmute Chat' : 'Mute Chat';
+                conversations = conversations.map(c =>
+                    String(c._id) === String(activeConvId) ? { ...c, isMuted: wasMuted } : c
+                );
+                renderConvList();
             }
         });
 
