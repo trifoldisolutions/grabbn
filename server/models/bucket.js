@@ -26,7 +26,8 @@ const bucketSchema = new mongoose.Schema(
     },
     links: {
       type: [linkSchema],
-      default: []
+      default: [],
+      validate: { validator: v => v.length <= 256, message: 'A bucket cannot have more than 256 links' }
     },
     description: {
       type: String,

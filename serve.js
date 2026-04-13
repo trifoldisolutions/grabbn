@@ -18,6 +18,7 @@ import Subscription from './server/models/subscription.js';
 import { buildRepositories } from './server/jobs/buildRepositories.js';
 import { buildExploreScores } from './server/jobs/buildExploreScores.js';
 import { FILTER_PUBLIC } from './server/utils/filters.js';
+import { validateLinks } from './server/utils/urlSafety.js';
 import bucketShareRouter from './server/routes/bucketShare.js';
 import authRouter from './server/routes/auth.js';
 import creditsRouter, { handleWebhook } from './server/routes/credits.js';
@@ -26,6 +27,9 @@ import notificationsRouter from './server/routes/notifications.js';
 import bucketCommentsRouter from './server/routes/bucketComments.js';
 import dmRouter from './server/routes/dm.js';
 import blockRouter from './server/routes/block.js';
+import adminRouter     from './server/routes/admin.js';
+import adminAuthRouter from './server/routes/admin/auth.js';
+import { adminSessionAuth, requireAdminSession } from './server/middleware/adminSessionAuth.js';
 import Notification from './server/models/notification.js';
 import Block from './server/models/block.js';
 import Conversation from './server/models/conversation.js';
@@ -36,6 +40,7 @@ import BucketShare from './server/models/bucketShare.js';
 import FeedImpression from './server/models/feedImpression.js';
 import TopicScore from './server/models/topicScore.js';
 import BucketSkip   from './server/models/bucketSkip.js';
+import RepoSkip     from './server/models/repoSkip.js';
 import ShareVisit   from './server/models/shareVisit.js';
 import BucketRating from './server/models/bucketRating.js';
 import { wsClients, pushNotification } from './server/ws.js';
@@ -222,6 +227,8 @@ app.use((req, res, next) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/admin/auth', adminAuthRouter); // must be before adminRouter (no session guard)
+app.use('/api/admin', adminRouter);
 app.use('/api/credits', creditsRouter);
 app.use('/api/connect', connectRouter);
 app.use('/api/notifications', notificationsRouter);
@@ -489,6 +496,13 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             return res.status(409).json({ error: 'Bucket already exists' });
         }
 
+        if (Array.isArray(links) && links.length > 0) {
+            if (links.length > 256) return res.status(400).json({ error: 'A bucket cannot have more than 256 links' });
+            const urls = links.map(l => l.url || '');
+            const { ok, blocked } = await validateLinks(urls);
+            if (!ok) return res.status(400).json({ error: 'One or more links were rejected for safety reasons', blocked });
+        }
+
         const resolvedLinks = Array.isArray(links) ? await Promise.all(links.map(async l => ({
             href:     l.url   || '',
             text:     l.title || '',
@@ -583,6 +597,12 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         if (sourceUrl   !== undefined) update.sourceUrl   = sourceUrl || '';
         if (thumbnail   !== undefined) update.thumbnail   = await fetchImageAsBase64(thumbnail || null) || '';
         if (links       !== undefined) {
+            if (links.length > 256) return res.status(400).json({ error: 'A bucket cannot have more than 256 links' });
+            if (links.length > 0) {
+                const urls = links.map(l => l.url || '');
+                const { ok, blocked } = await validateLinks(urls);
+                if (!ok) return res.status(400).json({ error: 'One or more links were rejected for safety reasons', blocked });
+            }
             update.links = await Promise.all(links.map(async l => ({
                 href:     l.url   || '',
                 text:     l.title || '',
@@ -1392,6 +1412,9 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
             return res.status(400).json({ error: 'Links array is required' });
         }
 
+        const { ok, blocked } = await validateLinks(links.map(l => l.href || ''));
+        if (!ok) return res.status(400).json({ error: 'One or more links were rejected for safety reasons', blocked });
+
         if (buckets.length === 0) {
             return res.status(400).json({ error: 'At least one bucket is required' });
         }
@@ -1434,6 +1457,10 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
                     }))
             );
             if (newLinks.length > 0) {
+                if (bucket.links.length + newLinks.length > 256) {
+                    results.push({ bucket: bucketName, error: 'Bucket is at the 256-link limit' });
+                    continue;
+                }
                 bucket.links.push(...newLinks);
                 bucket.lastMeaningfulActivityAt = new Date();
             }
@@ -2048,40 +2075,64 @@ app.get('/api/v2/repositories', anonymousAuth, async (req, res) => {
         const userId = req.user._id;
         const cutoff = new Date(Date.now() - 90 * 86_400_000); // 90-day window
 
-        // Run both lookups in parallel
-        const [domainClicks, subscriptions] = await Promise.all([
+        // Run all lookups in parallel
+        const [domainClicks, subscriptions, userBuckets, skippedRepos] = await Promise.all([
             // Signal 1 — direct affinity: domains this user has clicked recently
             LinkClick.aggregate([
                 { $match: { userId, createdAt: { $gte: cutoff } } },
                 { $group: { _id: '$domain', count: { $sum: 1 } } }
             ]),
             // Signal 2 — subscription: curators this user follows
-            Subscription.find({ followerId: userId }).select('followeeId').lean()
+            Subscription.find({ followerId: userId }).select('followeeId').lean(),
+            // Signal 3 — tag affinity: hashtags on the user's own public buckets
+            Bucket.find({ userId, isDraft: false }).select('hashtags').lean(),
+            // Signal 4 — skipped repos: never show these again
+            RepoSkip.find({ userId }).select('domain tag').lean()
         ]);
 
-        // domain  → click count  (direct affinity map)
+        // domain → click count  (direct affinity map)
         const affinityMap   = Object.fromEntries(domainClicks.map(d => [d._id, d.count]));
         // set of subscribed curator _id strings (for O(1) lookup)
         const subscribedIds = new Set(subscriptions.map(s => String(s.followeeId)));
+        // set of hashtags the user has used across their own buckets
+        const userTags      = new Set(userBuckets.flatMap(b => b.hashtags || []));
+        // set of "domain::tag" pairs the user dismissed
+        const skippedKeys   = new Set(skippedRepos.map(s => `${s.domain}::${s.tag}`));
 
-        // Score every repo and attach an internal rank value
-        const scored = allRepos.map(repo => {
-            // How many times has this user clicked links in this domain?
-            const affinityScore = (affinityMap[repo.domain] || 0) * 3;
+        // Score every non-skipped repo
+        const hasPreferences = affinityMap.size > 0 || userTags.size > 0 || subscribedIds.size > 0;
 
-            // How many of the top links were curated by someone this user subscribes to?
-            const subLinkCount  = repo.topLinks.filter(
+        const relevant  = [];
+        const popular   = [];
+
+        for (const repo of allRepos) {
+            if (skippedKeys.has(`${repo.domain}::${repo.tag}`)) continue;
+
+            const affinityScore     = (affinityMap[repo.domain] || 0) * 3;
+            const tagScore          = userTags.has(repo.tag) ? 4 : 0;
+            const subLinkCount      = repo.topLinks.filter(
                 l => l.curatorId && subscribedIds.has(String(l.curatorId))
             ).length;
-            const subscriptionScore = subLinkCount * 5; // subscription is the strongest signal
+            const subscriptionScore = subLinkCount * 5;
+            const popularityScore   = Math.log(repo.totalClicks + 1) * 0.5;
+            const totalScore        = affinityScore + tagScore + subscriptionScore + popularityScore;
 
-            // Global popularity as a tiebreaker (log-dampened so viral repos don't dominate)
-            const popularityScore = Math.log(repo.totalClicks + 1) * 0.5;
+            const scored = { ...repo, _score: totalScore };
 
-            return { ...repo, _score: affinityScore + subscriptionScore + popularityScore };
-        });
+            // If user has preferences, only show repos with at least one matching signal.
+            // If no preferences yet, everything goes into "relevant" (sorted by popularity).
+            if (!hasPreferences || affinityScore > 0 || tagScore > 0 || subscriptionScore > 0) {
+                relevant.push(scored);
+            } else {
+                popular.push(scored);
+            }
+        }
 
-        scored.sort((a, b) => b._score - a._score);
+        relevant.sort((a, b) => b._score - a._score);
+        popular.sort((a, b) => b._score - a._score);
+
+        // Merge: relevant first, then popular repos as padding
+        const scored = [...relevant, ...popular];
 
         const page    = scored.slice(skip, skip + limit + 1);
         const hasMore = page.length > limit;
@@ -2096,16 +2147,60 @@ app.get('/api/v2/repositories', anonymousAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// V2 API — single repository detail by domain
+// V2 API — single repository detail by domain + tag
 // ---------------------------------------------------------------------------
-app.get('/api/v2/repositories/:domain', anonymousAuth, async (req, res) => {
+app.get('/api/v2/repositories/:domain/:tag', anonymousAuth, async (req, res) => {
     try {
-        const repo = await Repository.findOne({ domain: req.params.domain }).lean();
-        if (!repo) return res.status(404).json({ error: 'Repository not found' });
-        res.json(repo);
+        const { domain, tag } = req.params;
+
+        // Escape domain for use in a regex (dots etc.)
+        const escapedDomain = domain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const domainPattern = new RegExp(`^https?://(www\\.)?${escapedDomain}`, 'i');
+
+        const [repo, topBuckets] = await Promise.all([
+            Repository.findOne({ domain, tag }).lean(),
+            // Buckets tagged with `tag` that contain at least one link from `domain`
+            Bucket.find({
+                hashtags:      tag,
+                visibility:    'public',
+                isDraft:       false,
+                'links.href':  domainPattern
+            })
+            .sort({ exploreScore: -1 })
+            .limit(12)
+            .select('_id name description thumbnail links grabbedBy viewCount userId')
+            .populate('userId', 'username avatar')
+            .lean()
+        ]);
+
+        if (!repo)                       return res.status(404).json({ error: 'Repository not found' });
+        if (topBuckets.length < 1)       return res.status(404).json({ error: 'Repository not found' });
+        res.json({ ...repo, topBuckets });
     } catch (err) {
         console.error('Repository detail error:', err);
         res.status(500).json({ error: 'Failed to load repository' });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// V2 API — mark a (domain, tag) repo as not interested
+// ---------------------------------------------------------------------------
+app.post('/api/v2/repositories/:domain/:tag/not-interested', anonymousAuth, async (req, res) => {
+    try {
+        const { domain, tag } = req.params;
+        const userId = req.user && !req.user.isAnonymous ? req.user._id : null;
+        const ip     = userId ? null : (req.headers['x-forwarded-for'] || req.ip);
+
+        await RepoSkip.updateOne(
+            { domain, tag, ...(userId ? { userId } : { ip }) },
+            { $setOnInsert: { domain, tag, userId, ip } },
+            { upsert: true }
+        );
+
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Repo not-interested error:', err);
+        res.status(500).json({ error: 'Failed to record skip' });
     }
 });
 
@@ -2132,6 +2227,61 @@ for (const { path: routePath, view, title, page } of v2Pages) {
         res.render(view, { title, page, user: req.user ?? null });
     });
 }
+
+// ---------------------------------------------------------------------------
+// Admin panel — server-rendered EJS pages at /admin/*
+// Protected by anonymousAuth + requireModerator (imported from adminAuth.js)
+// ---------------------------------------------------------------------------
+import { requireModerator as _requireModerator, requireSuperadmin as _requireSuperadmin, requireNonAdmin } from './server/middleware/adminAuth.js';
+
+// Convenience: resolve the _gadmin session cookie then role check, pass `admin`
+// to the template. For page routes we render a convincing 404 instead of
+// returning a 403 JSON so the existence of the admin panel isn't revealed.
+function adminPage(minRole = 'moderator') {
+    const allowedRoles = minRole === 'superadmin' ? ['superadmin'] : ['moderator', 'superadmin'];
+    return [
+        adminSessionAuth,
+        (req, res, next) => {
+            if (!req.user || req.user.isAnonymous || !allowedRoles.includes(req.user.role)) {
+                return res.status(404).render('admin/not-found');
+            }
+            res.locals.admin = req.user;
+            next();
+        }
+    ];
+}
+
+// /admin/login  →  standalone login page (no auth guard — publicly accessible)
+// If already logged in as admin (_gadmin cookie), redirect straight to panel.
+app.get('/admin/login', adminSessionAuth, (req, res) => {
+    if (req.user && !req.user.isAnonymous && ['moderator', 'superadmin'].includes(req.user.role)) {
+        return res.redirect('/admin');
+    }
+    res.render('admin/login');
+});
+
+// /admin  →  redirect to overview (users for now)
+app.get('/admin', adminPage(), (req, res) => res.redirect('/admin/users'));
+
+// /admin/users  →  user list
+app.get('/admin/users', adminPage(), (req, res) => {
+    res.render('admin/users', { admin: req.user });
+});
+
+// /admin/users/:userId  →  user detail
+app.get('/admin/users/:userId', adminPage(), async (req, res) => {
+    try {
+        const { default: User } = await import('./server/models/user.js');
+        const viewUser = await User.findById(req.params.userId)
+            .select('-password -otpCode -otpExpires -otpSentAt -resetPasswordToken -resetPasswordExpires')
+            .lean();
+        if (!viewUser) return res.status(404).send('User not found');
+        res.render('admin/user-detail', { admin: req.user, viewUser });
+    } catch (err) {
+        console.error('[admin/users/:id page]', err);
+        res.status(500).send('Server error');
+    }
+});
 
 // ── Search: JSON pagination API ──────────────────────────────────────────────
 app.get('/api/v2/search', anonymousAuth, async (req, res) => {
@@ -2297,6 +2447,9 @@ app.get('/api/v2/search', anonymousAuth, async (req, res) => {
         return res.json({ items: [], hasMore: false });
     }
 });
+
+// Block admin accounts from the regular user frontend — redirect to /admin
+app.use('/v2', requireNonAdmin);
 
 // Search page — /v2/search?q=<query>[&type=people|buckets|repos]
 app.get('/v2/search', anonymousAuth, async (req, res) => {
@@ -2466,8 +2619,10 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
         let repos           = [];
         let reposMatchQuery = false;
         if (sidebarEscaped) {
-            const found = await Repository.find({ domain: new RegExp(sidebarEscaped, 'i') })
-                .sort({ totalClicks: -1 }).limit(R_LIMIT + 1).lean();
+            const pattern = new RegExp(sidebarEscaped, 'i');
+            const found = await Repository.find({
+                $or: [{ domain: pattern }, { tag: pattern }]
+            }).sort({ totalClicks: -1 }).limit(R_LIMIT + 1).lean();
             reposMatchQuery = found.length > 0;
             hasMoreRepos    = found.length > R_LIMIT;
             repos           = found.slice(0, R_LIMIT);
@@ -2628,10 +2783,11 @@ app.get('/v2/u/:username', anonymousAuth, async (req, res) => {
     });
 });
 
-// Dynamic repository page — domain comes from the URL
-app.get('/v2/repository/:domain', anonymousAuth, (req, res) => {
-    const domain = req.params.domain;
-    res.render('v2/repository', { title: domain, page: 'repository', user: req.user ?? null, domain });
+// Dynamic repository page — domain + tag come from the path
+app.get('/v2/o/:topic/:tag', anonymousAuth, (req, res) => {
+    const topic = req.params.topic || '';
+    const tag   = req.params.tag   || '';
+    res.render('v2/repository', { title: `#${tag} in ${topic}`, page: 'repository', user: req.user ?? null, domain: topic, tag });
 });
 
 // Report page — /v2/report/:bucketId
@@ -2668,8 +2824,8 @@ app.get('/v2/report/:bucketId', anonymousAuth, async (req, res) => {
     }
 });
 
-// Bucket thumbnail — /v2/bucket/:bucketId/thumbnail.jpg
-app.get('/v2/bucket/:bucketId/thumbnail.jpg', async (req, res) => {
+// Bucket thumbnail — /v2/b/:bucketId/thumbnail.jpg
+app.get('/v2/b/:bucketId/thumbnail.jpg', async (req, res) => {
     try {
         const bucket = await Bucket.findById(req.params.bucketId).lean();
         if (!bucket) return res.status(404).send('Not found');
@@ -2745,8 +2901,8 @@ app.get('/api/buckets/:id/recommendations', anonymousAuth, async (req, res) => {
     }
 });
 
-// Bucket view page — /v2/bucket/:bucketId  (accessible to anyone)
-app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
+// Bucket view page — /v2/b/:bucketId  (accessible to anyone)
+app.get('/v2/b/:bucketId', anonymousAuth, async (req, res) => {
     try {
         const { bucketId } = req.params;
         const bucket = await Bucket.findById(bucketId).lean();
@@ -2827,9 +2983,9 @@ app.get('/v2/bucket/:bucketId', anonymousAuth, async (req, res) => {
             })();
         }
 
-        const bucketUrl = `${shareBaseUrl}/v2/bucket/${bucketId}`;
+        const bucketUrl = `${shareBaseUrl}/v2/b/${bucketId}`;
         const hasThumbnail = !!(bucket.thumbnail || bucket.links?.some(l => l.image));
-        const ogImage = hasThumbnail ? `${shareBaseUrl}/v2/bucket/${bucketId}/thumbnail.jpg` : null;
+        const ogImage = hasThumbnail ? `${shareBaseUrl}/v2/b/${bucketId}/thumbnail.jpg` : null;
 
         res.render('v2/bucket', {
             title: bucket.name,
