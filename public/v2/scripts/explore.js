@@ -50,13 +50,15 @@
         label.textContent = ROW_LABELS[type];
 
         const row = document.createElement('div');
-        // Match grid card widths: 2-col on mobile, 3-col on sm+
-        row.className = 'grid grid-flow-col auto-cols-[calc(50%-2px)] sm:auto-cols-[calc(33.333%-3px)] gap-1 overflow-x-auto pb-2';
+        row.className = 'flex gap-1 overflow-x-auto pb-2';
         row.style.scrollbarWidth = 'none';
 
         buckets.forEach(b => {
             seenIds.add(String(b._id));
-            row.appendChild(createCard(b));
+            const card = createCard(b);
+            card.style.flex = '0 0 calc(50vw - 8px)';
+            card.style.maxWidth = '320px';
+            row.appendChild(card);
         });
 
         section.appendChild(label);
