@@ -3,7 +3,7 @@
  * Run with: node scripts/test-url-safety.js
  */
 
-import { isValidUrl, isUrlShortener, checkUrlHaus, validateLinks } from '../server/utils/urlSafety.js';
+import { isValidUrl, isUrlShortener, checkUrlHaus, checkSafeBrowsing, validateLinks } from '../server/utils/urlSafety.js';
 
 const RESET  = '\x1b[0m';
 const GREEN  = '\x1b[32m';
@@ -127,6 +127,28 @@ console.log(`\n${BOLD}6. Host deduplication${RESET}`);
     info(`5 URLs across 2 unique hosts — should fire 2 URLhaus requests, not 5`);
     const flagged = await checkUrlHaus(urls);
     pass(`deduplication ran without error; flagged: ${flagged.length === 0 ? 'none (expected)' : flagged.join(', ')}`);
+}
+
+// ─── 7. Google Safe Browsing ──────────────────────────────────────────────────
+console.log(`\n${BOLD}7. checkSafeBrowsing${RESET}`);
+
+{
+    const apiKey = process.env.GOOGLE_SAFE_BROWSING_API_KEY;
+    if (!apiKey) {
+        info('GOOGLE_SAFE_BROWSING_API_KEY not set — skipping (set it in .env to enable)');
+    } else {
+        // Google maintains a canonical test URL for Safe Browsing integrations
+        const testUrl = 'http://malware.testing.google.test/testing/malware/';
+        info(`checking Google test URL: ${testUrl}`);
+        const flagged = await checkSafeBrowsing([testUrl]);
+        if (flagged.length > 0) pass('Safe Browsing correctly flagged the Google test URL');
+        else fail('Safe Browsing did not flag the Google test URL — check your API key');
+
+        // Clean URL should pass
+        const clean = await checkSafeBrowsing(['https://github.com']);
+        if (clean.length === 0) pass('github.com passes Safe Browsing');
+        else fail('github.com was unexpectedly flagged by Safe Browsing');
+    }
 }
 
 console.log('');
