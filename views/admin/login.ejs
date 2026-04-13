@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/tailwind/output.css">
+</head>
+<body class="bg-woodsmoke-950 min-h-screen flex items-center justify-center px-4" style="font-family: 'Jost', sans-serif;">
+
+    <div class="w-full max-w-sm space-y-6">
+
+        <!-- Logo -->
+        <div class="flex flex-col items-center gap-2">
+            <div class="text-orchid-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.5 5a2.5 2.5 0 0 1 2.461 2.058A2.5 2.5 0 0 1 21 9.5V12a8 8 0 0 1-8 8h-.674a8 8 0 0 1-7.155-4.422L2.329 9.894c-.36-.72-.093-1.683.747-2.028c1.043-.427 2.034-.507 3.055.012q.443.227.869.584V7.5a2.5 2.5 0 0 1 3.388-2.338a2.498 2.498 0 0 1 4.224 0A2.5 2.5 0 0 1 15.5 5"/></g></svg>
+            </div>
+            <div class="text-center">
+                <div class="text-white text-sm font-bold tracking-widest uppercase" style="letter-spacing: 0.12em;">Grabbn</div>
+                <div class="text-woodsmoke-500 text-xs mt-0.5">Restricted access</div>
+            </div>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-woodsmoke-900 border border-woodsmoke-700 rounded-xl p-7 space-y-5">
+
+            <!-- Error banner -->
+            <div id="errorBanner" class="hidden bg-red-900/40 border border-red-700/50 text-red-300 text-sm rounded-md px-4 py-3"></div>
+
+            <!-- Step 1: Credentials -->
+            <div id="stepCredentials">
+                <h1 class="text-white text-base font-semibold mb-5">Sign in</h1>
+                <form id="credentialsForm" class="space-y-4" novalidate>
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-woodsmoke-400 uppercase tracking-wider">Email</label>
+                        <input
+                            id="emailInput"
+                            type="email"
+                            autocomplete="email"
+                            required
+                            autofocus
+                            placeholder="you@example.com"
+                            class="w-full h-10 px-3 bg-woodsmoke-800 border border-woodsmoke-600 rounded-md text-sm text-white placeholder-woodsmoke-500 focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent transition-colors"
+                        />
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-woodsmoke-400 uppercase tracking-wider">Password</label>
+                        <input
+                            id="passwordInput"
+                            type="password"
+                            autocomplete="current-password"
+                            required
+                            placeholder="••••••••"
+                            class="w-full h-10 px-3 bg-woodsmoke-800 border border-woodsmoke-600 rounded-md text-sm text-white placeholder-woodsmoke-500 focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent transition-colors"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        id="credentialsSubmitBtn"
+                        class="w-full h-10 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                        Continue
+                    </button>
+                </form>
+            </div>
+
+            <!-- Step 2: OTP (hidden initially) -->
+            <div id="stepOtp" class="hidden">
+                <button id="backToCredentials" class="flex items-center gap-1.5 text-woodsmoke-400 hover:text-white text-xs mb-5 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><path fill="currentColor" d="m7.825 13l4.9 4.9q.3.3.288.7t-.313.7q-.3.275-.7.288t-.7-.288l-6.6-6.6q-.15-.15-.213-.325T4.425 12t.062-.375T4.7 11.3l6.6-6.6q.275-.275.688-.275t.712.275q.3.3.3.713t-.3.712L7.825 11H19q.425 0 .713.288T20 12t-.288.713T19 13z"/></svg>
+                    Back
+                </button>
+                <h1 class="text-white text-base font-semibold mb-1">Check your email</h1>
+                <p class="text-woodsmoke-400 text-xs mb-5">
+                    We sent a 6-digit code to <span id="otpEmailLabel" class="text-woodsmoke-200 font-medium"></span>
+                </p>
+                <form id="otpForm" class="space-y-4" novalidate>
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold text-woodsmoke-400 uppercase tracking-wider">Verification Code</label>
+                        <input
+                            id="otpInput"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="6"
+                            placeholder="000000"
+                            autocomplete="one-time-code"
+                            class="w-full h-10 px-3 bg-woodsmoke-800 border border-woodsmoke-600 rounded-md text-sm text-white placeholder-woodsmoke-500 focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent tracking-[0.3em] text-center transition-colors"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        id="otpSubmitBtn"
+                        class="w-full h-10 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                        Sign in
+                    </button>
+                </form>
+                <button id="resendOtpBtn" class="mt-3 text-xs text-woodsmoke-500 hover:text-woodsmoke-300 transition-colors w-full text-center">
+                    Resend code
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+<script>
+let pendingEmail = '';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function showError(msg) {
+    const el = document.getElementById('errorBanner');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+function clearError() {
+    document.getElementById('errorBanner').classList.add('hidden');
+}
+function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Please wait…' : btn.dataset.label;
+}
+
+// Save default button labels
+document.getElementById('credentialsSubmitBtn').dataset.label = 'Continue';
+document.getElementById('otpSubmitBtn').dataset.label = 'Sign in';
+
+// ── Step 1: Credentials ───────────────────────────────────────────────────────
+document.getElementById('credentialsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+
+    const email    = document.getElementById('emailInput').value.trim();
+    const password = document.getElementById('passwordInput').value;
+
+    if (!email || !password) return showError('Email and password are required.');
+
+    setLoading('credentialsSubmitBtn', true);
+    try {
+        const res  = await fetch('/api/admin/auth/login', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok) return showError(data.error || 'Login failed.');
+
+        if (data.requiresOtp) {
+            pendingEmail = email;
+            document.getElementById('otpEmailLabel').textContent = email;
+            document.getElementById('stepCredentials').classList.add('hidden');
+            document.getElementById('stepOtp').classList.remove('hidden');
+            document.getElementById('otpInput').focus();
+        }
+    } catch {
+        showError('Something went wrong. Please try again.');
+    } finally {
+        setLoading('credentialsSubmitBtn', false);
+    }
+});
+
+// ── Step 2: OTP ───────────────────────────────────────────────────────────────
+document.getElementById('otpForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+
+    const code = document.getElementById('otpInput').value.trim();
+    if (!/^\d{6}$/.test(code)) return showError('Enter the 6-digit code from your email.');
+
+    setLoading('otpSubmitBtn', true);
+    try {
+        const res  = await fetch('/api/admin/auth/verify-otp', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ email: pendingEmail, code })
+        });
+        const data = await res.json();
+
+        if (!res.ok) return showError(data.error || 'Verification failed.');
+
+        if (data.success) {
+            window.location.href = '/admin';
+        }
+    } catch {
+        showError('Something went wrong. Please try again.');
+    } finally {
+        setLoading('otpSubmitBtn', false);
+    }
+});
+
+// ── Back button ───────────────────────────────────────────────────────────────
+document.getElementById('backToCredentials').addEventListener('click', () => {
+    clearError();
+    document.getElementById('otpInput').value = '';
+    document.getElementById('stepOtp').classList.add('hidden');
+    document.getElementById('stepCredentials').classList.remove('hidden');
+});
+
+// ── Resend OTP ────────────────────────────────────────────────────────────────
+document.getElementById('resendOtpBtn').addEventListener('click', async () => {
+    clearError();
+    const btn = document.getElementById('resendOtpBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+        await fetch('/api/admin/auth/resend-otp', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ email: pendingEmail })
+        });
+        btn.textContent = 'Code resent ✓';
+        setTimeout(() => {
+            btn.textContent = 'Resend code';
+            btn.disabled = false;
+        }, 4000);
+    } catch {
+        btn.textContent = 'Resend code';
+        btn.disabled = false;
+        showError('Failed to resend code.');
+    }
+});
+
+// ── OTP: digits only ──────────────────────────────────────────────────────────
+document.getElementById('otpInput').addEventListener('input', function() {
+    this.value = this.value.replace(/\D/g, '').slice(0, 6);
+});
+</script>
+
+</body>
+</html>

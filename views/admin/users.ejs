@@ -1,0 +1,276 @@
+<%
+  title     = 'Users'
+  subtitle  = 'Search, filter and manage registered accounts'
+  adminPage = 'users'
+%>
+<%- include('layout') %>
+
+<div class="p-6 space-y-5">
+
+    <!-- ── Filters ──────────────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-xl p-4 flex flex-wrap items-end gap-3">
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Search</label>
+            <input id="filterEmail" type="text" placeholder="email or username…"
+                class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 w-56" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Role</label>
+            <select id="filterRole" class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 bg-white">
+                <option value="">All roles</option>
+                <option value="user">User</option>
+                <option value="moderator">Moderator</option>
+                <option value="superadmin">Superadmin</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Status</label>
+            <select id="filterSuspended" class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 bg-white">
+                <option value="">All</option>
+                <option value="false">Active</option>
+                <option value="true">Suspended</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Partner</label>
+            <select id="filterPartner" class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 bg-white">
+                <option value="">All</option>
+                <option value="true">Partners only</option>
+                <option value="false">Non-partners</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Verified</label>
+            <select id="filterVerified" class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 bg-white">
+                <option value="">All</option>
+                <option value="true">Verified</option>
+                <option value="false">Unverified</option>
+            </select>
+        </div>
+
+        <button id="applyFiltersBtn"
+            class="h-9 px-4 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+            Apply
+        </button>
+        <button id="clearFiltersBtn"
+            class="h-9 px-4 bg-silver-100 hover:bg-silver-200 text-woodsmoke-700 text-sm font-medium rounded-md transition-colors">
+            Clear
+        </button>
+
+        <!-- Result count -->
+        <div class="ml-auto text-xs text-woodsmoke-400 self-center" id="resultCount"></div>
+    </div>
+
+    <!-- ── Table ─────────────────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-silver-100 bg-silver-50">
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">User</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Role</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Status</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Credits</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Country</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Joined</th>
+                        <th class="text-right px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center py-12 text-woodsmoke-400 text-sm">Loading…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between px-4 py-3 border-t border-silver-100">
+            <button id="prevPageBtn"
+                class="h-8 px-3 text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                ← Prev
+            </button>
+            <span id="pageIndicator" class="text-xs text-woodsmoke-400"></span>
+            <button id="nextPageBtn"
+                class="h-8 px-3 text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                Next →
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Quick-action modal (suspend/verify/credits) ───────────────────────── -->
+<div id="actionModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-woodsmoke-950/50">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 space-y-4">
+        <h2 id="modalTitle" class="text-base font-semibold text-woodsmoke-950"></h2>
+        <div id="modalBody" class="space-y-3"></div>
+        <div class="flex gap-2 pt-1">
+            <button id="modalConfirmBtn"
+                class="flex-1 h-9 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+                Confirm
+            </button>
+            <button id="modalCancelBtn"
+                class="flex-1 h-9 bg-silver-100 hover:bg-silver-200 text-woodsmoke-700 text-sm font-medium rounded-md transition-colors">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const IS_SUPERADMIN = window.__ADMIN__.role === 'superadmin';
+let currentPage = 1;
+let totalPages  = 1;
+
+// ── Fetch & render users ──────────────────────────────────────────────────────
+async function fetchUsers(page = 1) {
+    const email     = document.getElementById('filterEmail').value.trim();
+    const role      = document.getElementById('filterRole').value;
+    const suspended = document.getElementById('filterSuspended').value;
+    const isPartner = document.getElementById('filterPartner').value;
+    const isEmailVerified = document.getElementById('filterVerified').value;
+
+    const params = new URLSearchParams({ page, limit: 25 });
+    if (email)     params.set('email', email);
+    if (role)      params.set('role', role);
+    if (suspended) params.set('suspended', suspended);
+    if (isPartner) params.set('isPartner', isPartner);
+    if (isEmailVerified) params.set('isEmailVerified', isEmailVerified);
+
+    const tbody   = document.getElementById('usersTableBody');
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-12 text-woodsmoke-400 text-sm">Loading…</td></tr>`;
+
+    try {
+        const data = await adminFetch(`/api/admin/users?${params}`);
+        currentPage = data.pagination.page;
+        totalPages  = data.pagination.pages;
+
+        document.getElementById('resultCount').textContent =
+            `${data.pagination.total.toLocaleString()} user${data.pagination.total !== 1 ? 's' : ''}`;
+        document.getElementById('pageIndicator').textContent =
+            `Page ${currentPage} of ${totalPages || 1}`;
+        document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+        document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+
+        if (!data.users.length) {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-12 text-woodsmoke-400 text-sm">No users found</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.users.map(u => `
+            <tr class="border-b border-silver-50 hover:bg-silver-50 transition-colors" data-user-id="${u._id}">
+                <td class="px-4 py-3">
+                    <a href="/admin/users/${u._id}" class="hover:text-orchid-600 transition-colors">
+                        <div class="font-medium text-woodsmoke-900">${esc(u.username || '—')}</div>
+                        <div class="text-xs text-woodsmoke-400">${esc(u.email || '—')}</div>
+                    </a>
+                </td>
+                <td class="px-4 py-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${roleBadge(u.role)}">
+                        ${esc(u.role)}
+                    </span>
+                    ${u.isPartner ? `<span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700">partner</span>` : ''}
+                </td>
+                <td class="px-4 py-3">
+                    ${u.accountSuspendedAt
+                        ? `<span class="inline-flex items-center gap-1 text-xs font-medium text-red-600"><span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>Suspended</span>`
+                        : u.isEmailVerified
+                            ? `<span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>Active</span>`
+                            : `<span class="inline-flex items-center gap-1 text-xs font-medium text-amber-600"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>Unverified</span>`
+                    }
+                </td>
+                <td class="px-4 py-3 text-woodsmoke-700">${u.credits ?? 0}</td>
+                <td class="px-4 py-3 text-woodsmoke-400 text-xs">${u.country || '—'}</td>
+                <td class="px-4 py-3 text-woodsmoke-400 text-xs">${formatDate(u.createdAt)}</td>
+                <td class="px-4 py-3">
+                    <div class="flex items-center justify-end gap-1">
+                        <a href="/admin/users/${u._id}"
+                            class="h-7 px-2.5 text-xs font-medium text-woodsmoke-600 hover:text-orchid-600 bg-silver-100 hover:bg-orchid-50 rounded transition-colors">
+                            View
+                        </a>
+                        ${u.accountSuspendedAt
+                            ? `<button onclick="quickUnsuspend('${u._id}', this)"
+                                class="h-7 px-2.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded transition-colors">
+                                Unsuspend
+                               </button>`
+                            : `<button onclick="quickSuspend('${u._id}', this)"
+                                class="h-7 px-2.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded transition-colors">
+                                Suspend
+                               </button>`
+                        }
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-12 text-red-400 text-sm">Failed to load users</td></tr>`;
+    }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function roleBadge(role) {
+    if (role === 'superadmin') return 'bg-orchid-100 text-orchid-700';
+    if (role === 'moderator')  return 'bg-blue-100 text-blue-700';
+    return 'bg-silver-100 text-woodsmoke-500';
+}
+
+// ── Quick inline actions ──────────────────────────────────────────────────────
+async function quickSuspend(userId, btn) {
+    if (!adminConfirm('Suspend this user?')) return;
+    btn.disabled = true;
+    try {
+        await adminFetch(`/api/admin/users/${userId}/suspend`, {
+            method: 'PATCH', body: JSON.stringify({ suspend: true })
+        });
+        showToast('User suspended');
+        fetchUsers(currentPage);
+    } finally { btn.disabled = false; }
+}
+async function quickUnsuspend(userId, btn) {
+    btn.disabled = true;
+    try {
+        await adminFetch(`/api/admin/users/${userId}/suspend`, {
+            method: 'PATCH', body: JSON.stringify({ suspend: false })
+        });
+        showToast('User unsuspended');
+        fetchUsers(currentPage);
+    } finally { btn.disabled = false; }
+}
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+document.getElementById('prevPageBtn').addEventListener('click', () => {
+    if (currentPage > 1) fetchUsers(currentPage - 1);
+});
+document.getElementById('nextPageBtn').addEventListener('click', () => {
+    if (currentPage < totalPages) fetchUsers(currentPage + 1);
+});
+
+// ── Filter controls ───────────────────────────────────────────────────────────
+document.getElementById('applyFiltersBtn').addEventListener('click', () => fetchUsers(1));
+document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+    ['filterEmail','filterRole','filterSuspended','filterPartner','filterVerified']
+        .forEach(id => { document.getElementById(id).value = ''; });
+    fetchUsers(1);
+});
+document.getElementById('filterEmail').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fetchUsers(1);
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+fetchUsers(1);
+</script>
+
+<%- include('layout-end') %>
