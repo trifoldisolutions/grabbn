@@ -80,6 +80,10 @@ const bucketSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    isPromoted: {
+      type: Boolean,
+      default: false
+    },
     isPaywalled: {
       type: Boolean,
       default: false

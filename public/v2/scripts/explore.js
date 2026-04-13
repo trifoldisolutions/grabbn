@@ -1,32 +1,104 @@
-// Explore feed — infinite scroll (skip-based pagination, stable between score runs)
+// Explore feed — named rows (promoted/paywalled/new/revisit) cycling between grid sections
 (function () {
-    let skip    = 0;
-    const LIMIT = 20;
-    let loading = false;
-    let hasMore = true;
+    const GRID_SIZE  = 9;
+    const ROW_SIZE   = 9;
+    const ROW_CYCLE  = ['paywalled', 'promoted', 'new', 'revisit'];
+    const ROW_LABELS = { promoted: 'Promoted', paywalled: 'Paywalled', new: 'New', revisit: 'Revisit' };
 
-    const grid   = document.getElementById('explore-grid');
+    let cycleIndex = 0;
+    let gridSkip   = 0;
+    let seenIds    = new Set();
+    let loading    = false;
+    let hasMore    = true;
+
+    const feed   = document.getElementById('explore-feed');
     const loader = document.getElementById('explore-loader');
 
-    async function loadPage() {
+    // ── API ───────────────────────────────────────────────────────────────────
+
+    function excludeParam() {
+        return seenIds.size ? `&excludeIds=${[...seenIds].join(',')}` : '';
+    }
+
+    async function fetchRow(type) {
+        try {
+            const res = await fetch(`/api/v2/explore/${type}?limit=${ROW_SIZE}${excludeParam()}`);
+            if (!res.ok) return [];
+            const { buckets } = await res.json();
+            return buckets || [];
+        } catch { return []; }
+    }
+
+    async function fetchGrid() {
+        try {
+            const res = await fetch(`/api/v2/explore?skip=${gridSkip}&limit=${GRID_SIZE}${excludeParam()}`);
+            if (!res.ok) return { buckets: [], hasMore: false };
+            return res.json();
+        } catch { return { buckets: [], hasMore: false }; }
+    }
+
+    // ── Renderers ─────────────────────────────────────────────────────────────
+
+    function renderRow(type, buckets) {
+        if (!buckets.length) return;
+
+        const section = document.createElement('div');
+        section.className = 'relative border-t border-b border-silver-100 pt-4 pb-2 mb-6';
+
+        const label = document.createElement('h3');
+        label.className = 'absolute -top-2.5 left-4 px-2 py-0.5 text-xs font-bold uppercase tracking-widest bg-orchid-600 text-orchid-200 rounded';
+        label.textContent = ROW_LABELS[type];
+
+        const row = document.createElement('div');
+        // Match grid card widths: 2-col on mobile, 3-col on sm+
+        row.className = 'grid grid-flow-col auto-cols-[calc(50%-2px)] sm:auto-cols-[calc(33.333%-3px)] gap-1 overflow-x-auto pb-2';
+        row.style.scrollbarWidth = 'none';
+
+        buckets.forEach(b => {
+            seenIds.add(String(b._id));
+            row.appendChild(createCard(b));
+        });
+
+        section.appendChild(label);
+        section.appendChild(row);
+        feed.insertBefore(section, loader);
+    }
+
+    function renderGridSection(buckets) {
+        if (!buckets.length) return;
+
+        const section = document.createElement('div');
+        section.className = 'grid grid-cols-2 sm:grid-cols-3 gap-1 mb-6';
+
+        buckets.forEach(b => {
+            seenIds.add(String(b._id));
+            section.appendChild(createCard(b));
+        });
+
+        feed.insertBefore(section, loader);
+    }
+
+    // ── Main load ─────────────────────────────────────────────────────────────
+
+    async function loadNextSection() {
         if (loading || !hasMore) return;
         loading = true;
         loader.classList.remove('hidden');
 
         try {
-            const res = await fetch(`/api/v2/explore?skip=${skip}&limit=${LIMIT}`);
-            if (!res.ok) throw new Error('Feed request failed');
-            const { buckets, hasMore: more } = await res.json();
+            const rowType    = ROW_CYCLE[cycleIndex % ROW_CYCLE.length];
+            const rowBuckets = await fetchRow(rowType);
+            renderRow(rowType, rowBuckets);
+            cycleIndex++;
 
-            hasMore = more;
-            skip   += buckets.length;
+            const { buckets: gridBuckets, hasMore: more } = await fetchGrid();
+            renderGridSection(gridBuckets);
+            gridSkip += gridBuckets.length;
+            hasMore   = more;
 
-            if (buckets.length === 0 && skip === 0) {
-                grid.innerHTML = '<p class="col-span-5 text-sm text-gray-500 text-center py-12">No public buckets yet.</p>';
-                return;
+            if (cycleIndex === 1 && gridBuckets.length === 0 && rowBuckets.length === 0) {
+                feed.insertAdjacentHTML('afterbegin', '<p class="text-sm text-gray-500 text-center py-12">No public buckets yet.</p>');
             }
-
-            buckets.forEach(b => grid.appendChild(createCard(b)));
         } catch (e) {
             console.error('Explore load error:', e);
         } finally {
@@ -35,11 +107,11 @@
         }
     }
 
-    // ── SVG assets ──────────────────────────────────────────────────────────
+    // ── SVG assets ────────────────────────────────────────────────────────────
 
     const NO_THUMB_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" class="text-gray-400" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>`;
 
-    const GRAB_BTN_ICON_DEFAULT = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0V6.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/></g></svg>`;
+    const GRAB_BTN_ICON_DEFAULT = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/></g></svg>`;
 
     const GRAB_BTN_ICON_GRABBED = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.5 5a2.5 2.5 0 0 1 2.461 2.058A2.5 2.5 0 0 1 21 9.5V12a8 8 0 0 1-8 8h-.674a8 8 0 0 1-7.155-4.422L2.329 9.894c-.36-.72-.093-1.683.747-2.028c1.043-.427 2.034-.507 3.055.012q.443.227.869.584V7.5a2.5 2.5 0 0 1 3.388-2.338a2.498 2.498 0 0 1 4.224 0A2.5 2.5 0 0 1 15.5 5"/></g></svg>`;
 
@@ -53,11 +125,11 @@
 
     const FLAG_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M5 3a1 1 0 0 1 1 1v1h12.138a1 1 0 0 1 .765 1.644L15.44 11l3.463 4.356A1 1 0 0 1 18.138 17H6v3a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1"/></g></svg>`;
 
-    // ── Card builder ─────────────────────────────────────────────────────────
+    // ── Card builder ──────────────────────────────────────────────────────────
 
     function createCard(b) {
         const card = document.createElement('div');
-        card.className = 'flex flex-col rounded-md bg-white border border-silver-100';
+        card.className = 'flex flex-col rounded-md bg-white';
 
         const isCurator = b.curator.userId && b.curator.userId === window.__GRABBN_USER__?.anonymousId;
         const grabbed   = !!b.isGrabbed;
@@ -74,12 +146,17 @@
                 <span class="grab-count">${formatNum(b.grabCount ?? 0)}</span>
                </button>`;
 
+        const promotedBadge = b.isPromoted
+            ? `<span class="px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-400 text-white leading-none">Promoted</span>`
+            : '';
+
         card.innerHTML = `
             <div class="relative p-2">
                 <a href="/v2/b/${escAttr(b._id)}" class="block aspect-square overflow-hidden rounded-sm bg-silver-100">
                     ${thumbContent}
                 </a>
                 <div class="absolute bottom-4 right-4 flex items-center gap-1">
+                    ${promotedBadge}
                     <span class="px-1.5 py-0.5 rounded text-[12px] font-semibold bg-white/80 backdrop-blur-sm text-gray-600 leading-none">
                         ${b.linkCount} link${b.linkCount !== 1 ? 's' : ''}
                     </span>
@@ -132,7 +209,7 @@
         return card;
     }
 
-    // ── Context menu handler ──────────────────────────────────────────────────
+    // ── Context menu ──────────────────────────────────────────────────────────
 
     function onMenuClick(e) {
         e.preventDefault();
@@ -250,11 +327,10 @@
     // ── Infinite scroll ───────────────────────────────────────────────────────
 
     const observer = new IntersectionObserver(entries => {
-        if (entries[0].isIntersecting) loadPage();
+        if (entries[0].isIntersecting) loadNextSection();
     }, { rootMargin: '300px' });
 
     observer.observe(loader);
 
-    // Initial load
-    loadPage();
+    loadNextSection();
 })();

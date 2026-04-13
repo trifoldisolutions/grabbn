@@ -1799,15 +1799,17 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
     try {
-        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
-        const skip  = Math.max(0, parseInt(req.query.skip)  || 0);
+        const limit      = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+        const skip       = Math.max(0, parseInt(req.query.skip)  || 0);
+        const excludeIds = (req.query.excludeIds || '').split(',').filter(Boolean).slice(0, 200);
 
         // Phase 1: fetch candidates sorted by pre-computed exploreScore
         const candidates = await Bucket.find({
             ...FILTER_PUBLIC,
-            isDraft:   { $ne: true },
-            name:      { $ne: 'Singletons' },
-            thumbnail: { $exists: true, $ne: '' }
+            isDraft:     { $ne: true },
+            isPaywalled: { $ne: true },
+            name:        { $ne: 'Singletons' },
+            thumbnail:   { $exists: true, $ne: '' }
         })
             .sort({ exploreScore: -1 })
             .skip(skip)
@@ -1824,6 +1826,8 @@ app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
                 ? { anonymousId: req.user.anonymousId }
                 : null;
 
+        const clientExcluded = new Set(excludeIds.map(String));
+
         let unseenCandidates = candidates;
         if (impressionFilter) {
             const [seen, skipped] = await Promise.all([
@@ -1835,8 +1839,10 @@ app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
             const seenIds    = new Set(seen.map(i => String(i.bucketId)));
             const skippedIds = new Set(skipped.map(s => String(s.bucketId)));
             unseenCandidates = candidates.filter(b =>
-                !seenIds.has(String(b._id)) && !skippedIds.has(String(b._id))
+                !seenIds.has(String(b._id)) && !skippedIds.has(String(b._id)) && !clientExcluded.has(String(b._id))
             );
+        } else if (clientExcluded.size) {
+            unseenCandidates = candidates.filter(b => !clientExcluded.has(String(b._id)));
         }
 
         // Phase 3: personalize for authenticated non-anonymous users
@@ -1985,6 +1991,157 @@ app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
     } catch (err) {
         console.error('Explore feed error:', err);
         res.status(500).json({ error: 'Failed to load explore feed' });
+    }
+});
+
+// ---------------------------------------------------------------------------
+// V2 API — named explore rows (promoted / paywalled / new / revisit)
+// ---------------------------------------------------------------------------
+
+const EXPLORE_ROW_SELECT = 'name thumbnail links isPaywalled isPromoted price viewCount shareCount ratingSum ratingCount createdAt userId grabbedBy';
+
+function parseExcludeIds(raw) {
+    return (raw || '').split(',').filter(Boolean).slice(0, 200);
+}
+
+function formatExploreRow(buckets, grabbedSet) {
+    return buckets.map(b => ({
+        _id:         b._id,
+        name:        b.name,
+        thumbnail:   b.thumbnail || (b.links || []).find(l => l.image)?.image || '',
+        linkCount:   (b.links || []).length,
+        isPaywalled: b.isPaywalled || false,
+        isPromoted:  b.isPromoted  || false,
+        price:       b.price       || 0,
+        viewCount:   b.viewCount   || 0,
+        shareCount:  b.shareCount  || 0,
+        ratingSum:   b.ratingSum   || 0,
+        ratingCount: b.ratingCount || 0,
+        isGrabbed:   grabbedSet.has(String(b._id)),
+        grabCount:   (b.grabbedBy || []).length,
+        grabbers:    (b.grabbedBy || []).slice(-4).map(g => ({ username: g.username || '?', avatar: g.avatar || '' })),
+        curator: {
+            username: b.userId?.username    || 'Unknown',
+            userId:   b.userId?.anonymousId || '',
+            avatar:   b.userId?.avatar      || '',
+            bucketCount: 0,
+            isFollowing: false
+        }
+    }));
+}
+
+async function buildGrabbedSet(buckets, userId) {
+    if (!userId || !buckets.length) return new Set();
+    const grabs = await Bucket.find({
+        _id: { $in: buckets.map(b => b._id) },
+        'grabbedBy.userId': userId
+    }).select('_id').lean();
+    return new Set(grabs.map(g => String(g._id)));
+}
+
+// Promoted row
+app.get('/api/v2/explore/promoted', anonymousAuth, async (req, res) => {
+    try {
+        const excludeIds = parseExcludeIds(req.query.excludeIds);
+        const buckets = await Bucket.find({
+            ...FILTER_PUBLIC,
+            isPromoted: true,
+            isDraft:    { $ne: true },
+            thumbnail:  { $exists: true, $ne: '' },
+            ...(excludeIds.length ? { _id: { $nin: excludeIds } } : {})
+        })
+            .sort({ exploreScore: -1 })
+            .limit(9)
+            .populate('userId', 'username anonymousId avatar')
+            .select(EXPLORE_ROW_SELECT)
+            .lean();
+
+        const grabbedSet = await buildGrabbedSet(buckets, req.user?._id);
+        res.json({ buckets: formatExploreRow(buckets, grabbedSet) });
+    } catch (err) {
+        console.error('Explore promoted row error:', err);
+        res.status(500).json({ error: 'Failed to load promoted row' });
+    }
+});
+
+// Paywalled row — excludes promoted buckets to avoid overlap
+app.get('/api/v2/explore/paywalled', anonymousAuth, async (req, res) => {
+    try {
+        const excludeIds = parseExcludeIds(req.query.excludeIds);
+        const buckets = await Bucket.find({
+            ...FILTER_PUBLIC,
+            isPaywalled: true,
+            isPromoted:  { $ne: true },
+            isDraft:     { $ne: true },
+            thumbnail:   { $exists: true, $ne: '' },
+            ...(excludeIds.length ? { _id: { $nin: excludeIds } } : {})
+        })
+            .sort({ exploreScore: -1 })
+            .limit(9)
+            .populate('userId', 'username anonymousId avatar')
+            .select(EXPLORE_ROW_SELECT)
+            .lean();
+
+        const grabbedSet = await buildGrabbedSet(buckets, req.user?._id);
+        res.json({ buckets: formatExploreRow(buckets, grabbedSet) });
+    } catch (err) {
+        console.error('Explore paywalled row error:', err);
+        res.status(500).json({ error: 'Failed to load paywalled row' });
+    }
+});
+
+// New row — sorted by creation date
+app.get('/api/v2/explore/new', anonymousAuth, async (req, res) => {
+    try {
+        const excludeIds = parseExcludeIds(req.query.excludeIds);
+        const buckets = await Bucket.find({
+            ...FILTER_PUBLIC,
+            isDraft:   { $ne: true },
+            thumbnail: { $exists: true, $ne: '' },
+            ...(excludeIds.length ? { _id: { $nin: excludeIds } } : {})
+        })
+            .sort({ createdAt: -1 })
+            .limit(9)
+            .populate('userId', 'username anonymousId avatar')
+            .select(EXPLORE_ROW_SELECT)
+            .lean();
+
+        const grabbedSet = await buildGrabbedSet(buckets, req.user?._id);
+        res.json({ buckets: formatExploreRow(buckets, grabbedSet) });
+    } catch (err) {
+        console.error('Explore new row error:', err);
+        res.status(500).json({ error: 'Failed to load new row' });
+    }
+});
+
+// Revisit row — buckets the user viewed but never grabbed (logged-in only)
+app.get('/api/v2/explore/revisit', anonymousAuth, async (req, res) => {
+    try {
+        if (!req.user?._id || req.user.isAnonymous) return res.json({ buckets: [] });
+
+        const excludeIds = parseExcludeIds(req.query.excludeIds);
+        const views      = await BucketView.find({ userId: req.user._id }).select('bucketId').lean();
+        const viewedIds  = views.map(v => v.bucketId);
+        if (!viewedIds.length) return res.json({ buckets: [] });
+
+        const buckets = await Bucket.find({
+            ...FILTER_PUBLIC,
+            _id:                { $in: viewedIds, ...(excludeIds.length ? { $nin: excludeIds } : {}) },
+            'grabbedBy.userId': { $ne: req.user._id },
+            isDraft:            { $ne: true },
+            thumbnail:          { $exists: true, $ne: '' }
+        })
+            .sort({ exploreScore: -1 })
+            .limit(9)
+            .populate('userId', 'username anonymousId avatar')
+            .select(EXPLORE_ROW_SELECT)
+            .lean();
+
+        const grabbedSet = await buildGrabbedSet(buckets, req.user._id);
+        res.json({ buckets: formatExploreRow(buckets, grabbedSet) });
+    } catch (err) {
+        console.error('Explore revisit row error:', err);
+        res.status(500).json({ error: 'Failed to load revisit row' });
     }
 });
 
