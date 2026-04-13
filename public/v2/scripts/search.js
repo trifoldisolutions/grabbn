@@ -150,7 +150,7 @@
 
     function createCard(b) {
         const card = document.createElement('a');
-        card.href      = `/v2/bucket/${b._id}`;
+        card.href      = `/v2/b/${b._id}`;
         card.className = 'flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer';
 
         const thumb = b.thumbnail
@@ -278,7 +278,7 @@
                 : IMG_PH;
         });
         const card = document.createElement('a');
-        card.href      = `/v2/repository/${encodeURIComponent(repo.domain)}`;
+        card.href      = `/v2/o/${encodeURIComponent(repo.domain)}/${encodeURIComponent(repo.tag || '')}`;
         card.className = 'block rounded-md overflow-hidden cursor-pointer hover:shadow-md transition-shadow bg-white border border-gray-100';
         card.innerHTML = `
             <div class="grid grid-cols-2 gap-0.5 aspect-square">${cells.join('')}</div>
@@ -373,7 +373,7 @@
         btn.dataset.busy = '1';
 
         const bucketId  = btn.dataset.bucketId;
-        const url       = `${window.location.origin}/v2/bucket/${bucketId}`;
+        const url       = `${window.location.origin}/v2/b/${bucketId}`;
         const origHtml  = btn.innerHTML;
         const u         = window.__GRABBN_USER__;
         const shareText = (u && !u.isAnonymous && u.username)

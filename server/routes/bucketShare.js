@@ -41,7 +41,7 @@ router.get('/bucket/:bucketId/thumbnail.jpg', async (req, res) => {
 
 // Redirect old share links to the main bucket page
 router.get('/bucket/:bucketId', (req, res) => {
-    res.redirect(301, `/v2/bucket/${req.params.bucketId}`);
+    res.redirect(301, `/v2/b/${req.params.bucketId}`);
 });
 
 export default router;

@@ -26,7 +26,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/tailwind/output.css">
-    <script>window.__GRABBN_USER__ = { isAnonymous: <%- JSON.stringify(user?.isAnonymous ?? true) %>, anonymousId: <%- JSON.stringify(user?.anonymousId ?? null) %>, username: <%- JSON.stringify((!user?.isAnonymous && user?.username) ? user.username : null) %> };</script>
+    <script>window.__GRABBN_USER__ = { isAnonymous: <%- JSON.stringify(user?.isAnonymous ?? true) %>, anonymousId: <%- JSON.stringify(user?.anonymousId ?? null) %>, username: <%- JSON.stringify((!user?.isAnonymous && user?.username) ? user.username : null) %>, isPartner: <%- JSON.stringify(user?.isPartner ?? false) %> };</script>
 </head>
 <body class="flex h-screen bg-white overflow-hidden">
 

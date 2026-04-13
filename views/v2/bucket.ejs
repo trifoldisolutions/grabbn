@@ -500,7 +500,7 @@
         const el = document.getElementById('bvTimeAgo');
         if (el) el.textContent = label;
     })();
-    const shareUrl  = '<%= `${shareBaseUrl}/v2/bucket/${bucketId}?ref=share` %>';
+    const shareUrl  = '<%= `${shareBaseUrl}/v2/b/${bucketId}?ref=share` %>';
     const linkHrefs = <%- JSON.stringify(visibleLinks.map(function(l){ return l.href; })) %>;
 
     // Track link clicks
@@ -874,7 +874,7 @@
 
             card.innerHTML = `
                 <div class="relative p-2">
-                    <a href="/v2/bucket/${esc(b._id)}" class="block aspect-square overflow-hidden rounded-sm bg-silver-100">
+                    <a href="/v2/b/${esc(b._id)}" class="block aspect-square overflow-hidden rounded-sm bg-silver-100">
                         ${thumbContent}
                     </a>
                     <div class="absolute bottom-4 right-4 flex items-center gap-1">
@@ -1008,7 +1008,7 @@
                             ? '<span class="inline-flex items-center gap-0.75">' + STAR_ICON + esc(String(e.snapshot.ratingAvg)) + '</span>'
                             : 'No ratings';
                         replacement = '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-silver-100 border border-silver-200 text-xs text-woodsmoke-700" data-bucket-id="' + esc(e.value) + '">'
-                            + '<a href="/v2/bucket/' + esc(e.value) + '" '
+                            + '<a href="/v2/b/' + esc(e.value) + '" '
                             + 'class="inline-flex items-center gap-1 font-semibold text-woodsmoke-800 hover:text-orchid-700 transition-colors">'
                             + BUCKET_ICON + esc(e.snapshot.name) + '</a>'
                             + '<span class="text-woodsmoke-400">·</span>'

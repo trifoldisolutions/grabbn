@@ -1,0 +1,386 @@
+================================================================================
+  GRABBN — ADMIN PANEL BUILD PLAN
+================================================================================
+Last updated: 2026-04-11
+
+OVERVIEW
+--------
+Build a full admin panel for the Grabbn platform, accessible at /admin/* and
+backed by protected API routes at /api/admin/*. Two admin tiers are supported:
+  - moderator    : content moderation, user management (limited)
+  - superadmin   : full access including financial, system, and partner controls
+
+================================================================================
+  PHASE 1 — FOUNDATION
+================================================================================
+
+[ ] 1.1  User Model — Add Admin Role Field
+    File : server/models/user.js
+    Task : Add role field to the User schema:
+             role: {
+               type: String,
+               enum: ['user', 'moderator', 'superadmin'],
+               default: 'user'
+             }
+    Note : First superadmin must be set manually in the database.
+
+[ ] 1.2  Admin Auth Middleware
+    File : server/middleware/adminAuth.js  (new file)
+    Task : Export two middleware functions:
+             requireModerator(req, res, next)
+               → allows moderator + superadmin
+             requireSuperadmin(req, res, next)
+               → allows superadmin only
+    Note : Both must be stacked after anonymousAuth (which populates req.user).
+           Return 403 if role check fails.
+
+[ ] 1.3  Admin Router — Bootstrap
+    File : server/routes/admin.js  (new file)
+    Task : Create the root admin router.
+           Apply anonymousAuth + requireModerator to all routes via router.use().
+           Sub-routers (users, reports, buckets, etc.) will be mounted here.
+
+[ ] 1.4  Mount Admin Router in serve.js
+    File : serve.js
+    Task : Import and mount:
+             app.use('/api/admin', adminRouter);
+           Place it after standard API route mounts.
+
+[ ] 1.5  Admin UI — Base Layout & Entry Point
+    Files: views/admin/layout.ejs  (new)
+           views/admin/login.ejs   (new, if admin login is separate)
+    Task : Create a base EJS layout for the admin panel:
+           - Sidebar navigation (links to each section)
+           - Top bar (logged-in admin name, role badge, logout)
+           - Content area slot
+           - Tailwind-based, dark or neutral theme distinct from the main app
+    Note : Admin UI is served at /admin/* by Express directly (not a SPA).
+           Add app.get('/admin', requireModerator, ...) page routes in serve.js
+           or a dedicated views router.
+
+================================================================================
+  PHASE 2 — USER MANAGEMENT
+================================================================================
+
+[ ] 2.1  API Routes — /api/admin/users
+    File : server/routes/admin/users.js  (new)
+    Routes:
+      GET    /api/admin/users
+               → list users with pagination + filters:
+                 email, username, role, isEmailVerified, isPartner, flagged,
+                 accountSuspendedAt (suspended), createdAt range, country
+      GET    /api/admin/users/:userId
+               → full user detail (buckets count, credits, partner status,
+                 transaction count, reports made against them, join date, geo)
+      PATCH  /api/admin/users/:userId/role
+               → change role (moderator ↔ user; superadmin only for promotions)
+               Tier: superadmin only
+      PATCH  /api/admin/users/:userId/suspend
+               → suspend or unsuspend account (toggle accountSuspendedAt)
+               Tier: moderator+
+      PATCH  /api/admin/users/:userId/verify
+               → force-mark email as verified
+               Tier: moderator+
+      PATCH  /api/admin/users/:userId/partner
+               → grant or revoke isPartner flag
+               Tier: superadmin only
+      PATCH  /api/admin/users/:userId/credits
+               → add or subtract credits (with a reason string for audit)
+               Tier: superadmin only
+      DELETE /api/admin/users/:userId
+               → hard-delete user immediately (bypass 70-hour window)
+               Tier: superadmin only
+
+[ ] 2.2  UI Page — /admin/users
+    File : views/admin/users.ejs  (new)
+    Task : Table of users with:
+           - Search bar (email / username)
+           - Filter dropdowns (role, status, partner)
+           - Sortable columns (joined, credits, country)
+           - Pagination
+           - Row actions: View, Suspend, Verify, Delete (role-gated in UI too)
+    File : views/admin/user-detail.ejs  (new)
+    Task : Single user view with:
+           - Profile summary card (email, username, role badge, join date, geo)
+           - Stats (buckets, comments, credits, transactions)
+           - Action buttons (suspend, verify, adjust credits, change role)
+           - Recent activity log (last 10 buckets, last 5 reports against them)
+
+================================================================================
+  PHASE 3 — CONTENT MODERATION
+================================================================================
+
+[ ] 3.1  Report Model — Review Status Field
+    File : server/models/report.js  (check if exists, may need new file)
+    Task : Ensure the Report document has:
+             status: { type: String, enum: ['pending', 'reviewed', 'actioned'], default: 'pending' }
+             reviewedBy: { type: ObjectId, ref: 'User' }
+             reviewedAt: Date
+             action: String  (e.g. 'dismissed', 'content_removed', 'user_banned')
+    Note : If Report model doesn't exist yet as a separate collection, create it.
+           Buckets and comments currently embed report data — evaluate whether to
+           migrate or keep inline.
+
+[ ] 3.2  API Routes — /api/admin/reports
+    File : server/routes/admin/reports.js  (new)
+    Routes:
+      GET    /api/admin/reports
+               → paginated list of pending reports
+                 filter by: type (bucket | comment), status, date range
+      GET    /api/admin/reports/:reportId
+               → single report detail with full context
+                 (reported content, reporter info, reported user info)
+      PATCH  /api/admin/reports/:reportId/dismiss
+               → mark reviewed, no action taken
+               Tier: moderator+
+      PATCH  /api/admin/reports/:reportId/remove
+               → remove the reported content (delete bucket or comment)
+                 mark report as actioned
+               Tier: moderator+
+      PATCH  /api/admin/reports/:reportId/ban
+               → remove content + suspend the reported user
+               Tier: moderator+
+
+[ ] 3.3  UI Page — /admin/reports
+    File : views/admin/reports.ejs  (new)
+    Task : Reports queue UI:
+           - Tabs: Pending / Reviewed / All
+           - Filter by type (bucket / comment)
+           - Each report card shows: reported content preview, reporter,
+             reported user, report reason, date
+           - Action buttons per card: Dismiss | Remove Content | Remove + Ban
+           - After action, card is removed from pending queue (optimistic UI)
+
+================================================================================
+  PHASE 4 — BUCKET & CONTENT MANAGEMENT
+================================================================================
+
+[ ] 4.1  API Routes — /api/admin/buckets
+    File : server/routes/admin/buckets.js  (new)
+    Routes:
+      GET    /api/admin/buckets
+               → list all buckets (any visibility) with filters:
+                 owner, visibility, topic, isPaywalled, createdAt range
+                 sort by: views, rating, exploreScore, createdAt
+      GET    /api/admin/buckets/:bucketId
+               → full bucket detail (owner info, links list, stats, reports)
+      PATCH  /api/admin/buckets/:bucketId/visibility
+               → force-set visibility (public / unlisted / private / taken_down)
+               Tier: moderator+
+      PATCH  /api/admin/buckets/:bucketId/feature
+               → add or remove from Showroom (set/unset featured flag)
+               Tier: moderator+
+      PATCH  /api/admin/buckets/:bucketId/explore-score
+               → manually override exploreScore
+               Tier: superadmin only
+      DELETE /api/admin/buckets/:bucketId
+               → hard delete bucket
+               Tier: moderator+
+
+[ ] 4.2  UI Page — /admin/buckets
+    File : views/admin/buckets.ejs  (new)
+    Task : Buckets table with:
+           - Filters (topic, visibility, owner search, paywall toggle)
+           - Sort by views / score / date
+           - Row actions: View, Feature, Take Down, Delete
+           - "Feature" toggle syncs with Showroom directly
+
+================================================================================
+  PHASE 5 — PARTNER PROGRAM MANAGEMENT
+================================================================================
+
+[ ] 5.1  Partner Application Model (if not already tracked)
+    File : server/models/partnerApplication.js  (new, if needed)
+    Fields: userId, appliedAt, status (pending/approved/rejected),
+            reviewedBy, reviewedAt, rejectionReason
+
+[ ] 5.2  API Routes — /api/admin/partners
+    File : server/routes/admin/partners.js  (new)
+    Routes:
+      GET    /api/admin/partners/applications
+               → list partner applications (filter: pending / all)
+               Tier: superadmin only
+      PATCH  /api/admin/partners/applications/:userId/approve
+               → set isPartner = true on User, update application status,
+                 notify user
+               Tier: superadmin only
+      PATCH  /api/admin/partners/applications/:userId/reject
+               → update application status with reason, notify user
+               Tier: superadmin only
+      GET    /api/admin/partners
+               → list all current partners with payout stats (Stripe Connect)
+               Tier: superadmin only
+      PATCH  /api/admin/partners/:userId/revoke
+               → revoke partner status, disable ad controls and promotion access
+               Tier: superadmin only
+
+[ ] 5.3  UI Page — /admin/partners
+    File : views/admin/partners.ejs  (new)
+    Task : Two tabs:
+           - Applications tab: list of pending applicants with Approve/Reject
+           - Partners tab: active partners with Stripe payout summary,
+             Revoke button per partner
+
+================================================================================
+  PHASE 6 — ANALYTICS DASHBOARD
+================================================================================
+
+[ ] 6.1  API Routes — /api/admin/analytics
+    File : server/routes/admin/analytics.js  (new)
+    Routes:
+      GET    /api/admin/analytics/overview
+               → { newUsers, activeUsers, bucketsCreated, linksAdded }
+                 grouped by day for last 30 days
+               Tier: moderator+
+      GET    /api/admin/analytics/content
+               → top buckets by views / ratings, top topics, top repositories
+               Tier: moderator+
+      GET    /api/admin/analytics/revenue
+               → credits purchased, paywall payments, partner payouts
+                 grouped by day/month
+               Tier: superadmin only
+      GET    /api/admin/analytics/explore
+               → explore feed stats: impressions, skips, clicks,
+                 top surfaced topics
+               Tier: superadmin only
+
+[ ] 6.2  UI Page — /admin/analytics (dashboard home)
+    File : views/admin/analytics.ejs  (new)
+    Task : Overview dashboard with:
+           - KPI cards: Users today, Buckets created today, Revenue this month
+           - Line chart: signups + bucket creation over last 30 days
+           - Bar chart: top 10 topics by engagement
+           - Revenue section (superadmin only, hidden for moderators)
+    Note : Use a lightweight chart library (Chart.js or similar) — no heavy deps.
+
+================================================================================
+  PHASE 7 — SYSTEM TOOLS
+================================================================================
+
+[ ] 7.1  API Routes — /api/admin/system
+    File : server/routes/admin/system.js  (new)
+    Routes:
+      GET    /api/admin/system/health
+               → ping MongoDB, Stripe, Resend — return status of each
+               Tier: superadmin only
+      POST   /api/admin/system/notify
+               → broadcast a platform notification to all users or a segment
+                 body: { message, targetRole?, targetCountry? }
+               Tier: superadmin only
+      GET    /api/admin/system/jobs
+               → status of background jobs (buildExploreScores, buildRepositories)
+                 last run time, next scheduled run
+               Tier: superadmin only
+      POST   /api/admin/system/jobs/:jobName/run
+               → manually trigger a background job
+               Tier: superadmin only
+
+[ ] 7.2  UI Page — /admin/system
+    File : views/admin/system.ejs  (new)
+    Task : System health panel:
+           - Status indicators for MongoDB, Stripe, Resend (green/red)
+           - Background jobs table with last run time + manual trigger button
+           - Broadcast notification form (message + optional target filter)
+
+================================================================================
+  PHASE 8 — AUDIT LOG
+================================================================================
+
+[ ] 8.1  Audit Log Model
+    File : server/models/adminAuditLog.js  (new)
+    Fields: adminUserId, adminRole, action, targetType (user|bucket|report|...),
+            targetId, metadata (JSON), createdAt
+    Task : Every destructive or privileged admin action writes a log entry.
+           Covered actions: suspend, delete user, delete bucket, change role,
+           adjust credits, approve/reject partner, broadcast notification.
+
+[ ] 8.2  Audit Log API Route
+    Route: GET /api/admin/audit
+             → paginated audit log with filters (admin, action type, date range)
+           Tier: superadmin only
+
+[ ] 8.3  UI Page — /admin/audit
+    File : views/admin/audit.ejs  (new)
+    Task : Table of audit log entries — who did what to whom and when.
+
+================================================================================
+  ROLE PERMISSION MATRIX
+================================================================================
+
+  Action                            moderator   superadmin
+  --------------------------------  ----------  ----------
+  View user list                       YES         YES
+  Suspend / unsuspend user             YES         YES
+  Force verify email                   YES         YES
+  Change user role                     NO          YES
+  Grant / revoke partner               NO          YES
+  Adjust credits                       NO          YES
+  Hard delete user                     NO          YES
+  View reports queue                   YES         YES
+  Dismiss report                       YES         YES
+  Remove reported content              YES         YES
+  Remove content + ban user            YES         YES
+  View all buckets                     YES         YES
+  Take down / change visibility        YES         YES
+  Feature in Showroom                  YES         YES
+  Override exploreScore                NO          YES
+  Hard delete bucket                   YES         YES
+  View partner applications            NO          YES
+  Approve / reject partner             NO          YES
+  Revoke partner status                NO          YES
+  View analytics overview              YES         YES
+  View revenue analytics               NO          YES
+  View explore analytics               NO          YES
+  System health check                  NO          YES
+  Broadcast notification               NO          YES
+  Trigger background jobs              NO          YES
+  View audit log                       NO          YES
+
+================================================================================
+  FILE STRUCTURE (target state)
+================================================================================
+
+  server/
+  ├── middleware/
+  │   ├── anonymousAuth.js        (existing)
+  │   └── adminAuth.js            (NEW — requireModerator, requireSuperadmin)
+  ├── models/
+  │   ├── user.js                 (MODIFY — add role field)
+  │   ├── partnerApplication.js   (NEW)
+  │   └── adminAuditLog.js        (NEW)
+  ├── routes/
+  │   ├── admin.js                (NEW — root admin router)
+  │   └── admin/
+  │       ├── users.js            (NEW)
+  │       ├── reports.js          (NEW)
+  │       ├── buckets.js          (NEW)
+  │       ├── partners.js         (NEW)
+  │       ├── analytics.js        (NEW)
+  │       ├── system.js           (NEW)
+  │       └── audit.js            (NEW)
+  views/
+  └── admin/
+      ├── layout.ejs              (NEW — shared admin shell)
+      ├── analytics.ejs           (NEW — dashboard home)
+      ├── users.ejs               (NEW)
+      ├── user-detail.ejs         (NEW)
+      ├── reports.ejs             (NEW)
+      ├── buckets.ejs             (NEW)
+      ├── partners.ejs            (NEW)
+      ├── system.ejs              (NEW)
+      └── audit.ejs               (NEW)
+
+================================================================================
+  BUILD ORDER (recommended)
+================================================================================
+
+  Phase 1  →  Foundation (model, middleware, router mount)       ← start here
+  Phase 2  →  User Management
+  Phase 3  →  Reports / Moderation Queue
+  Phase 4  →  Bucket Management
+  Phase 5  →  Partner Program
+  Phase 6  →  Analytics Dashboard
+  Phase 7  →  System Tools
+  Phase 8  →  Audit Log
+
+================================================================================

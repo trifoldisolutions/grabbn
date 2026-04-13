@@ -3,10 +3,11 @@ import Bucket from '../models/bucket.js';
 import Repository from '../models/repository.js';
 
 // ─── Tuning constants ───────────────────────────────────────────────────────
-const TOP_LINKS_PER_DOMAIN = 10;  // max links stored per repo
-const TOP_DOMAINS          = 100; // max repos to keep in the cache
-const MIN_CLICKS           = 2;   // ignore a domain with a single stray click
-const RECENCY_HALF_LIFE    = 90;  // days at which a click counts as 50% weight
+const TOP_LINKS_PER_REPO = 10;  // max links stored per repo
+const TOP_REPOS          = 200; // max (domain, tag) repos to keep
+const MIN_CLICKS         = 2;   // ignore a (domain, tag) pair with a single stray click
+const MIN_BUCKETS        = 1;   // min distinct buckets required before a repo is created
+const RECENCY_HALF_LIFE  = 90;  // days at which a click counts as 50% weight
 
 // ─── Scoring helpers ─────────────────────────────────────────────────────────
 
@@ -47,46 +48,71 @@ export async function buildRepositories() {
     console.log('[repos] Starting rebuild…');
     const t0 = Date.now();
 
-    // ── Stage 1: aggregate LinkClick → top hrefs grouped by domain ──────────
+    // ── Stage 1: aggregate LinkClicks joined with bucket hashtags ────────────
+    // Groups by (href, domain, tag) where tag comes from the containing bucket's
+    // hashtags. Only public buckets with at least one hashtag produce repos.
     const clickData = await LinkClick.aggregate([
-        // Group by (href, domain): count clicks, collect unique buckets, track recency
+        // Group by (href, domain, bucketId): count clicks per link per bucket
         {
             $group: {
-                _id:             { href: '$href', domain: '$domain' },
-                totalClicks:     { $sum: 1 },
-                distinctBuckets: { $addToSet: '$bucketId' },
-                lastClickAt:     { $max: '$createdAt' }
+                _id:         { href: '$href', domain: '$domain', bucketId: '$bucketId' },
+                clicks:      { $sum: 1 },
+                lastClickAt: { $max: '$createdAt' }
             }
         },
-        // Materialise bucket spread so downstream stages can see it
+        // Join with the bucket to get its hashtags and visibility
         {
-            $addFields: { bucketSpread: { $size: '$distinctBuckets' } }
+            $lookup: {
+                from:         'buckets',
+                localField:   '_id.bucketId',
+                foreignField: '_id',
+                as:           'bucket'
+            }
         },
-        // Sort best links first so $push inside the next $group preserves order
-        { $sort: { totalClicks: -1 } },
-
-        // Group by domain: collect all its links + sum domain-level click total
-        // allBucketArrays collects every per-link distinctBuckets array so we can
-        // flatten + deduplicate them in JS to get the true domain-level bucket count
+        { $unwind: '$bucket' },
+        // Only public buckets that have at least one hashtag
+        {
+            $match: {
+                'bucket.hashtags.0': { $exists: true },
+                $or: [
+                    { 'bucket.visibility': 'public' },
+                    { 'bucket.isPublic': true }
+                ]
+            }
+        },
+        // Unwind hashtags — one record per (href, domain, bucketId, tag)
+        { $unwind: '$bucket.hashtags' },
+        // Group by (href, domain, tag): sum clicks, collect distinct buckets
         {
             $group: {
-                _id: '$_id.domain',
+                _id:             { href: '$_id.href', domain: '$_id.domain', tag: '$bucket.hashtags' },
+                totalClicks:     { $sum: '$clicks' },
+                distinctBuckets: { $addToSet: '$_id.bucketId' },
+                lastClickAt:     { $max: '$lastClickAt' }
+            }
+        },
+        { $addFields: { bucketSpread: { $size: '$distinctBuckets' } } },
+        { $sort: { totalClicks: -1 } },
+        // Group by (domain, tag): collect all its links + domain-tag-level click total
+        {
+            $group: {
+                _id: { domain: '$_id.domain', tag: '$_id.tag' },
                 links: {
                     $push: {
-                        href:            '$_id.href',
-                        totalClicks:     '$totalClicks',
-                        bucketSpread:    '$bucketSpread',
-                        lastClickAt:     '$lastClickAt'
+                        href:         '$_id.href',
+                        totalClicks:  '$totalClicks',
+                        bucketSpread: '$bucketSpread',
+                        lastClickAt:  '$lastClickAt'
                     }
                 },
-                domainTotalClicks: { $sum: '$totalClicks' },
-                allBucketArrays:   { $push: '$distinctBuckets' }
+                domainTagTotalClicks: { $sum: '$totalClicks' },
+                allBucketArrays:      { $push: '$distinctBuckets' }
             }
         },
-        // Drop domains that barely exist
-        { $match: { domainTotalClicks: { $gte: MIN_CLICKS } } },
-        { $sort: { domainTotalClicks: -1 } },
-        { $limit: TOP_DOMAINS }
+        // Drop (domain, tag) pairs that barely exist
+        { $match: { domainTagTotalClicks: { $gte: MIN_CLICKS } } },
+        { $sort: { domainTagTotalClicks: -1 } },
+        { $limit: TOP_REPOS }
     ]);
 
     if (!clickData.length) {
@@ -106,7 +132,7 @@ export async function buildRepositories() {
                 _id:       '$links.href',
                 text:      { $first: '$links.text' },
                 image:     { $first: '$links.image' },
-                curatorId: { $first: '$userId' }   // owner of the first matching public bucket
+                curatorId: { $first: '$userId' }
             }
         }
     ]);
@@ -117,13 +143,17 @@ export async function buildRepositories() {
     );
 
     // ── Stage 3: score links and upsert into the Repository cache ────────────
-    const ops = clickData.map(domain => {
-        // Flatten all per-link distinctBuckets arrays → unique bucket count for this domain
-        const domainBucketCount = new Set(
-            domain.allBucketArrays.flat().map(id => String(id))
+    const ops = [];
+
+    for (const repo of clickData) {
+        const repoBucketCount = new Set(
+            repo.allBucketArrays.flat().map(id => String(id))
         ).size;
 
-        const scoredLinks = domain.links
+        // Enforce minimum quality bar — skip thin (domain, tag) pairs
+        if (repoBucketCount < MIN_BUCKETS) continue;
+
+        const scoredLinks = repo.links
             .map(link => {
                 const meta = metaMap[link.href] || {};
                 return {
@@ -137,30 +167,33 @@ export async function buildRepositories() {
                 };
             })
             .sort((a, b) => b.score - a.score)
-            .slice(0, TOP_LINKS_PER_DOMAIN);
+            .slice(0, TOP_LINKS_PER_REPO);
 
-        return {
+        ops.push({
             updateOne: {
-                filter: { domain: domain._id },
+                filter: { domain: repo._id.domain, tag: repo._id.tag },
                 update: {
                     $set: {
-                        domain:      domain._id,
+                        domain:      repo._id.domain,
+                        tag:         repo._id.tag,
                         topLinks:    scoredLinks,
-                        totalClicks: domain.domainTotalClicks,
-                        bucketCount: domainBucketCount,
+                        totalClicks: repo.domainTagTotalClicks,
+                        bucketCount: repoBucketCount,
                         rebuiltAt:   new Date()
                     }
                 },
                 upsert: true
             }
-        };
-    });
+        });
+    }
 
     await Repository.bulkWrite(ops);
 
-    // Remove domains that dropped out of the top list
-    const activeDomains = clickData.map(d => d._id);
-    await Repository.deleteMany({ domain: { $nin: activeDomains } });
+    // Remove (domain, tag) pairs that dropped out of the top list
+    const activeKeys = clickData.map(d => ({ domain: d._id.domain, tag: d._id.tag }));
+    await Repository.deleteMany({
+        $nor: activeKeys.map(k => ({ domain: k.domain, tag: k.tag }))
+    });
 
     console.log(`[repos] Rebuilt ${ops.length} repositories in ${Date.now() - t0}ms`);
 }

@@ -221,7 +221,7 @@
         }
 
         function bucketThumbHtml(src, bucketId) {
-            const href  = bucketId ? `/v2/bucket/${escHtml(bucketId)}` : null;
+            const href  = bucketId ? `/v2/b/${escHtml(bucketId)}` : null;
             const inner = src
                 ? `<img src="${escHtml(src)}" class="w-11 h-9 rounded-md object-cover shrink-0" />`
                 : `<div class="w-11 h-9 rounded-md bg-silver-100 shrink-0 flex items-center justify-center">${BUCKET_ICON}</div>`;
@@ -236,7 +236,7 @@
 
         function bucketLink(name, bucketId) {
             if (!bucketId) return `<span class="font-semibold">${escHtml(name || 'a bucket')}</span>`;
-            return `<a href="/v2/bucket/${escHtml(bucketId)}" class="font-semibold hover:underline">${escHtml(name || 'a bucket')}</a>`;
+            return `<a href="/v2/b/${escHtml(bucketId)}" class="font-semibold hover:underline">${escHtml(name || 'a bucket')}</a>`;
         }
 
         function renderItem(n) {
@@ -285,7 +285,7 @@
 
             // comment-related notifications — use actor avatar on the left
             if (['comment_mention', 'bucket_tagged', 'comment_reply', 'comment_agreed'].includes(n.type)) {
-                const commentLink   = d.bucketId ? `/v2/bucket/${escHtml(String(d.bucketId))}#comments` : '';
+                const commentLink   = d.bucketId ? `/v2/b/${escHtml(String(d.bucketId))}#comments` : '';
                 const actorAvatar   = d.commenterAvatar   || d.replierAvatar   || d.agreerAvatar   || '';
                 const actorUsername = d.commenterUsername  || d.replierUsername  || d.agreerUsername  || '';
                 // Use plain bold spans — outer row is clickable, so no nested <a> tags

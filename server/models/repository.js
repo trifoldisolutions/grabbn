@@ -11,14 +11,19 @@ const topLinkSchema = new mongoose.Schema({
     curatorId:    { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null } // owner of the first bucket that contributed this link
 }, { _id: false });
 
-// One document per domain — rebuilt periodically by the aggregation job
+// One document per (domain, tag) pair — rebuilt periodically by the aggregation job.
+// A domain with no hashtagged buckets produces no repo; the tag is always required.
 const repositorySchema = new mongoose.Schema({
-    domain:      { type: String, required: true, unique: true },
+    domain:      { type: String, required: true },
+    tag:         { type: String, required: true }, // hashtag that qualifies this repo (e.g. "react")
     topLinks:    [topLinkSchema],
     totalClicks: { type: Number, default: 0 },
     bucketCount: { type: Number, default: 0 },
     rebuiltAt:   { type: Date, default: Date.now }
 });
+
+// Compound unique key: one repo per (domain, tag) pair
+repositorySchema.index({ domain: 1, tag: 1 }, { unique: true });
 
 // Sort repos by popularity on the showroom sidebar
 repositorySchema.index({ totalClicks: -1 });

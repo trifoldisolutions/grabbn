@@ -56,6 +56,9 @@
     // mingcute:flag-1-fill — report action
     const FLAG_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M5 3a1 1 0 0 1 1 1v1h12.138a1 1 0 0 1 .765 1.644L15.44 11l3.463 4.356A1 1 0 0 1 18.138 17H6v3a1 1 0 1 1-2 0V4a1 1 0 0 1 1-1"/></g></svg>`;
 
+    // mingcute:eye-close-line — not interested action
+    const EYE_OFF_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.588 13.412a2 2 0 1 0 2.824-2.824zm-6.54-5.117c-.38.368-.38.965 0 1.333l.738.737A13 13 0 0 0 2.46 12.41a1 1 0 0 0 1.08 1.08 1 1 0 0 0 .86-.62A11 11 0 0 1 6.12 10.95l.97.97a4 4 0 0 0 5.64 5.64l.97.97a11 11 0 0 1-1.44 1.16 1 1 0 0 0 1.48 1.07A13 13 0 0 0 15 19.3l1.29 1.29a.943.943 0 1 0 1.333-1.333l-13-13a.943.943 0 0 0-1.574.038M12 7c-.69 0-1.355.117-1.98.332l1.537 1.537A2 2 0 0 1 13.13 10.443l1.537 1.537A4 4 0 0 0 12 7m8.46 4.59a1 1 0 0 0-1.94.48A11 11 0 0 1 17.88 13.05l.97.97a13 13 0 0 0 1.612-2.03A1 1 0 0 0 20.46 11.59"/></g></svg>`;
+
     // mingcute:share-forward-fill — share action
     const SHARE_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M14.055 3.38a1 1 0 0 1 1.09.217l6 6a1 1 0 0 1 0 1.414l-6 6A1 1 0 0 1 13.5 16.5V14c-3.53.26-6.212 1.493-8.144 3.764a1 1 0 0 1-1.743-.578C3.117 12.568 5.259 7.44 13.5 6.03V3.5a1 1 0 0 1 .555-.12"/></g></svg>`;
 
@@ -69,7 +72,7 @@
 
     function createCard(b) {
         const card = document.createElement('a');
-        card.href      = `/v2/bucket/${b._id}`;
+        card.href      = `/v2/b/${b._id}`;
         card.className = 'flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer';
 
         // Thumbnail / placeholder
@@ -287,7 +290,7 @@
         btn.dataset.busy = '1';
 
         const bucketId = btn.dataset.bucketId;
-        const url      = `${window.location.origin}/v2/bucket/${bucketId}`;
+        const url      = `${window.location.origin}/v2/b/${bucketId}`;
         const origHtml = btn.innerHTML;
         const u = window.__GRABBN_USER__;
         const shareText = (u && !u.isAnonymous && u.username)
@@ -402,10 +405,7 @@
     const repoList = document.getElementById('repositories-list');
 
     function createRepoCard(repo) {
-        // Collect up to 4 links that have an image
         const imgLinks = repo.topLinks.filter(l => l.image).slice(0, 4);
-
-        // Build the 2×2 mosaic cells (fill missing slots with a placeholder)
         const cells = Array.from({ length: 4 }, (_, i) => {
             const link = imgLinks[i];
             return link
@@ -413,28 +413,68 @@
                 : `<div class="w-full h-full bg-silver-100 flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="text-gray-300" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg></div>`;
         });
 
-        const card = document.createElement('a');
-        card.href      = `/v2/repository/${encodeURIComponent(repo.domain)}`;
-        card.className = 'block rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow bg-white border border-gray-100';
+        const card = document.createElement('div');
+        card.className      = 'relative rounded-lg bg-white border border-gray-100 overflow-hidden hover:shadow-md transition-shadow';
+        card.dataset.domain = repo.domain;
+        card.dataset.tag    = repo.tag;
+
         card.innerHTML = `
-            <div class="grid grid-cols-2 gap-0.5 aspect-square">${cells.join('')}</div>
-            <div class="px-2 py-1.5">
-                <p class="text-xs font-semibold truncate text-woodsmoke-950">${escHtml(repo.domain)}</p>
-                <p class="text-xs text-gray-400">${formatNum(repo.bucketCount)} bucket${repo.bucketCount !== 1 ? 's' : ''}</p>
+            <a href="/v2/o/${encodeURIComponent(repo.domain)}/${encodeURIComponent(repo.tag)}" class="block">
+                <div class="grid grid-cols-2 gap-0.5 aspect-square">${cells.join('')}</div>
+            </a>
+            <div class="flex items-start justify-between gap-1 px-2.5 py-2 min-w-0">
+                <a href="/v2/o/${encodeURIComponent(repo.domain)}/${encodeURIComponent(repo.tag)}" class="min-w-0 flex-1 block">
+                    <p class="text-sm font-semibold truncate text-woodsmoke-950"><span class="text-orchid-600">#</span>${escHtml(repo.tag)}</p>
+                    <p class="text-xs text-gray-400 truncate mt-0.5">in ${escHtml(repo.domain)}</p>
+                </a>
+                <div class="relative shrink-0">
+                    <button class="repo-menu-btn w-5 h-5 rounded-full flex items-center justify-center text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors" onclick="event.preventDefault();event.stopPropagation()">
+                        ${MORE_ICON}
+                    </button>
+                    <div class="context-menu hidden absolute right-0 top-full mt-1 bg-white rounded-md shadow-lg border border-gray-100 py-1 z-50 min-w-[150px]">
+                        <button class="repo-not-interested-btn flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                            ${EYE_OFF_ICON}
+                            Not interested
+                        </button>
+                    </div>
+                </div>
             </div>`;
+
+        card.querySelector('.repo-menu-btn').addEventListener('click', onMenuClick);
+        card.querySelector('.repo-not-interested-btn').addEventListener('click', onRepoNotInterestedClick);
+
         return card;
+    }
+
+    async function onRepoNotInterestedClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const card   = e.currentTarget.closest('[data-domain]');
+        const domain = card.dataset.domain;
+        const tag    = card.dataset.tag;
+
+        document.querySelectorAll('.context-menu:not(.hidden)').forEach(m => m.classList.add('hidden'));
+
+        card.style.transition = 'opacity 0.15s';
+        card.style.opacity    = '0';
+        setTimeout(() => card.remove(), 150);
+
+        fetch(`/api/v2/repositories/${encodeURIComponent(domain)}/${encodeURIComponent(tag)}/not-interested`, {
+            method: 'POST'
+        }).catch(() => {});
     }
 
     async function loadRepositories() {
         if (!repoList) return;
         try {
-            const res  = await fetch('/api/v2/repositories?limit=6');
+            const res  = await fetch('/api/v2/repositories?limit=8');
             if (!res.ok) return;
             const { repositories } = await res.json();
 
             repoList.innerHTML = '';
             if (!repositories || repositories.length === 0) {
-                repoList.innerHTML = '<p class="col-span-3 text-xs text-gray-400 text-center py-4">No repositories yet.</p>';
+                repoList.innerHTML = '<p class="col-span-2 text-xs text-gray-400 text-center py-4">No repositories yet.</p>';
                 return;
             }
             repositories.forEach(repo => repoList.appendChild(createRepoCard(repo)));

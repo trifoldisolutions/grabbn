@@ -100,6 +100,14 @@ const userSchema = new mongoose.Schema(
     // Dedicated token embedded in the bookmarklet so the popup can authenticate
     // without relying on third-party cookies (blocked by many modern browsers).
     bookmarkletToken: { type: String, sparse: true, index: true },
+    isPartner: { type: Boolean, default: false },
+    // Admin access tier — set manually in the database for the first superadmin.
+    // 'user' is the default for all regular accounts.
+    role: {
+      type: String,
+      enum: ['user', 'moderator', 'superadmin'],
+      default: 'user'
+    },
     // Rate-limiting for comment posts (1 comment per minute per user)
     lastCommentAt: { type: Date, default: null },
     // Region inferred from IP on first visit (ISO 3166-1 alpha-2 country + subdivision code)

@@ -76,7 +76,7 @@
 
         card.innerHTML = `
             <div class="relative p-2">
-                <a href="/v2/bucket/${escAttr(b._id)}" class="block aspect-square overflow-hidden rounded-sm bg-silver-100">
+                <a href="/v2/b/${escAttr(b._id)}" class="block aspect-square overflow-hidden rounded-sm bg-silver-100">
                     ${thumbContent}
                 </a>
                 <div class="absolute bottom-4 right-4 flex items-center gap-1">
@@ -206,7 +206,7 @@
         btn.dataset.busy = '1';
 
         const bucketId = btn.dataset.bucketId;
-        const url      = `${window.location.origin}/v2/bucket/${bucketId}`;
+        const url      = `${window.location.origin}/v2/b/${bucketId}`;
         const origHtml = btn.innerHTML;
         const u = window.__GRABBN_USER__;
         const shareText = (u && !u.isAnonymous && u.username)
