@@ -153,8 +153,6 @@
                         </div>
                     </div>
                 </div>
-                ${b.description ? `<p class="text-xs text-gray-500 line-clamp-2 leading-relaxed">${escHtml(b.description)}</p>` : ''}
-                ${b.hashtags && b.hashtags.length > 0 ? `<div class="flex flex-wrap gap-1">${b.hashtags.slice(0, 4).map(tag => `<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-orchid-50 text-orchid-500">#${escHtml(tag)}</span>`).join('')}</div>` : ''}
                 <!-- Action row -->
                 <div class="flex items-center gap-4 pt-1.5" onclick="event.preventDefault();event.stopPropagation()">
                     ${(b.ratingCount > 0) ? `<span class="flex items-center gap-1 text-sm font-medium text-amber-500">
@@ -172,6 +170,8 @@
                         <span>${formatNum(b.shareCount ?? 0)}</span>
                     </button>
                 </div>
+                ${b.description ? `<p class="text-xs text-gray-500 line-clamp-2 leading-relaxed">${escHtml(b.description)}</p>` : ''}
+                ${b.hashtags && b.hashtags.length > 0 ? `<div class="flex flex-wrap gap-1">${b.hashtags.slice(0, 4).map(tag => `<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-orchid-50 text-orchid-500">#${escHtml(tag)}</span>`).join('')}</div>` : ''}
             </div>
         `;
 

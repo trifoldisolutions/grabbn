@@ -43,6 +43,7 @@ import BucketSkip   from './server/models/bucketSkip.js';
 import RepoSkip     from './server/models/repoSkip.js';
 import ShareVisit   from './server/models/shareVisit.js';
 import BucketRating from './server/models/bucketRating.js';
+import UserRepo     from './server/models/userRepo.js';
 import { wsClients, pushNotification } from './server/ws.js';
 
 dotenv.config();
@@ -475,7 +476,7 @@ async function fanOutNewBucketPublished(curatorId, curatorUsername, bucketId, bu
 // Create a new bucket
 app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, draft } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, draft, repoId } = req.body;
 
         if (!name || typeof name !== 'string') {
             return res.status(400).json({ error: 'Bucket name is required' });
@@ -516,6 +517,13 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
         // Auto-set thumbnail from first link image if no explicit thumbnail provided
         const effectiveThumb = resolvedThumb || resolvedLinks.find(l => l.image)?.image || '';
 
+        // Validate repoId belongs to this user
+        let resolvedRepoId = null;
+        if (repoId) {
+            const repo = await UserRepo.findOne({ _id: repoId, userId: req.user._id });
+            if (repo) resolvedRepoId = repo._id;
+        }
+
         const vis = ['public', 'unlisted', 'private'].includes(visibility) ? visibility : 'private';
         const bucket = await Bucket.create({
             userId:      req.user._id,
@@ -531,6 +539,7 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             thumbnail:   effectiveThumb,
             links:       resolvedLinks,
             isDraft:     !!draft,
+            repoId:      resolvedRepoId,
         });
 
         if (vis === 'public' && !bucket.isDraft) {
@@ -576,7 +585,7 @@ app.put('/api/buckets/:oldName', requireAuth, requireVerification, async (req, r
 // Full bucket update (used by profile edit modal)
 app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, isDraft } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, isDraft, repoId } = req.body;
 
         // Fetch current state to detect meaningful changes before building the update
         const current = await Bucket.findOne({ _id: req.params.id, userId: req.user._id });
@@ -587,6 +596,14 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         if (description !== undefined) update.description = String(description || '').slice(0, 256);
         if (tags        !== undefined) update.hashtags    = Array.isArray(tags) ? tags.slice(0, 8) : [];
         if (mature      !== undefined) update.mature      = !!mature;
+        if (repoId !== undefined) {
+            if (!repoId) {
+                update.repoId = null;
+            } else {
+                const repo = await UserRepo.findOne({ _id: repoId, userId: req.user._id });
+                update.repoId = repo ? repo._id : null;
+            }
+        }
         if (visibility !== undefined) {
             const vis = ['public', 'unlisted', 'private'].includes(visibility) ? visibility : 'private';
             update.visibility = vis;
@@ -682,6 +699,100 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         res.status(500).json({ error: 'Failed to update bucket' });
     }
 });
+
+// ── User Repos ────────────────────────────────────────────────────────────────
+
+// List all repos for the current user (with per-repo bucket counts + first thumbnail)
+app.get('/api/repos', requireAuth, async (req, res) => {
+    try {
+        const [repos, counts, thumbs] = await Promise.all([
+            UserRepo.find({ userId: req.user._id }).sort({ name: 1 }).lean(),
+            Bucket.aggregate([
+                { $match: { userId: req.user._id, repoId: { $ne: null } } },
+                { $group: { _id: '$repoId', count: { $sum: 1 } } },
+            ]),
+            // First non-empty thumbnail per repo (oldest bucket first)
+            Bucket.aggregate([
+                { $match: { userId: req.user._id, repoId: { $ne: null }, thumbnail: { $nin: [null, ''] } } },
+                { $sort: { createdAt: 1 } },
+                { $group: { _id: '$repoId', thumb: { $first: '$thumbnail' } } },
+            ]),
+        ]);
+        const countMap = Object.fromEntries(counts.map(c => [c._id.toString(), c.count]));
+        const thumbMap = Object.fromEntries(thumbs.map(t => [t._id.toString(), t.thumb]));
+        res.json(repos.map(r => ({
+            ...r,
+            bucketCount: countMap[r._id.toString()] ?? 0,
+            thumb:       thumbMap[r._id.toString()] ?? null,
+        })));
+    } catch (err) {
+        console.error('Error fetching repos:', err);
+        res.status(500).json({ error: 'Failed to fetch repos' });
+    }
+});
+
+// Create a new repo
+app.post('/api/repos', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { name, description } = req.body;
+        if (!name || typeof name !== 'string' || !name.trim()) {
+            return res.status(400).json({ error: 'Repo name is required' });
+        }
+        const trimmed = name.trim().slice(0, 80);
+        const existing = await UserRepo.findOne({ userId: req.user._id, name: trimmed });
+        if (existing) return res.status(409).json({ error: 'You already have a repo with that name' });
+        const repo = await UserRepo.create({
+            userId:      req.user._id,
+            name:        trimmed,
+            description: String(description || '').slice(0, 256),
+        });
+        res.status(201).json(repo);
+    } catch (err) {
+        console.error('Error creating repo:', err);
+        res.status(500).json({ error: 'Failed to create repo' });
+    }
+});
+
+// Rename / update a repo
+app.patch('/api/repos/:id', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { name, description } = req.body;
+        const update = {};
+        if (name !== undefined) {
+            const trimmed = String(name).trim().slice(0, 80);
+            if (!trimmed) return res.status(400).json({ error: 'Repo name cannot be empty' });
+            const conflict = await UserRepo.findOne({ userId: req.user._id, name: trimmed, _id: { $ne: req.params.id } });
+            if (conflict) return res.status(409).json({ error: 'You already have a repo with that name' });
+            update.name = trimmed;
+        }
+        if (description !== undefined) update.description = String(description).slice(0, 256);
+        const repo = await UserRepo.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            update,
+            { new: true }
+        );
+        if (!repo) return res.status(404).json({ error: 'Repo not found' });
+        res.json(repo);
+    } catch (err) {
+        console.error('Error updating repo:', err);
+        res.status(500).json({ error: 'Failed to update repo' });
+    }
+});
+
+// Delete a repo — its buckets are unassigned, not deleted
+app.delete('/api/repos/:id', requireAuth, async (req, res) => {
+    try {
+        const repo = await UserRepo.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+        if (!repo) return res.status(404).json({ error: 'Repo not found' });
+        await Bucket.updateMany({ userId: req.user._id, repoId: req.params.id }, { $unset: { repoId: 1 } });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Error deleting repo:', err);
+        res.status(500).json({ error: 'Failed to delete repo' });
+    }
+});
+
+// ── Bucket helpers ────────────────────────────────────────────────────────────
 
 // Get bucket ID by name for sharing
 app.get('/api/buckets/:name/id', requireAuth, requireVerification, async (req, res) => {
@@ -2897,26 +3008,24 @@ app.get('/v2/u/:username', anonymousAuth, async (req, res) => {
         ? { userId: profileUser._id }
         : { userId: profileUser._id, ...FILTER_PUBLIC };
 
-    const queries = [
+    const [allBuckets, subscriberCount, followingCount, rawGrabbed, userRepos] = await Promise.all([
         Bucket.find(bucketFilter)
-            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum createdAt updatedAt')
+            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum repoId createdAt updatedAt')
             .sort({ order: 1, createdAt: -1 })
             .lean(),
         Subscription.countDocuments({ followeeId: profileUser._id }),
         Subscription.countDocuments({ followerId: profileUser._id }),
-    ];
-    // Grabbed tab is only fetched for the profile owner
-    if (isOwner) {
-        queries.push(
-            Bucket.find({ 'grabbedBy.userId': profileUser._id })
+        isOwner
+            ? Bucket.find({ 'grabbedBy.userId': profileUser._id })
                 .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags ratingCount ratingSum createdAt updatedAt')
                 .populate('userId', 'username')
                 .sort({ createdAt: -1 })
                 .lean()
-        );
-    }
-
-    const [allBuckets, subscriberCount, followingCount, rawGrabbed = []] = await Promise.all(queries);
+            : Promise.resolve([]),
+        isOwner
+            ? UserRepo.find({ userId: profileUser._id }).sort({ name: 1 }).lean()
+            : Promise.resolve([]),
+    ]);
 
     const ownBuckets     = allBuckets.map(addDisplayThumb);
     const grabbedBuckets = rawGrabbed.map(addDisplayThumb);
@@ -2932,6 +3041,7 @@ app.get('/v2/u/:username', anonymousAuth, async (req, res) => {
         isOwner,
         ownBuckets,
         grabbedBuckets,
+        userRepos,
         totalViews,
         totalGrabs,
         subscriberCount,
@@ -2941,6 +3051,62 @@ app.get('/v2/u/:username', anonymousAuth, async (req, res) => {
 });
 
 // Dynamic repository page — domain + tag come from the path
+// User-created repo page — single ObjectId segment distinguishes it from domain+tag repos
+app.get('/v2/o/:repoId', anonymousAuth, async (req, res) => {
+    try {
+        const { repoId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(repoId)) {
+            return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+        }
+
+        const repo = await UserRepo.findById(repoId).lean();
+        if (!repo) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+
+        const viewer  = req.user ?? null;
+        const owner   = await User.findById(repo.userId).select('username avatar anonymousId').lean();
+        if (!owner) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: viewer });
+
+        const isOwner = !!(viewer && !viewer.isAnonymous && viewer._id.toString() === repo.userId.toString());
+
+        // Visitors see public + unlisted buckets (unlisted = accessible via link/repo, not discoverable); owner sees all
+        const bucketFilter = isOwner
+            ? { repoId: repo._id }
+            : { repoId: repo._id, ...FILTER_ACCESSIBLE };
+
+        const rawBuckets = await Bucket.find(bucketFilter)
+            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum createdAt updatedAt')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const buckets = rawBuckets.map(b => ({
+            ...b,
+            _id:          b._id.toString(),
+            displayThumb: b.thumbnail || b.links?.find(l => l.image)?.image || null,
+        }));
+
+        const createdAt = new Date(repo.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const pageUrl   = `${req.protocol}://${req.get('host')}/v2/o/${repoId}`;
+
+        res.render('v2/repo', {
+            title:          repo.name,
+            page:           'repo',
+            user:           viewer,
+            ogTitle:        `${repo.name} — by @${owner.username}`,
+            ogDescription:  `A curated repo of ${buckets.length} bucket${buckets.length !== 1 ? 's' : ''} by @${owner.username}`,
+            ogUrl:          pageUrl,
+            repo,
+            owner,
+            isOwner,
+            buckets,
+            createdAt,
+            pageUrl,
+        });
+    } catch (err) {
+        console.error('Error rendering repo page:', err);
+        res.status(500).render('v2/404', { title: 'Error', page: '', user: req.user ?? null });
+    }
+});
+
 app.get('/v2/o/:topic/:tag', anonymousAuth, (req, res) => {
     const topic = req.params.topic || '';
     const tag   = req.params.tag   || '';
