@@ -158,7 +158,14 @@ const bucketSchema = new mongoose.Schema(
     ratingCount: {
       type: Number,
       default: 0
-    }
+    },
+    // User-created repo this bucket belongs to (null = not assigned)
+    repoId: {
+      type:    mongoose.Schema.Types.ObjectId,
+      ref:     'UserRepo',
+      default: null,
+      index:   true,
+    },
   },
   { timestamps: true }
 );

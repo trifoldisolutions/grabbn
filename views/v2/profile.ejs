@@ -8,6 +8,7 @@
 <script>
     window.__PROFILE_OWN__           = <%- JSON.stringify(ownBuckets) %>;
     window.__PROFILE_GRABBED__       = <%- JSON.stringify(grabbedBuckets) %>;
+    window.__PROFILE_REPOS__         = <%- JSON.stringify(userRepos) %>;
     window.__PROFILE_IS_OWNER__      = <%- JSON.stringify(isOwner) %>;
     window.__PROFILE_VIEWER_AUTHED__ = <%- JSON.stringify(!!(user && !user.isAnonymous)) %>;
     window.__PROFILE_ANON_ID__       = <%- JSON.stringify(profileUser.anonymousId) %>;
@@ -39,7 +40,7 @@
                     <!-- Credit status badge -->
                     <div class="relative w-full max-w-sm mt-3">
                         <!-- Only visible to you — straddles the top border -->
-                        <span class="absolute left-1/2 -translate-x-1/2 -top-[0.6875rem] flex items-center gap-1 text-xs text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded-full whitespace-nowrap z-10">
+                        <span class="absolute left-1/2 -translate-x-1/2 -top-2.75 flex items-center gap-1 text-xs text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded-full whitespace-nowrap z-10">
                             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 2a5 5 0 1 0 0 10A5 5 0 0 0 12 2M4 13a8 8 0 0 0 8 8a8 8 0 0 0 8-8z" opacity=".3"/><path fill="currentColor" fill-rule="evenodd" d="M12 4a3 3 0 1 0 0 6a3 3 0 0 0 0-6M7 7a5 5 0 1 1 10 0A5 5 0 0 1 7 7m-3 6a8 8 0 0 1 16 0v1H4v-1zm2.1 3H18.9A8 8 0 0 1 4.1 16z" clip-rule="evenodd"/></g></svg>
                             Only visible to you
                         </span>
@@ -146,6 +147,10 @@
                     Grabbed
                     <span class="ml-1.5 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full"><%= grabbedBuckets.length %></span>
                 </button>
+                <button id="tabRepos" class="profile-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-colors" data-tab="repos">
+                    Repos
+                    <span id="reposTabCount" class="ml-1.5 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full"><%= userRepos.length %></span>
+                </button>
             <% } %>
         </div>
     </div>
@@ -165,6 +170,11 @@
             </div>
         <% } %>
     </div>
+
+    <!-- ── Repos tab (owner only) ───────────────────────────────────────── -->
+    <% if (isOwner) { %>
+        <div id="panelRepos" class="hidden"></div>
+    <% } %>
 
     <!-- ── Grabbed tab (owner only) ────────────────────────────────────── -->
     <% if (isOwner) { %>
@@ -308,7 +318,11 @@
 
     // ── Tab switching ────────────────────────────────────────────────────────
     const tabs   = document.querySelectorAll('.profile-tab');
-    const panels = { buckets: document.getElementById('panelBuckets'), grabbed: document.getElementById('panelGrabbed') };
+    const panels = {
+        buckets: document.getElementById('panelBuckets'),
+        grabbed: document.getElementById('panelGrabbed'),
+        repos:   document.getElementById('panelRepos'),
+    };
 
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
@@ -325,6 +339,262 @@
             });
         });
     });
+
+    // ── Repos panel (owner only) ─────────────────────────────────────────────
+    (function () {
+        if (!isOwner) return;
+        const reposPanel = document.getElementById('panelRepos');
+        if (!reposPanel) return;
+
+        let repos      = (window.__PROFILE_REPOS__ || []).slice();
+        const ownBuckets = window.__PROFILE_OWN__ || [];
+
+        function getBucketsForRepo(repoId) {
+            return ownBuckets.filter(b => b.repoId && String(b.repoId) === String(repoId));
+        }
+
+        function updateTabCount() {
+            const el = document.getElementById('reposTabCount');
+            if (el) el.textContent = repos.length;
+        }
+
+        // ── Render ─────────────────────────────────────────────────────────
+        function renderRepos() {
+            reposPanel.innerHTML = '';
+
+            if (repos.length === 0) {
+                reposPanel.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" class="text-gray-300"><g fill="none"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h3.93a3 3 0 0 1 2.121.879l.707.707A1 1 0 0 0 13.465 5H19a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" opacity=".2"/><path fill="currentColor" fill-rule="evenodd" d="M6 5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-5.535a3 3 0 0 1-2.12-.879l-.708-.707A1 1 0 0 0 8.929 5zm-3 1a3 3 0 0 1 3-3h2.929a3 3 0 0 1 2.12.879l.708.707A1 1 0 0 0 12.465 5H18a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" clip-rule="evenodd"/></g></svg>
+                        <p class="text-sm text-gray-400">No repos yet. Create one from the bucket editor.</p>
+                    </div>`;
+                return;
+            }
+
+            const list = document.createElement('div');
+            list.className = 'flex flex-col gap-4';
+            repos.forEach(repo => list.appendChild(buildRepoCard(repo)));
+            reposPanel.appendChild(list);
+        }
+
+        // ── Build a single repo card ────────────────────────────────────────
+        const BUCKET_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>`;
+
+        const IMG_PLACEHOLDER = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>`;
+
+        function buildBucketCard(b) {
+            const vis = b.visibility || (b.isPublic ? 'public' : 'private');
+            const badge = b.isDraft
+                ? `<span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-500">Draft</span>`
+                : vis === 'public'
+                    ? `<span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orchid-100 text-orchid-600">Public</span>`
+                    : vis === 'unlisted'
+                        ? `<span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-500">Unlisted</span>`
+                        : `<span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400">Private</span>`;
+            const thumb = b.displayThumb
+                ? `<img src="${escHtml(b.displayThumb)}" class="w-full aspect-square object-cover rounded-md" loading="lazy" onerror="this.style.display='none'">`
+                : `<div class="w-full aspect-square bg-silver-100 rounded-md flex items-center justify-center text-gray-300">${IMG_PLACEHOLDER}</div>`;
+            return `
+                <div class="flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer hover:shadow-md transition-shadow w-[calc(25%-9px)] shrink-0"
+                    data-action="open-bucket" data-bucket-id="${escHtml(b._id)}">
+                    <div class="px-3 pt-3 pb-3">${thumb}</div>
+                    <div class="px-3 pt-1 pb-3 flex flex-col gap-0.5">
+                        <div class="flex items-center gap-1">
+                            <p class="font-medium text-base leading-snug truncate flex-1">${escHtml(b.name)}</p>
+                            ${badge}
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function buildRepoCard(repo) {
+            const buckets = getBucketsForRepo(repo._id);
+            const card = document.createElement('div');
+            card.className = 'bg-white border border-silver-100 rounded-xl overflow-hidden';
+            card.dataset.repoId = repo._id;
+
+            card.innerHTML = `
+                <div class="flex items-center justify-between px-4 py-3.5 border-b border-silver-100">
+                    <div class="flex items-center gap-2 min-w-0 flex-1 mr-3">
+                        <span class="text-orchid-400 shrink-0">${BUCKET_ICON}</span>
+                        <span class="repo-name-display font-semibold text-sm text-woodsmoke-900 truncate">${escHtml(repo.name)}</span>
+                        <span class="repo-bucket-count text-xs bg-orchid-50 text-orchid-600 px-1.5 py-0.5 rounded-full shrink-0">${buckets.length}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button data-action="rename" data-repo-id="${repo._id}"
+                            class="h-7 px-3 flex items-center justify-center rounded-md text-xs font-semibold border border-silver-200 text-woodsmoke-600 hover:border-orchid-300 hover:text-orchid-600 transition-colors">Edit</button>
+                        <button data-action="share" data-repo-id="${repo._id}"
+                            class="h-7 px-3 flex items-center justify-center rounded-md text-xs font-semibold border border-silver-200 text-woodsmoke-600 hover:border-orchid-300 hover:text-orchid-600 transition-colors">Share</button>
+                        <button data-action="delete" data-repo-id="${repo._id}"
+                            class="h-7 px-3 flex items-center justify-center rounded-md text-xs font-semibold border border-silver-200 text-woodsmoke-600 hover:border-red-200 hover:text-red-500 transition-colors">Delete</button>
+                    </div>
+                </div>
+                <div class="repo-inline-rename hidden px-4 py-3 border-b border-silver-100 flex items-center gap-2">
+                    <input type="text" maxlength="80" placeholder="Repo name…"
+                        class="repo-rename-input flex-1 px-3 py-1.5 rounded-md border border-silver-200 text-sm text-woodsmoke-950 outline-none focus:border-orchid-400 focus:ring-2 focus:ring-orchid-100 transition"/>
+                    <button data-action="rename-save" data-repo-id="${repo._id}"
+                        class="px-3 h-8 flex items-center justify-center bg-woodsmoke-950 text-white text-xs font-semibold rounded-md hover:bg-woodsmoke-800 transition-colors shrink-0">Save</button>
+                    <button data-action="rename-cancel" data-repo-id="${repo._id}"
+                        class="w-8 h-8 flex items-center justify-center rounded-md border border-silver-200 text-gray-400 hover:text-red-500 transition-colors shrink-0">✕</button>
+                    <p class="repo-rename-error hidden text-xs text-red-500"></p>
+                </div>
+                <div class="repo-buckets-area p-4">
+                    ${buckets.length === 0
+                        ? `<p class="text-xs text-gray-400 italic">No buckets assigned yet. Open a bucket and pick this repo from the Settings tab.</p>`
+                        : `<div class="flex gap-3 overflow-x-auto pb-1">${buckets.map(buildBucketCard).join('')}</div>`
+                    }
+                </div>`;
+
+            return card;
+        }
+
+        // ── Helpers ────────────────────────────────────────────────────────
+        function escHtml(str) {
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function findCard(repoId) {
+            return reposPanel.querySelector(`[data-repo-id="${repoId}"]`);
+        }
+
+        // ── Rename ─────────────────────────────────────────────────────────
+        function startRename(repoId) {
+            const card = findCard(repoId);
+            if (!card) return;
+            const repo = repos.find(r => String(r._id) === String(repoId));
+            if (!repo) return;
+            const inlineRow = card.querySelector('.repo-inline-rename');
+            const input     = card.querySelector('.repo-rename-input');
+            const errEl     = card.querySelector('.repo-rename-error');
+            inlineRow.classList.remove('hidden');
+            errEl.classList.add('hidden');
+            input.value = repo.name;
+            input.focus();
+            input.select();
+        }
+
+        function cancelRename(repoId) {
+            const card = findCard(repoId);
+            if (!card) return;
+            card.querySelector('.repo-inline-rename').classList.add('hidden');
+        }
+
+        async function saveRename(repoId) {
+            const card  = findCard(repoId);
+            if (!card) return;
+            const input  = card.querySelector('.repo-rename-input');
+            const errEl  = card.querySelector('.repo-rename-error');
+            const saveBtn = card.querySelector('[data-action="rename-save"]');
+            const name   = input.value.trim();
+
+            if (!name) { errEl.textContent = 'Name cannot be empty.'; errEl.classList.remove('hidden'); return; }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = '…';
+            errEl.classList.add('hidden');
+
+            try {
+                const res  = await fetch(`/api/repos/${repoId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ name }),
+                });
+                const data = await res.json();
+                if (!res.ok) { errEl.textContent = data.error || 'Failed to rename.'; errEl.classList.remove('hidden'); return; }
+
+                // Update local data + DOM
+                const repo = repos.find(r => String(r._id) === String(repoId));
+                if (repo) repo.name = data.name;
+                const nameDisplay = card.querySelector('.repo-name-display');
+                if (nameDisplay) nameDisplay.textContent = data.name;
+                card.querySelector('.repo-inline-rename').classList.add('hidden');
+            } catch (_) {
+                errEl.textContent = 'Network error.';
+                errEl.classList.remove('hidden');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save';
+            }
+        }
+
+        // ── Delete ─────────────────────────────────────────────────────────
+        async function handleDelete(repoId, btn) {
+            if (btn.dataset.confirm !== 'yes') {
+                btn.dataset.confirm = 'yes';
+                btn.textContent = 'Confirm?';
+                btn.classList.add('border-red-300', 'text-red-500');
+                btn.classList.remove('border-silver-200', 'text-woodsmoke-600');
+                setTimeout(() => {
+                    if (btn.dataset.confirm === 'yes') {
+                        btn.dataset.confirm = '';
+                        btn.textContent = 'Delete';
+                        btn.classList.remove('border-red-300', 'text-red-500');
+                        btn.classList.add('border-silver-200', 'text-woodsmoke-600');
+                    }
+                }, 3500);
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '…';
+            try {
+                const res = await fetch(`/api/repos/${repoId}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) { btn.disabled = false; btn.textContent = 'Delete'; return; }
+
+                ownBuckets.forEach(b => { if (b.repoId && String(b.repoId) === String(repoId)) b.repoId = null; });
+                repos = repos.filter(r => String(r._id) !== String(repoId));
+                updateTabCount();
+                renderRepos();
+            } catch (_) {
+                btn.disabled = false;
+                btn.textContent = 'Delete';
+            }
+        }
+
+        // ── Share ───────────────────────────────────────────────────────────
+        async function handleShare(repoId, btn) {
+            const url = `${window.location.origin}/v2/o/${repoId}`;
+            const orig = btn.textContent;
+            if (navigator.share) {
+                try { await navigator.share({ url }); } catch (_) {}
+            } else {
+                await navigator.clipboard.writeText(url).catch(() => {});
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = orig; }, 2000);
+            }
+        }
+
+        // ── Event delegation ────────────────────────────────────────────────
+        reposPanel.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const action   = btn.dataset.action;
+            const repoId   = btn.dataset.repoId;
+            const bucketId = btn.dataset.bucketId;
+
+            if (action === 'rename')        startRename(repoId);
+            if (action === 'rename-cancel') cancelRename(repoId);
+            if (action === 'rename-save')   saveRename(repoId);
+            if (action === 'delete')        handleDelete(repoId, btn);
+            if (action === 'share')         handleShare(repoId, btn);
+            if (action === 'open-bucket') {
+                const bucket = ownBuckets.find(b => b._id === bucketId);
+                if (bucket && window.openBucketModal) window.openBucketModal(bucket);
+            }
+        });
+
+        reposPanel.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            const input = e.target.closest('.repo-rename-input');
+            if (!input) return;
+            const card  = input.closest('[data-repo-id]');
+            if (card) saveRename(card.dataset.repoId);
+        });
+
+        // Initial render
+        renderRepos();
+    })();
 
     // ── Follow button ─────────────────────────────────────────────────────────
     const followBtn = document.getElementById('followBtn');

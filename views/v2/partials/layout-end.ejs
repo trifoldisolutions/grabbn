@@ -245,6 +245,59 @@
             <div data-tab-panel="settings" class="w-full lg:w-1/4 shrink-0 flex flex-col overflow-hidden">
                 <div class="flex flex-col gap-0 flex-1 overflow-y-auto p-4 md:p-6">
 
+                    <!-- Repo -->
+                    <div class="flex flex-col gap-1.5 mb-5">
+                        <label class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Repo</label>
+                        <div class="flex items-center gap-2">
+                            <!-- Custom dropdown -->
+                            <div class="relative flex-1" id="repoDropdownWrapper">
+                                <!-- Trigger -->
+                                <button id="repoDropdownBtn" type="button"
+                                    class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md border border-silver-200 bg-white text-left hover:border-orchid-300 focus:outline-none focus:border-orchid-400 focus:ring-2 focus:ring-orchid-100 transition-colors">
+                                    <span id="repoDropdownThumb" class="w-7 h-7 rounded shrink-0 flex items-center justify-center bg-silver-100 text-woodsmoke-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><path fill="currentColor" d="M19 11H5a1 1 0 0 0 0 2h14a1 1 0 0 0 0-2z"/></svg>
+                                    </span>
+                                    <span id="repoDropdownLabel" class="flex-1 text-sm text-woodsmoke-400 truncate">— No repo —</span>
+                                    <svg id="repoDropdownChevron" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" class="text-woodsmoke-400 shrink-0 transition-transform duration-150"><path fill="currentColor" d="m12 15.586l-7.293-7.293-1.414 1.414L12 18.414l8.707-8.707-1.414-1.414z"/></svg>
+                                </button>
+                                <!-- List -->
+                                <div id="repoDropdownList" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-silver-200 rounded-md shadow-lg z-50 overflow-y-auto max-h-52">
+                                    <!-- "No repo" option -->
+                                    <button type="button" data-repo-id=""
+                                        class="repo-dropdown-option w-full flex items-center gap-3 px-3 py-2.5 hover:bg-silver-50 transition-colors">
+                                        <span class="w-8 h-8 rounded shrink-0 flex items-center justify-center bg-silver-100 text-woodsmoke-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><path fill="currentColor" d="M19 11H5a1 1 0 0 0 0 2h14a1 1 0 0 0 0-2z"/></svg>
+                                        </span>
+                                        <span class="text-sm text-woodsmoke-400">— No repo —</span>
+                                    </button>
+                                    <!-- Repo options injected by JS -->
+                                </div>
+                            </div>
+                            <!-- + button -->
+                            <button
+                                id="newRepoPlusBtn"
+                                type="button"
+                                title="Create new repo"
+                                class="h-9 px-3 flex items-center justify-center rounded-md border border-silver-200 text-woodsmoke-500 hover:border-orchid-400 hover:text-orchid-600 transition-colors shrink-0"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                            </button>
+                        </div>
+                        <!-- Inline new repo creation -->
+                        <div id="newRepoInline" class="hidden flex items-center gap-2">
+                            <input
+                                id="newRepoNameInput"
+                                type="text"
+                                maxlength="80"
+                                placeholder="Repo name…"
+                                class="flex-1 px-3 py-2 rounded-md border border-silver-200 text-sm text-woodsmoke-950 placeholder-woodsmoke-400 outline-none focus:border-orchid-400 focus:ring-2 focus:ring-orchid-100 transition"
+                            />
+                            <button id="newRepoConfirmBtn" type="button" class="h-9 px-3 flex items-center justify-center bg-woodsmoke-950 text-white text-sm font-semibold rounded-md hover:bg-woodsmoke-800 transition-colors shrink-0">Add</button>
+                            <button id="newRepoCancelBtn" type="button" class="w-9 h-9 flex items-center justify-center rounded-md border border-silver-200 text-woodsmoke-500 hover:border-orchid-400 hover:text-orchid-600 transition-colors shrink-0">✕</button>
+                        </div>
+                        <p id="newRepoError" class="hidden text-xs text-red-500"></p>
+                    </div>
+
                     <!-- Tags -->
                     <div class="flex flex-col gap-1.5 mb-5">
                         <label class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Tags</label>
@@ -397,6 +450,7 @@
         monetization: false,
         mature:       false,
         thumbnail:    null, // { dataUrl, visible }
+        repoId:       null, // ObjectId string of the selected UserRepo, or null
         _linkThumbTargetId: null,
         _editBucket:        null,  // { _id, name } when editing an existing bucket
         _originalSnapshot:  null   // snapshot of form state at modal open; used to detect no-op saves
@@ -490,6 +544,179 @@
     var matureToggle            = document.getElementById('matureToggle');
     var isPartner = !!(user && user.isPartner);
 
+    // ── Repo custom dropdown ─────────────────────────────────────────────────
+    var repoDropdownWrapper = document.getElementById('repoDropdownWrapper');
+    var repoDropdownBtn     = document.getElementById('repoDropdownBtn');
+    var repoDropdownList    = document.getElementById('repoDropdownList');
+    var repoDropdownLabel   = document.getElementById('repoDropdownLabel');
+    var repoDropdownThumb   = document.getElementById('repoDropdownThumb');
+    var repoDropdownChevron = document.getElementById('repoDropdownChevron');
+    var newRepoPlusBtn      = document.getElementById('newRepoPlusBtn');
+    var newRepoInline       = document.getElementById('newRepoInline');
+    var newRepoNameInput    = document.getElementById('newRepoNameInput');
+    var newRepoConfirmBtn   = document.getElementById('newRepoConfirmBtn');
+    var newRepoCancelBtn    = document.getElementById('newRepoCancelBtn');
+    var newRepoError        = document.getElementById('newRepoError');
+    var _cachedRepos        = [];
+
+    var REPO_FOLDER_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h3.93a3 3 0 0 1 2.121.879l.707.707A1 1 0 0 0 13.465 5H19a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" opacity=".3"/><path fill="currentColor" fill-rule="evenodd" d="M6 5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-5.535a3 3 0 0 1-2.12-.879l-.708-.707A1 1 0 0 0 8.929 5zm-3 1a3 3 0 0 1 3-3h2.929a3 3 0 0 1 2.12.879l.708.707A1 1 0 0 0 12.465 5H18a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" clip-rule="evenodd"/></g></svg>';
+    var REPO_DASH_ICON   = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><path fill="currentColor" d="M19 11H5a1 1 0 0 0 0 2h14a1 1 0 0 0 0-2z"/></svg>';
+
+    function _repoEscHtml(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function closeRepoDropdown() {
+        repoDropdownList.classList.add('hidden');
+        repoDropdownChevron.style.transform = '';
+    }
+
+    function openRepoDropdown() {
+        repoDropdownList.classList.remove('hidden');
+        repoDropdownChevron.style.transform = 'rotate(180deg)';
+    }
+
+    function setRepoTrigger(repo) {
+        if (!repo) {
+            repoDropdownLabel.textContent = '— No repo —';
+            repoDropdownLabel.classList.add('text-woodsmoke-400');
+            repoDropdownLabel.classList.remove('text-woodsmoke-950');
+            repoDropdownThumb.className = 'w-7 h-7 rounded shrink-0 flex items-center justify-center bg-silver-100 text-woodsmoke-300';
+            repoDropdownThumb.innerHTML = REPO_DASH_ICON;
+        } else {
+            repoDropdownLabel.textContent = repo.name;
+            repoDropdownLabel.classList.remove('text-woodsmoke-400');
+            repoDropdownLabel.classList.add('text-woodsmoke-950');
+            if (repo.thumb) {
+                repoDropdownThumb.className = 'w-7 h-7 rounded shrink-0 overflow-hidden';
+                repoDropdownThumb.innerHTML = '<img src="' + repo.thumb + '" class="w-full h-full object-cover" />';
+            } else {
+                repoDropdownThumb.className = 'w-7 h-7 rounded shrink-0 flex items-center justify-center bg-orchid-50 text-orchid-500';
+                repoDropdownThumb.innerHTML = REPO_FOLDER_ICON;
+            }
+        }
+    }
+
+    function populateRepoSelect(repos, selectedId) {
+        // Keep the static "no repo" first child, rebuild the rest
+        var noRepoOpt = repoDropdownList.querySelector('[data-repo-id=""]');
+        repoDropdownList.innerHTML = '';
+        if (noRepoOpt) repoDropdownList.appendChild(noRepoOpt);
+
+        repos.forEach(function (r) {
+            var count = r.bucketCount != null ? r.bucketCount : 0;
+            var thumbHtml = r.thumb
+                ? '<img src="' + r.thumb + '" class="w-full h-full object-cover" />'
+                : REPO_FOLDER_ICON;
+            var thumbClass = r.thumb
+                ? 'w-8 h-8 rounded shrink-0 overflow-hidden'
+                : 'w-8 h-8 rounded shrink-0 flex items-center justify-center bg-orchid-50 text-orchid-500';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.dataset.repoId = r._id;
+            btn.className = 'repo-dropdown-option w-full flex items-center gap-3 px-3 py-2.5 hover:bg-silver-50 transition-colors border-t border-silver-50 text-left';
+            btn.innerHTML =
+                '<span class="' + thumbClass + '">' + thumbHtml + '</span>' +
+                '<span class="flex flex-col items-start min-w-0">' +
+                    '<span class="text-sm font-medium text-woodsmoke-900 truncate w-full leading-tight">' + _repoEscHtml(r.name) + '</span>' +
+                    '<span class="text-xs text-woodsmoke-400 leading-tight mt-0.5">' + count + ' ' + (count === 1 ? 'bucket' : 'buckets') + '</span>' +
+                '</span>';
+            repoDropdownList.appendChild(btn);
+        });
+
+        var selected = selectedId ? repos.find(function (r) { return String(r._id) === String(selectedId); }) : null;
+        state.repoId = selected ? String(selected._id) : null;
+        setRepoTrigger(selected || null);
+    }
+
+    async function loadRepos(selectedId) {
+        if (_cachedRepos.length) populateRepoSelect(_cachedRepos, selectedId);
+        try {
+            var res = await fetch('/api/repos', { credentials: 'include' });
+            if (!res.ok) return;
+            _cachedRepos = await res.json();
+            populateRepoSelect(_cachedRepos, selectedId || null);
+        } catch (e) { /* ignore silently */ }
+    }
+
+    // Toggle dropdown
+    repoDropdownBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (repoDropdownList.classList.contains('hidden')) openRepoDropdown();
+        else closeRepoDropdown();
+    });
+
+    // Select option
+    repoDropdownList.addEventListener('click', function (e) {
+        var opt = e.target.closest('.repo-dropdown-option');
+        if (!opt) return;
+        var repoId = opt.dataset.repoId;
+        var repo   = repoId ? _cachedRepos.find(function (r) { return String(r._id) === String(repoId); }) : null;
+        state.repoId = repoId || null;
+        setRepoTrigger(repo || null);
+        closeRepoDropdown();
+    });
+
+    // Close on outside click
+    document.addEventListener('click', function (e) {
+        if (repoDropdownWrapper && !repoDropdownWrapper.contains(e.target)) closeRepoDropdown();
+    });
+
+    newRepoPlusBtn.addEventListener('click', function () {
+        closeRepoDropdown();
+        newRepoInline.classList.remove('hidden');
+        newRepoError.classList.add('hidden');
+        newRepoNameInput.value = '';
+        newRepoNameInput.focus();
+    });
+
+    newRepoCancelBtn.addEventListener('click', function () {
+        newRepoInline.classList.add('hidden');
+        newRepoError.classList.add('hidden');
+    });
+
+    async function confirmCreateRepo() {
+        var name = newRepoNameInput.value.trim();
+        if (!name) {
+            newRepoError.textContent = 'Please enter a name.';
+            newRepoError.classList.remove('hidden');
+            return;
+        }
+        newRepoConfirmBtn.disabled = true;
+        newRepoConfirmBtn.textContent = '…';
+        try {
+            var res = await fetch('/api/repos', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body:    JSON.stringify({ name: name })
+            });
+            var data = await res.json();
+            if (!res.ok) {
+                newRepoError.textContent = data.error || 'Failed to create repo.';
+                newRepoError.classList.remove('hidden');
+                return;
+            }
+            data.bucketCount = 0; // newly created repo has no buckets
+            _cachedRepos.push(data);
+            _cachedRepos.sort(function (a, b) { return a.name.localeCompare(b.name); });
+            populateRepoSelect(_cachedRepos, data._id);
+            newRepoInline.classList.add('hidden');
+            newRepoError.classList.add('hidden');
+        } catch (e) {
+            newRepoError.textContent = 'Network error. Please try again.';
+            newRepoError.classList.remove('hidden');
+        } finally {
+            newRepoConfirmBtn.disabled = false;
+            newRepoConfirmBtn.textContent = 'Add';
+        }
+    }
+
+    newRepoConfirmBtn.addEventListener('click', confirmCreateRepo);
+    newRepoNameInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); confirmCreateRepo(); }
+    });
+
     // Promote button — enabled for partners only; hide the upgrade CTA for partners
     if (isPartner) {
         promoteBucketBtn.disabled = false;
@@ -568,6 +795,7 @@
         state.monetization = false;
         state.mature       = false;
         state.thumbnail    = null;
+        state.repoId       = null;
         state._linkThumbTargetId = null;
         state._editBucket        = null;
         state._editBucketIsDraft = false;
@@ -735,6 +963,13 @@
         newLinkUrl.value   = '';
         tagInput.value     = '';
         addLinkBtn.disabled = true;
+
+        // Repo
+        closeRepoDropdown();
+        setRepoTrigger(null);
+        newRepoInline.classList.add('hidden');
+        newRepoError.classList.add('hidden');
+        newRepoNameInput.value = '';
     }
 
     // ── Mobile tab switching ──────────────────────────────────────────────────
@@ -789,6 +1024,7 @@
         clearDraft();
         resetState();
         resetUI();
+        loadRepos(null);
         deleteBtn.disabled = true;               // not available in create mode
         if (modalStats)      modalStats.classList.add('hidden');
         if (modalViewerLink) modalViewerLink.classList.add('hidden');
@@ -812,6 +1048,7 @@
                 description: descInput.value.trim(),
                 sourceUrl:   sourceUrlInput.value.trim(),
                 thumbnail:   state.thumbnail ? state.thumbnail.dataUrl : null,
+                repoId:      state.repoId || null,
                 isDraft:     true,
                 links:       state.links.map(function (l) {
                     return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: l.pinned };
@@ -840,12 +1077,14 @@
         state.monetization = !!bucket.isPaywalled;
         state.mature       = !!bucket.mature;
         state.thumbnail    = bucket.thumbnail ? { dataUrl: bucket.thumbnail, visible: true } : null;
+        state.repoId       = bucket.repoId ? String(bucket.repoId) : null;
 
         // Capture visibility before resetUI overwrites state.visibility to 'public'
         var bucketVisibility = bucket.visibility || (bucket.isPublic ? 'public' : 'private');
 
         // Reset the UI using the populated state
         resetUI();
+        loadRepos(state.repoId);
 
         // resetUI hardcodes toggles — fix them to match the bucket's actual settings
         setVisSegment(bucketVisibility);
@@ -907,7 +1146,8 @@
             mature:      !!bucket.mature,
             tags:        (bucket.hashtags || []).slice().sort().join('|'),
             links:       (bucket.links || []).map(function (l) { return l.href + ':' + (l.isFree ? '1' : '0'); }).sort().join('|'),
-            thumbnail:   bucket.thumbnail || ''
+            thumbnail:   bucket.thumbnail || '',
+            repoId:      bucket.repoId ? String(bucket.repoId) : null
         };
 
         // Enable delete button (edit mode) and reset its confirm state
@@ -1665,6 +1905,7 @@
                 state.monetization            === snap.monetized &&
                 priceAsEWL()                  === snap.price &&
                 state.mature                  === snap.mature &&
+                (state.repoId || null)        === snap.repoId &&
                 currentTags                   === snap.tags &&
                 currentLinks                  === snap.links &&
                 currentThumb                  === snap.thumbnail;
@@ -1686,6 +1927,7 @@
                 description: descInput.value.trim(),
                 sourceUrl:   sourceUrlInput.value.trim(),
                 thumbnail:   state.thumbnail ? state.thumbnail.dataUrl : null,
+                repoId:      state.repoId || null,
                 isDraft:     false,
                 links:       state.links.slice().sort(function (a, b) {
                     if (a.pinned && !b.pinned) return -1;
