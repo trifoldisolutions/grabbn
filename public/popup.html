@@ -320,16 +320,16 @@
                 const checked  = !already && selectedUrls.has(link.href);
 
                 const row = document.createElement('label');
-                row.className = `link-row flex items-start gap-2.5 px-3 py-2.5 ${checked ? 'selected' : ''} ${already ? 'opacity-50 cursor-default' : ''}`;
+                row.className = `link-row flex items-start gap-2.5 px-3 py-2.5 ${checked ? 'selected' : ''} ${already ? 'cursor-default' : ''}`;
                 row.innerHTML = `
                     <input type="checkbox" data-href="${escHtml(link.href)}"
-                        class="mt-0.5 shrink-0 w-3.5 h-3.5 rounded accent-orchid-600 ${already ? 'cursor-not-allowed' : 'cursor-pointer'}"
+                        class="mt-0.5 shrink-0 w-3.5 h-3.5 rounded accent-orchid-600 ${already ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}"
                         ${checked ? 'checked' : ''} ${already ? 'disabled' : ''}>
-                    ${link.image ? `<img src="${escHtml(link.image)}" class="w-10 h-8 object-cover rounded shrink-0" onerror="this.remove()">` : ''}
+                    ${link.image ? `<img src="${escHtml(link.image)}" class="w-10 h-8 object-cover rounded shrink-0${already ? ' opacity-40' : ''}" onerror="this.remove()">` : ''}
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-1.5">
-                            <p class="text-xs font-medium text-gray-800 text-clamp">${escHtml(link.text)}</p>
-                            ${already ? '<span class="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-gray-400 bg-gray-100 rounded px-1 py-px">Saved</span>' : ''}
+                            <p class="text-xs font-medium text-clamp ${already ? 'text-gray-400' : 'text-gray-800'}">${escHtml(link.text)}</p>
+                            ${already ? '<span class="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-orchid-500 bg-orchid-50 rounded px-1 py-px">Saved</span>' : ''}
                         </div>
                         <p class="text-[10px] text-gray-400 text-clamp">${escHtml(link.href)}</p>
                     </div>
