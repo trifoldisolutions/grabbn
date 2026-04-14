@@ -158,6 +158,8 @@
         // State
         let allLinks        = [];
         let selectedUrls    = new Set();
+        let existingHrefs   = new Set(); // hrefs already saved in the currently selected bucket
+        let savedLinksCache = null;      // cached GET /api/links response (href → Set<bucketName>)
         let sourceUrl       = '';
         let filterText      = '';
         let maxPage         = 1;
@@ -237,10 +239,41 @@
             saveBtn.disabled = selectedUrls.size === 0 || !bucketValue;
         }
 
-        function setBucketValue(val) {
+        async function fetchSavedLinks() {
+            if (savedLinksCache) return savedLinksCache;
+            try {
+                const res = await fetch(`${API}/api/links`, fetchOpts());
+                if (!res.ok) return null;
+                const data = await res.json();
+                // Build map: href → Set of bucket names
+                savedLinksCache = new Map();
+                data.forEach(l => {
+                    savedLinksCache.set(l.href, new Set(l.buckets || []));
+                });
+            } catch {}
+            return savedLinksCache;
+        }
+
+        async function setBucketValue(val) {
             bucketValue = val;
             bucketSelectLabel.textContent = val || 'Choose bucket…';
             bucketSelectLabel.className = `truncate flex-1 text-left ${val ? 'text-gray-700' : 'text-gray-400'}`;
+
+            if (val) {
+                const cache = await fetchSavedLinks();
+                existingHrefs = new Set();
+                if (cache) {
+                    cache.forEach((buckets, href) => {
+                        if (buckets.has(val)) existingHrefs.add(href);
+                    });
+                }
+                // Deselect any links that are already in this bucket
+                existingHrefs.forEach(href => selectedUrls.delete(href));
+                renderLinks();
+            } else {
+                existingHrefs = new Set();
+            }
+
             updateFooterCounts();
         }
 
@@ -283,47 +316,56 @@
             const frag = document.createDocumentFragment();
 
             filtered.forEach((link, i) => {
+                const already = existingHrefs.has(link.href);
+                const checked  = !already && selectedUrls.has(link.href);
+
                 const row = document.createElement('label');
-                row.className = `link-row flex items-start gap-2.5 px-3 py-2.5 ${selectedUrls.has(link.href) ? 'selected' : ''}`;
+                row.className = `link-row flex items-start gap-2.5 px-3 py-2.5 ${checked ? 'selected' : ''} ${already ? 'opacity-50 cursor-default' : ''}`;
                 row.innerHTML = `
                     <input type="checkbox" data-href="${escHtml(link.href)}"
-                        class="mt-0.5 shrink-0 w-3.5 h-3.5 rounded accent-orchid-600 cursor-pointer"
-                        ${selectedUrls.has(link.href) ? 'checked' : ''}>
+                        class="mt-0.5 shrink-0 w-3.5 h-3.5 rounded accent-orchid-600 ${already ? 'cursor-not-allowed' : 'cursor-pointer'}"
+                        ${checked ? 'checked' : ''} ${already ? 'disabled' : ''}>
                     ${link.image ? `<img src="${escHtml(link.image)}" class="w-10 h-8 object-cover rounded shrink-0" onerror="this.remove()">` : ''}
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium text-gray-800 text-clamp">${escHtml(link.text)}</p>
+                        <div class="flex items-center gap-1.5">
+                            <p class="text-xs font-medium text-gray-800 text-clamp">${escHtml(link.text)}</p>
+                            ${already ? '<span class="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-gray-400 bg-gray-100 rounded px-1 py-px">Saved</span>' : ''}
+                        </div>
                         <p class="text-[10px] text-gray-400 text-clamp">${escHtml(link.href)}</p>
                     </div>
                 `;
 
                 const cb = row.querySelector('input[type=checkbox]');
 
-                row.addEventListener('click', (e) => {
-                    if ((e.shiftKey || e.ctrlKey || e.metaKey) && anchorHref !== null) {
-                        e.preventDefault();
-                        const anchorIndex = filtered.findIndex(l => l.href === anchorHref);
-                        if (anchorIndex !== -1) {
-                            const from = Math.min(anchorIndex, i);
-                            const to   = Math.max(anchorIndex, i);
-                            for (let j = from; j <= to; j++) selectedUrls.add(filtered[j].href);
-                            renderLinks();
+                if (!already) {
+                    row.addEventListener('click', (e) => {
+                        if ((e.shiftKey || e.ctrlKey || e.metaKey) && anchorHref !== null) {
+                            e.preventDefault();
+                            const anchorIndex = filtered.findIndex(l => l.href === anchorHref);
+                            if (anchorIndex !== -1) {
+                                const from = Math.min(anchorIndex, i);
+                                const to   = Math.max(anchorIndex, i);
+                                for (let j = from; j <= to; j++) {
+                                    if (!existingHrefs.has(filtered[j].href)) selectedUrls.add(filtered[j].href);
+                                }
+                                renderLinks();
+                            }
+                            return;
                         }
-                        return;
-                    }
-                    // Normal click — let the checkbox handle toggle; anchor updates in change handler
-                });
+                    });
 
-                cb.addEventListener('change', () => {
-                    if (cb.checked) {
-                        selectedUrls.add(link.href);
-                        row.classList.add('selected');
-                    } else {
-                        selectedUrls.delete(link.href);
-                        row.classList.remove('selected');
-                    }
-                    anchorHref = link.href;
-                    updateFooterCounts();
-                });
+                    cb.addEventListener('change', () => {
+                        if (cb.checked) {
+                            selectedUrls.add(link.href);
+                            row.classList.add('selected');
+                        } else {
+                            selectedUrls.delete(link.href);
+                            row.classList.remove('selected');
+                        }
+                        anchorHref = link.href;
+                        updateFooterCounts();
+                    });
+                }
 
                 frag.appendChild(row);
             });
@@ -354,11 +396,11 @@
                 const prev = bucketValue;
                 // Restore previous selection if still valid, else pre-select the first
                 if (prev && names.includes(prev)) {
-                    setBucketValue(prev);
+                    await setBucketValue(prev);
                 } else if (names.length > 0) {
-                    setBucketValue(names[0]);
+                    await setBucketValue(names[0]);
                 } else {
-                    setBucketValue('');
+                    await setBucketValue('');
                 }
                 renderBucketOptions(names);
             } catch {} finally {
@@ -458,7 +500,9 @@
                     saveStatus.className = 'text-[11px] text-green-600';
                     saveStatus.classList.remove('hidden');
                     selectedUrls.clear();
-                    renderLinks();
+                    // Invalidate cache so newly saved links show as disabled immediately
+                    savedLinksCache = null;
+                    await setBucketValue(bucket);
                     setTimeout(() => saveStatus.classList.add('hidden'), 3000);
                     // Clear the window.name accumulator on the parent page so the
                     // next bookmarklet click starts a fresh collection session.
@@ -503,7 +547,7 @@
         // --- Select all / none ---
 
         document.getElementById('selectAllBtn').addEventListener('click', () => {
-            getFiltered().forEach(l => selectedUrls.add(l.href));
+            getFiltered().forEach(l => { if (!existingHrefs.has(l.href)) selectedUrls.add(l.href); });
             renderLinks();
         });
 
