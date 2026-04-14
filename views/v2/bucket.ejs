@@ -11,10 +11,10 @@
 <%- include('partials/layout') %>
 
 <div class="w-full max-w-[65rem] mx-auto px-4 md:px-6 py-6">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:items-stretch">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:items-start">
 
         <!-- ── Column 1 · Meta ────────────────────────────────────────────── -->
-        <div class="flex flex-col gap-4">
+        <div id="bvMetaCol" class="flex flex-col gap-4">
 
             <div class="flex flex-col gap-2">
                 <!-- Title -->
@@ -256,7 +256,7 @@
         <!-- ── Column 2 · Links ───────────────────────────────────────────── -->
         <div id="bvLinksCol" class="overflow-hidden flex flex-col">
 
-<div class="flex-1 overflow-y-auto scrollbar-hide pb-16 md:pb-0">
+<div id="bvLinksScroll" class="overflow-y-auto scrollbar-hide pb-16 md:pb-0">
 <%
     const sortedLinks = bucket.links.slice().sort(function(a, b) {
         if (a.isPinned && !b.isPinned) return -1;
@@ -1592,6 +1592,24 @@
             }
         });
     }
+
+    // ── Links column height: match left column on md+ ──────────────────────
+    (function () {
+        var metaCol    = document.getElementById('bvMetaCol');
+        var linksScroll = document.getElementById('bvLinksScroll');
+        if (!metaCol || !linksScroll) return;
+
+        function syncHeight() {
+            if (window.innerWidth >= 768) {
+                linksScroll.style.maxHeight = metaCol.offsetHeight + 'px';
+            } else {
+                linksScroll.style.maxHeight = '';
+            }
+        }
+
+        syncHeight();
+        window.addEventListener('resize', syncHeight);
+    })();
 })();
 </script>
 
