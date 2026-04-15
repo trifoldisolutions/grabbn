@@ -309,9 +309,15 @@
                             <input
                                 id="tagInput"
                                 type="text"
-                                placeholder="Add tag, press Enter"
+                                enterkeyhint="done"
+                                placeholder="Add a tag…"
                                 class="bg-transparent outline-none text-sm text-woodsmoke-950 placeholder-woodsmoke-400 flex-1 min-w-[120px] h-7 leading-7"
                             />
+                            <button
+                                id="tagAddBtn"
+                                type="button"
+                                class="hidden items-center justify-center h-7 px-2 rounded text-xs font-semibold bg-orchid-100 text-orchid-700 hover:bg-orchid-200 transition-colors"
+                            >Add</button>
                         </div>
                     </div>
 
@@ -1517,15 +1523,34 @@
         tagInput.classList.toggle('hidden', state.tags.length >= 8);
     }
 
+    var tagAddBtn = document.getElementById('tagAddBtn');
+
+    function commitTagInput() {
+        var val = tagInput.value.trim().replace(/,$/, '');
+        if (val && !state.tags.includes(val) && state.tags.length < 8) {
+            state.tags.push(val);
+            renderTags();
+        }
+        tagInput.value = '';
+        tagAddBtn.classList.remove('flex');
+        tagAddBtn.classList.add('hidden');
+    }
+
+    tagInput.addEventListener('input', function () {
+        var hasText = this.value.trim().length > 0;
+        tagAddBtn.classList.toggle('hidden', !hasText);
+        tagAddBtn.classList.toggle('flex', hasText);
+    });
+
+    tagAddBtn.addEventListener('click', function () {
+        commitTagInput();
+        tagInput.focus();
+    });
+
     tagInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault();
-            var val = this.value.trim().replace(/,$/, '');
-            if (val && !state.tags.includes(val) && state.tags.length < 8) {
-                state.tags.push(val);
-                renderTags();
-            }
-            this.value = '';
+            commitTagInput();
         } else if (e.key === 'Backspace' && this.value === '' && state.tags.length) {
             state.tags.pop();
             renderTags();
