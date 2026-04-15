@@ -163,7 +163,7 @@
                 <p class="text-sm text-gray-400"><%= isOwner ? "No buckets yet. Start curating!" : "No public buckets yet." %></p>
             </div>
         <% } else { %>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <% ownBuckets.forEach(function(b) { %>
                     <%- include('partials/bucket-card', { b, isOwn: isOwner }) %>
                 <% }); %>
@@ -185,7 +185,7 @@
                     <p class="text-sm text-gray-400">You haven't grabbed any buckets yet.</p>
                 </div>
             <% } else { %>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <% grabbedBuckets.forEach(function(b) { %>
                         <%- include('partials/bucket-card', { b, isOwn: false }) %>
                     <% }); %>
@@ -323,22 +323,32 @@
         grabbed: document.getElementById('panelGrabbed'),
         repos:   document.getElementById('panelRepos'),
     };
+    const TAB_KEY = 'profile_active_tab_<%= profileUser.username %>';
+
+    function activateTab(target) {
+        tabs.forEach(t => {
+            const active = t.dataset.tab === target;
+            t.classList.toggle('border-orchid-600',  active);
+            t.classList.toggle('text-orchid-600',    active);
+            t.classList.toggle('border-transparent', !active);
+            t.classList.toggle('text-gray-400',      !active);
+        });
+        Object.entries(panels).forEach(([key, el]) => {
+            if (el) el.classList.toggle('hidden', key !== target);
+        });
+    }
 
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.tab;
-            tabs.forEach(t => {
-                const active = t.dataset.tab === target;
-                t.classList.toggle('border-orchid-600',  active);
-                t.classList.toggle('text-orchid-600',    active);
-                t.classList.toggle('border-transparent', !active);
-                t.classList.toggle('text-gray-400',      !active);
-            });
-            Object.entries(panels).forEach(([key, el]) => {
-                if (el) el.classList.toggle('hidden', key !== target);
-            });
+            activateTab(target);
+            try { localStorage.setItem(TAB_KEY, target); } catch (_) {}
         });
     });
+
+    // Restore last active tab on load
+    const savedTab = (() => { try { return localStorage.getItem(TAB_KEY); } catch (_) { return null; } })();
+    if (savedTab && panels[savedTab]) activateTab(savedTab);
 
     // ── Repos panel (owner only) ─────────────────────────────────────────────
     (function () {
@@ -395,9 +405,9 @@
                 ? `<img src="${escHtml(b.displayThumb)}" class="w-full aspect-square object-cover rounded-md" loading="lazy" onerror="this.style.display='none'">`
                 : `<div class="w-full aspect-square bg-silver-100 rounded-md flex items-center justify-center text-gray-300">${IMG_PLACEHOLDER}</div>`;
             return `
-                <div class="flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer hover:shadow-md transition-shadow w-[calc(25%-9px)] shrink-0"
+                <div class="flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer hover:shadow-md transition-shadow w-[44%] sm:w-[calc(25%-6px)] shrink-0"
                     data-action="open-bucket" data-bucket-id="${escHtml(b._id)}">
-                    <div class="px-3 pt-3 pb-3">${thumb}</div>
+                    <div class="p-1.5">${thumb}</div>
                     <div class="px-3 pt-1 pb-3 flex flex-col gap-0.5">
                         <div class="flex items-center gap-1">
                             <p class="font-medium text-base leading-snug truncate flex-1">${escHtml(b.name)}</p>
@@ -417,7 +427,7 @@
                 <div class="flex items-center justify-between px-4 py-3.5 border-b border-silver-100">
                     <div class="flex items-center gap-2 min-w-0 flex-1 mr-3">
                         <span class="text-orchid-400 shrink-0">${BUCKET_ICON}</span>
-                        <span class="repo-name-display font-semibold text-sm text-woodsmoke-900 truncate">${escHtml(repo.name)}</span>
+                        <a href="/v2/o/${escHtml(repo._id)}" class="repo-name-display font-semibold text-sm text-woodsmoke-900 hover:text-orchid-600 transition-colors truncate">${escHtml(repo.name)}</a>
                         <span class="repo-bucket-count text-xs bg-orchid-50 text-orchid-600 px-1.5 py-0.5 rounded-full shrink-0">${buckets.length}</span>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
@@ -438,10 +448,30 @@
                         class="w-8 h-8 flex items-center justify-center rounded-md border border-silver-200 text-gray-400 hover:text-red-500 transition-colors shrink-0">✕</button>
                     <p class="repo-rename-error hidden text-xs text-red-500"></p>
                 </div>
+                <div class="repo-desc-row px-4 py-2.5 border-b border-silver-100">
+                    <div class="repo-desc-display flex items-start gap-2 group cursor-pointer">
+                        <p class="repo-desc-text text-sm leading-relaxed flex-1 ${repo.description ? 'text-woodsmoke-500' : 'text-silver-400 italic'}"
+                           data-value="${escHtml(repo.description || '')}">${repo.description ? escHtml(repo.description) : 'Add a description…'}</p>
+                        <button data-action="desc-edit" data-repo-id="${repo._id}"
+                            class="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-silver-400 hover:text-orchid-600" aria-label="Edit description">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.756 6.17l7.07 7.071l-7.173 7.174a2 2 0 0 1-1.238.578L9.239 21H4.006a1.01 1.01 0 0 1-1.004-.9l-.006-.11v-5.233a2 2 0 0 1 .467-1.284l.12-.13l7.173-7.174Zm3.14-3.14a2 2 0 0 1 2.701-.117l.127.117l4.243 4.243a2 2 0 0 1 .117 2.7l-.117.128l-1.726 1.726l-7.07-7.071z"/></g></svg>
+                        </button>
+                    </div>
+                    <div class="repo-desc-editor hidden mt-1.5">
+                        <textarea class="repo-desc-input w-full px-3 py-2 text-sm text-woodsmoke-950 rounded-md border border-silver-200 outline-none focus:border-orchid-400 focus:ring-2 focus:ring-orchid-100 transition resize-none" maxlength="256" rows="2" placeholder="Add a description for this repo…"></textarea>
+                        <div class="flex items-center justify-center gap-2 mt-1.5">
+                            <button data-action="desc-save" data-repo-id="${repo._id}"
+                                class="h-7 px-3 text-xs flex items-center justify-center font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors">Save</button>
+                            <button data-action="desc-cancel" data-repo-id="${repo._id}"
+                                class="h-7 px-3 text-xs flex items-center justify-center font-semibold border border-silver-200 text-woodsmoke-500 rounded-md hover:border-red-200 hover:text-red-500 transition-colors">Cancel</button>
+                            <span class="repo-desc-count text-xs text-silver-400">0 / 256</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="repo-buckets-area p-4">
                     ${buckets.length === 0
                         ? `<p class="text-xs text-gray-400 italic">No buckets assigned yet. Open a bucket and pick this repo from the Settings tab.</p>`
-                        : `<div class="flex gap-3 overflow-x-auto pb-1">${buckets.map(buildBucketCard).join('')}</div>`
+                        : `<div class="flex gap-2 overflow-x-auto pb-1">${buckets.map(buildBucketCard).join('')}</div>`
                     }
                 </div>`;
 
@@ -552,6 +582,70 @@
             }
         }
 
+        // ── Description ─────────────────────────────────────────────────────
+        function openDescEditor(repoId) {
+            const card = findCard(repoId);
+            if (!card) return;
+            const row      = card.querySelector('.repo-desc-row');
+            const display  = row.querySelector('.repo-desc-display');
+            const editor   = row.querySelector('.repo-desc-editor');
+            const textarea = row.querySelector('.repo-desc-input');
+            const counter  = row.querySelector('.repo-desc-count');
+            textarea.value = row.querySelector('.repo-desc-text').dataset.value || '';
+            counter.textContent = `${textarea.value.length} / 256`;
+            display.classList.add('hidden');
+            editor.classList.remove('hidden');
+            textarea.focus();
+        }
+
+        function closeDescEditor(repoId) {
+            const card = findCard(repoId);
+            if (!card) return;
+            const row = card.querySelector('.repo-desc-row');
+            row.querySelector('.repo-desc-display').classList.remove('hidden');
+            row.querySelector('.repo-desc-editor').classList.add('hidden');
+        }
+
+        async function saveDesc(repoId, btn) {
+            const card = findCard(repoId);
+            if (!card) return;
+            const row      = card.querySelector('.repo-desc-row');
+            const textarea = row.querySelector('.repo-desc-input');
+            const descText = row.querySelector('.repo-desc-text');
+            const value    = textarea.value.trim();
+            const origLabel = btn.textContent;
+            btn.textContent = 'Saving…';
+            btn.disabled = true;
+            try {
+                const res = await fetch(`/api/repos/${repoId}`, {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description: value }),
+                });
+                if (res.ok) {
+                    descText.dataset.value = value;
+                    if (value) {
+                        descText.textContent = value;
+                        descText.classList.remove('text-silver-400', 'italic');
+                        descText.classList.add('text-woodsmoke-500');
+                    } else {
+                        descText.textContent = 'Add a description…';
+                        descText.classList.add('text-silver-400', 'italic');
+                        descText.classList.remove('text-woodsmoke-500');
+                    }
+                    closeDescEditor(repoId);
+                } else {
+                    btn.textContent = 'Failed';
+                    setTimeout(() => { btn.textContent = origLabel; btn.disabled = false; }, 2000);
+                }
+            } catch {
+                btn.textContent = 'Failed';
+                setTimeout(() => { btn.textContent = origLabel; btn.disabled = false; }, 2000);
+            }
+            btn.disabled = false;
+        }
+
         // ── Share ───────────────────────────────────────────────────────────
         async function handleShare(repoId, btn) {
             const url = `${window.location.origin}/v2/o/${repoId}`;
@@ -578,10 +672,27 @@
             if (action === 'rename-save')   saveRename(repoId);
             if (action === 'delete')        handleDelete(repoId, btn);
             if (action === 'share')         handleShare(repoId, btn);
+            if (action === 'desc-edit')     openDescEditor(repoId);
+            if (action === 'desc-cancel')   closeDescEditor(repoId);
+            if (action === 'desc-save')     saveDesc(repoId, btn);
             if (action === 'open-bucket') {
                 const bucket = ownBuckets.find(b => b._id === bucketId);
                 if (bucket && window.openBucketModal) window.openBucketModal(bucket);
             }
+        });
+
+        reposPanel.addEventListener('click', function (e) {
+            const text = e.target.closest('.repo-desc-text');
+            if (!text) return;
+            const card = text.closest('[data-repo-id]');
+            if (card) openDescEditor(card.dataset.repoId);
+        });
+
+        reposPanel.addEventListener('input', function (e) {
+            const textarea = e.target.closest('.repo-desc-input');
+            if (!textarea) return;
+            const row = textarea.closest('.repo-desc-row');
+            if (row) row.querySelector('.repo-desc-count').textContent = `${textarea.value.length} / 256`;
         });
 
         reposPanel.addEventListener('keydown', function (e) {

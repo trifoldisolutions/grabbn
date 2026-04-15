@@ -63,6 +63,12 @@
                     <span class="text-silver-300">·</span>
                     <span><%= buckets.length %> bucket<%= buckets.length !== 1 ? 's' : '' %></span>
                 </div>
+
+                <!-- Description -->
+                <% if (repo.description) { %>
+                <p class="mt-2.5 text-sm text-woodsmoke-600 leading-relaxed"><%= repo.description %></p>
+                <% } %>
+
             </div>
 
         </div>
@@ -104,9 +110,9 @@
             </p>
         </div>
     <% } else { %>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             <% buckets.forEach(function(b) { %>
-                <%- include('partials/bucket-card', { b, isOwn: isOwner, showMenu: isOwner }) %>
+                <%- include('partials/bucket-card', { b, isOwn: isOwner, showMenu: isOwner, plain: true }) %>
             <% }); %>
         </div>
     <% } %>
