@@ -416,6 +416,26 @@ app.get('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     }
 });
 
+// ── GET /api/buckets/mine ─────────────────────────────────────────────────────
+// Returns the current user's buckets with enough info to render the clone modal.
+app.get('/api/buckets/mine', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const buckets = await Bucket.find({ userId: req.user._id })
+            .select('name thumbnail links')
+            .sort({ order: 1, createdAt: 1 })
+            .lean();
+
+        res.json(buckets.map(b => ({
+            name:      b.name,
+            thumbnail: b.thumbnail || null,
+            linkCount: (b.links || []).length,
+        })));
+    } catch (err) {
+        console.error('Error fetching user buckets:', err);
+        res.status(500).json({ error: 'Failed to fetch buckets' });
+    }
+});
+
 // Fan-out a grabbed_bucket_updated notification to all grabbers of a bucket.
 // Dedup: skips grabbers who already received this notification for this bucket today.
 async function fanOutGrabbedBucketUpdated(bucket, curatorUsername) {

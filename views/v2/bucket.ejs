@@ -254,9 +254,9 @@
         </div><!-- /Column 1 -->
 
         <!-- ── Column 2 · Links ───────────────────────────────────────────── -->
-        <div id="bvLinksCol" class="overflow-hidden flex flex-col">
+        <div id="bvLinksCol" class="-mx-4 md:mx-0 overflow-hidden flex flex-col">
 
-<div id="bvLinksScroll" class="overflow-y-auto scrollbar-hide pb-16 md:pb-0">
+<div id="bvLinksScroll" class="overflow-y-auto scrollbar-hide pb-16 md:pb-0 px-3">
 <%
     const sortedLinks = bucket.links.slice().sort(function(a, b) {
         if (a.isPinned && !b.isPinned) return -1;
@@ -275,10 +275,11 @@
     _ranked.forEach(function(l, i){ clickRank[l.href] = i + 1; });
 %>
             <% if (bucket.links.length === 0) { %>
-            <div class="px-5 py-12 text-center text-woodsmoke-400 text-sm italic">No links in this collection.</div>
+            <div class="py-12 text-center text-woodsmoke-400 text-sm italic">No links in this collection.</div>
             <% } else { %>
 
-                <!-- Visible links -->
+                <!-- Visible links grid -->
+                <div class="grid grid-cols-2 gap-2">
                 <% visibleLinks.forEach(function(link) { %>
                 <%
                     var rank = clickRank[link.href] || null;
@@ -286,101 +287,100 @@
                     var isStar   = rank === 2 || rank === 3;
                     var hasBadge = link.isPinned || isTrophy || isStar;
                 %>
-                <div class="bv-link-item border-b border-silver-50 last:border-b-0">
-                    <!-- Title row -->
-                    <div class="flex items-center pt-3 <%= hasBadge ? 'pb-1' : 'pb-3' %> hover:bg-orchid-50 transition-colors group">
-                        <a href="<%= link.href %>" target="_blank" rel="noopener noreferrer"
-                           data-bucket-id="<%= bucketId %>"
-                           class="bv-link-row flex items-center gap-3 px-5 flex-1 min-w-0">
+                <div class="bv-link-item relative bg-white group">
+                    <a href="<%= link.href %>" target="_blank" rel="noopener noreferrer"
+                       data-bucket-id="<%= bucketId %>"
+                       class="bv-link-row block hover:bg-orchid-50 transition-colors">
+                        <!-- Square thumbnail -->
+                        <div class="relative aspect-square bg-silver-100 overflow-hidden rounded-md">
                             <% if (link.image) { %>
-                            <img src="<%= link.image %>" alt="" loading="lazy" class="w-12 h-9 object-cover rounded-md shrink-0 bg-silver-100" onerror="this.style.display='none'">
+                            <img src="<%= link.image %>" alt="" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none'">
                             <% } %>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-woodsmoke-950 group-hover:text-orchid-700 transition-colors truncate">
-                                    <%= link.text || 'Untitled Link' %><% if (link.duration) { %><span class="text-woodsmoke-400 font-normal"> · <%= link.duration %></span><% } %>
-                                </p>
-                                <p class="text-xs text-woodsmoke-400 truncate mt-0.5"><%= link.href %></p>
-                            </div>
-                        </a>
-                        <!-- 3-dots context menu -->
-                        <div class="relative shrink-0 flex items-center pr-3" data-href="<%= link.href %>">
-                            <button class="bv-link-menu-btn w-7 h-7 flex items-center justify-center rounded-md text-silver-300 hover:text-woodsmoke-600 hover:bg-silver-100 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 17a2 2 0 1 1 0 4a2 2 0 0 1 0-4m0-7a2 2 0 1 1 0 4a2 2 0 0 1 0-4m0-7a2 2 0 1 1 0 4a2 2 0 0 1 0-4"/></g></svg>
-                            </button>
-                            <div class="bv-link-menu hidden absolute right-0 top-full z-20 mt-1 w-44 bg-white rounded-lg shadow-lg border border-silver-100 py-1">
-                                <button class="bv-copy-link w-full px-4 py-2 text-left text-xs text-woodsmoke-700 hover:bg-silver-50 transition-colors">Copy Link</button>
-<% if (!isOwner) { %>
-                                <button class="bv-request-update w-full px-4 py-2 text-left text-xs text-woodsmoke-700 hover:bg-silver-50 transition-colors">Request Update</button>
-                                <button class="bv-report-link w-full px-4 py-2 text-left text-xs text-red-400 hover:bg-red-50 transition-colors">Report</button>
+                            <!-- Badge overlays (top-left, icon-only) -->
+                            <% if (hasBadge) { %>
+                            <div class="absolute top-1.5 left-1.5 flex flex-col gap-1">
+                                <% if (link.isPinned) { %>
+                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-orchid-700/90 text-white" title="Pinned by curator">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M16.735 2.835a2 2 0 0 0-2.615-.186l-2.913 2.185a9 9 0 0 1-4.127 1.71l-2.177.31c-.73.105-1.265.891-.913 1.662c.331.723 1.385 2.629 4.36 5.72l-4.178 4.178a1 1 0 1 0 1.414 1.414l4.178-4.178c3.091 2.975 4.997 4.029 5.72 4.36c.77.352 1.557-.183 1.661-.913l.311-2.177a9 9 0 0 1 1.71-4.127L21.35 9.88a2 2 0 0 0-.186-2.615z"/></g></svg>
+                                </span>
+                                <% } %>
+                                <% if (isTrophy) { %>
+                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/90 text-white" title="Top performing">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M16.617 3a2 2 0 0 1 1.985 1.752L18.758 6h.668a2.29 2.29 0 0 1 2.246 2.74l-.201 1.005a4.05 4.05 0 0 1-2.972 3.13a7.18 7.18 0 0 1-5.5 4.056V19h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2.069a7.18 7.18 0 0 1-5.498-4.056a4.05 4.05 0 0 1-2.972-3.13l-.201-1.006A2.29 2.29 0 0 1 4.574 6h.668l.156-1.248A2 2 0 0 1 7.383 3zm2.81 5h-.42l.117.93q.075.61.05 1.203q.197-.276.294-.61l.042-.17l.2-1.006a.29.29 0 0 0-.217-.34zM4.991 8h-.418a.29.29 0 0 0-.285.347l.201 1.005c.058.289.174.553.336.78q-.025-.592.05-1.202z"/></g></svg>
+                                </span>
+                                <% } %>
+                                <% if (isStar) { %>
+                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-woodsmoke-500/80 text-white" title="Rising star">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176z"/></g></svg>
+                                </span>
                                 <% } %>
                             </div>
+                            <% } %>
+                        </div>
+                        <!-- Title -->
+                        <div class="p-3">
+                            <p class="text-xs font-semibold text-woodsmoke-950 group-hover:text-orchid-700 transition-colors line-clamp-2 leading-snug">
+                                <%= link.text || 'Untitled Link' %><% if (link.duration) { %><span class="text-woodsmoke-400 font-normal"> · <%= link.duration %></span><% } %>
+                            </p>
+                        </div>
+                    </a>
+                    <!-- 3-dot context menu (overlays thumbnail, top-right) -->
+                    <div class="absolute top-1.5 right-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity" data-href="<%= link.href %>" data-link-text="<%= (link.text || '').replace(/"/g, '&quot;') %>" data-link-image="<%= link.image || '' %>" data-link-duration="<%= link.duration || '' %>">
+                        <button class="bv-link-menu-btn w-6 h-6 flex items-center justify-center rounded-md bg-white/90 backdrop-blur-sm text-woodsmoke-500 hover:text-woodsmoke-700 shadow-sm transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 17a2 2 0 1 1 0 4a2 2 0 0 1 0-4m0-7a2 2 0 1 1 0 4a2 2 0 0 1 0-4m0-7a2 2 0 1 1 0 4a2 2 0 0 1 0-4"/></g></svg>
+                        </button>
+                        <div class="bv-link-menu hidden absolute right-0 top-full z-20 mt-1 w-44 bg-white rounded-lg shadow-lg border border-silver-100 py-1">
+                            <button class="bv-copy-link w-full px-4 py-2 text-left text-xs text-woodsmoke-700 hover:bg-silver-50 transition-colors">Copy Link</button>
+                            <button class="bv-clone-link w-full px-4 py-2 text-left text-xs text-woodsmoke-700 hover:bg-silver-50 transition-colors">Clone Link</button>
+<% if (!isOwner) { %>
+                            <button class="bv-request-update w-full px-4 py-2 text-left text-xs text-woodsmoke-700 hover:bg-silver-50 transition-colors">Request Update</button>
+                            <button class="bv-report-link w-full px-4 py-2 text-left text-xs text-red-400 hover:bg-red-50 transition-colors">Report</button>
+<% } %>
                         </div>
                     </div>
-                    <!-- Badges -->
-                    <% if (hasBadge) { %>
-                    <div class="flex items-center gap-1.5 flex-wrap px-5 pb-3">
-                        <% if (link.isPinned) { %>
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orchid-100 text-orchid-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M16.735 2.835a2 2 0 0 0-2.615-.186l-2.913 2.185a9 9 0 0 1-4.127 1.71l-2.177.31c-.73.105-1.265.891-.913 1.662c.331.723 1.385 2.629 4.36 5.72l-4.178 4.178a1 1 0 1 0 1.414 1.414l4.178-4.178c3.091 2.975 4.997 4.029 5.72 4.36c.77.352 1.557-.183 1.661-.913l.311-2.177a9 9 0 0 1 1.71-4.127L21.35 9.88a2 2 0 0 0-.186-2.615z"/></g></svg>
-                            Pinned by the curator
-                        </span>
-                        <% } %>
-                        <% if (isTrophy) { %>
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M16.617 3a2 2 0 0 1 1.985 1.752L18.758 6h.668a2.29 2.29 0 0 1 2.246 2.74l-.201 1.005a4.05 4.05 0 0 1-2.972 3.13a7.18 7.18 0 0 1-5.5 4.056V19h3a1 1 0 1 1 0 2H8a1 1 0 1 1 0-2h3v-2.069a7.18 7.18 0 0 1-5.498-4.056a4.05 4.05 0 0 1-2.972-3.13l-.201-1.006A2.29 2.29 0 0 1 4.574 6h.668l.156-1.248A2 2 0 0 1 7.383 3zm2.81 5h-.42l.117.93q.075.61.05 1.203q.197-.276.294-.61l.042-.17l.2-1.006a.29.29 0 0 0-.217-.34zM4.991 8h-.418a.29.29 0 0 0-.285.347l.201 1.005c.058.289.174.553.336.78q-.025-.592.05-1.202z"/></g></svg>
-                            Top performing
-                        </span>
-                        <% } %>
-                        <% if (isStar) { %>
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-silver-100 text-woodsmoke-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.92 2.868a1.25 1.25 0 0 1 2.16 0l2.795 4.798l5.428 1.176a1.25 1.25 0 0 1 .667 2.054l-3.7 4.141l.56 5.525a1.25 1.25 0 0 1-1.748 1.27L12 19.592l-5.082 2.24a1.25 1.25 0 0 1-1.748-1.27l.56-5.525l-3.7-4.14a1.25 1.25 0 0 1 .667-2.055l5.428-1.176z"/></g></svg>
-                            Rising star
-                        </span>
-                        <% } %>
-                    </div>
-                    <% } else { %>
-                    <div class="pb-1"></div>
-                    <% } %>
                 </div>
                 <% }); %>
 
                 <!-- Blurred locked links -->
                 <% if (showLocked) { %>
-                    <% lockedLinks.slice(0, 5).forEach(function(link) { %>
-                    <div class="flex items-center gap-3 px-5 py-3 border-b border-silver-50 select-none">
-                        <% if (link.image) { %>
-                        <div class="w-12 h-9 rounded-md shrink-0 bg-silver-100 blur-sm overflow-hidden">
+                    <% lockedLinks.slice(0, 4).forEach(function(link) { %>
+                    <div class="relative bg-white select-none">
+                        <div class="aspect-square bg-silver-100 overflow-hidden blur-sm">
+                            <% if (link.image) { %>
                             <img src="<%= imgSrc(link.image) %>" alt="" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                            <% } %>
                         </div>
-                        <% } %>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium truncate blur-sm text-woodsmoke-950 pointer-events-none">
-                                <%= link.text || 'Untitled Link' %>
-                            </p>
+                        <div class="p-3">
+                            <p class="text-xs font-semibold text-woodsmoke-950 truncate blur-sm pointer-events-none"><%= link.text || 'Untitled Link' %></p>
                         </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 shrink-0 text-silver-200" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-silver-400" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
+                        </div>
                     </div>
                     <% }); %>
-                    <% if (lockedLinks.length > 5) { %>
-                    <p class="px-5 py-2 text-xs text-woodsmoke-400 italic">+ <%= lockedLinks.length - 5 %> more locked</p>
+                    <% if (lockedLinks.length > 4) { %>
+                    <div class="col-span-2 py-2 text-xs text-woodsmoke-400 italic text-center">+ <%= lockedLinks.length - 4 %> more locked</div>
                     <% } %>
+                <% } %>
+                </div><!-- /grid -->
 
-                    <!-- Unlock CTA -->
-                    <div class="px-5 py-5 border-t border-silver-100 text-center">
-                        <p class="text-sm font-semibold text-woodsmoke-950 mb-1">Unlock this collection</p>
-                        <p class="text-xs text-woodsmoke-400 mb-4">One-time purchase · Access forever</p>
-                        <% if (user.isAnonymous) { %>
-                        <a href="/?openAuth=true" class="inline-flex items-center justify-center gap-2 w-full max-w-xs h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors mx-auto">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
-                            Sign in to unlock
-                        </a>
-                        <% } else { %>
-                        <button id="bvUnlockBtn" class="inline-flex items-center justify-center gap-2 w-full max-w-xs h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors mx-auto">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
-                            Unlock for <%= (bucket.price || 0).toLocaleString('en-US') %> EWL
-                        </button>
-                        <% } %>
-                    </div>
+                <!-- Unlock CTA (full-width, below grid) -->
+                <% if (showLocked) { %>
+                <div class="px-5 py-5 border-t border-silver-100 text-center">
+                    <p class="text-sm font-semibold text-woodsmoke-950 mb-1">Unlock this collection</p>
+                    <p class="text-xs text-woodsmoke-400 mb-4">One-time purchase · Access forever</p>
+                    <% if (user.isAnonymous) { %>
+                    <a href="/?openAuth=true" class="inline-flex items-center justify-center gap-2 w-full max-w-xs h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors mx-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
+                        Sign in to unlock
+                    </a>
+                    <% } else { %>
+                    <button id="bvUnlockBtn" class="inline-flex items-center justify-center gap-2 w-full max-w-xs h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors mx-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.010z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
+                        Unlock for <%= (bucket.price || 0).toLocaleString('en-US') %> EWL
+                    </button>
+                    <% } %>
+                </div>
                 <% } %>
 
             <% } %>
@@ -475,9 +475,36 @@
     </div><!-- /bvPanelComments -->
 </div><!-- /tab container -->
 
+<!-- ── Clone Link Modal ───────────────────────────────────────────────────── -->
+<div id="bvCloneModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <!-- Backdrop -->
+    <div id="bvCloneBackdrop" class="absolute inset-0 bg-woodsmoke-950/60 backdrop-blur-sm"></div>
+    <!-- Sheet -->
+    <div class="relative w-full sm:max-w-sm bg-white sm:rounded-xl shadow-xl flex flex-col max-h-[85dvh]">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-silver-100 shrink-0">
+            <h2 class="text-sm font-semibold text-woodsmoke-950">Clone to bucket</h2>
+            <button id="bvCloseCloneModal" class="w-7 h-7 flex items-center justify-center rounded-md text-woodsmoke-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 10.586L6.707 5.293a1 1 0 0 0-1.414 1.414L10.586 12l-5.293 5.293a1 1 0 1 0 1.414 1.414L12 13.414l5.293 5.293a1 1 0 0 0 1.414-1.414L13.414 12l5.293-5.293a1 1 0 0 0-1.414-1.414z"/></g></svg>
+            </button>
+        </div>
+        <!-- Bucket list -->
+        <div id="bvCloneBucketList" class="overflow-y-auto flex-1 py-1">
+            <!-- populated by JS -->
+        </div>
+        <!-- Footer -->
+        <div class="px-4 py-3 border-t border-silver-100 shrink-0">
+            <button id="bvCloneConfirm" class="w-full h-10 bg-orchid-700 hover:bg-orchid-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-md transition-colors flex items-center justify-center gap-2">
+                Confirm Choices
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
-    const bucketId  = '<%= bucketId %>';
+    const bucketId   = '<%= bucketId %>';
+    const bucketName = '<%= bucket.name.replace(/'/g, "\\'") %>';
 
     // TimeAgo
     (function () {
@@ -554,6 +581,120 @@
         });
     });
 
+    // ── Clone Link modal ──────────────────────────────────────────────────────
+    (function () {
+        var modal        = document.getElementById('bvCloneModal');
+        var backdrop     = document.getElementById('bvCloneBackdrop');
+        var closeBtn     = document.getElementById('bvCloseCloneModal');
+        var listEl       = document.getElementById('bvCloneBucketList');
+        var confirmBtn   = document.getElementById('bvCloneConfirm');
+        var pendingLink  = null;   // { href, text, image, duration }
+        var bucketCache  = null;   // fetched once per page load
+
+        function openModal(linkData) {
+            pendingLink = linkData;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            loadBuckets();
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            listEl.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = false; });
+            updateConfirmState();
+        }
+
+        function updateConfirmState() {
+            var any = listEl.querySelector('input[type=checkbox]:checked');
+            confirmBtn.disabled = !any;
+        }
+
+        function renderBuckets(buckets) {
+            var filtered = buckets.filter(function (b) { return b.name !== bucketName; });
+            if (!filtered.length) {
+                listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">No other buckets to clone to.</p>';
+                return;
+            }
+            listEl.innerHTML = filtered.map(function (b) {
+                var thumb = b.thumbnail
+                    ? '<img src="' + b.thumbnail + '" alt="" class="w-10 h-10 object-cover rounded-md bg-silver-100">'
+                    : '<div class="w-10 h-10 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-silver-300"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zm3-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/></g></svg></div>';
+                return '<label class="flex items-center gap-3 px-4 py-2.5 hover:bg-silver-50 cursor-pointer">'
+                    + '<input type="checkbox" class="bv-clone-cb w-4 h-4 rounded accent-orchid-700 shrink-0" data-bucket-name="' + b.name.replace(/"/g, '&quot;') + '">'
+                    + '<span class="shrink-0">' + thumb + '</span>'
+                    + '<span class="flex flex-col min-w-0 flex-1">'
+                    +   '<span class="text-sm font-medium text-woodsmoke-950 truncate">' + b.name + '</span>'
+                    +   '<span class="text-xs text-woodsmoke-400">' + b.linkCount + ' link' + (b.linkCount !== 1 ? 's' : '') + '</span>'
+                    + '</span>'
+                    + '</label>';
+            }).join('');
+            listEl.querySelectorAll('.bv-clone-cb').forEach(function (cb) {
+                cb.addEventListener('change', updateConfirmState);
+            });
+            updateConfirmState();
+        }
+
+        function loadBuckets() {
+            if (bucketCache) { renderBuckets(bucketCache); return; }
+            listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">Loading…</p>';
+            fetch('/api/buckets/mine', { credentials: 'include' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) { bucketCache = data; renderBuckets(data); })
+                .catch(function () {
+                    listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-red-400">Failed to load buckets.</p>';
+                });
+        }
+
+        confirmBtn.addEventListener('click', function () {
+            var selected = Array.from(listEl.querySelectorAll('.bv-clone-cb:checked'))
+                .map(function (cb) { return cb.dataset.bucketName; });
+            if (!selected.length || !pendingLink) return;
+
+            var DOTS_SVG = '<svg width="24" height="10" viewBox="0 0 24 10" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><circle cx="3" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0s" repeatCount="indefinite"/></circle><circle cx="12" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.2s" repeatCount="indefinite"/></circle><circle cx="21" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.4s" repeatCount="indefinite"/></circle></svg>';
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = DOTS_SVG;
+
+            fetch('/api/links', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ links: [pendingLink], buckets: selected })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function () {
+                bucketCache = null;
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Cloned!';
+                setTimeout(function () {
+                    closeModal();
+                    confirmBtn.textContent = 'Confirm Choices';
+                }, 1200);
+            })
+            .catch(function () {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Error — try again';
+                setTimeout(function () { confirmBtn.textContent = 'Confirm Choices'; }, 2000);
+            });
+        });
+
+        closeBtn.addEventListener('click', closeModal);
+        backdrop.addEventListener('click', closeModal);
+
+        document.querySelectorAll('.bv-clone-link').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var container = btn.closest('[data-href]');
+                btn.closest('.bv-link-menu').classList.add('hidden');
+                openModal({
+                    href:     container.dataset.href,
+                    text:     container.dataset.linkText     || '',
+                    image:    container.dataset.linkImage    || null,
+                    duration: container.dataset.linkDuration || '',
+                });
+            });
+        });
+    })();
 
     // Close all context menus on outside click
     document.addEventListener('click', function () {
@@ -1609,6 +1750,10 @@
 
         syncHeight();
         window.addEventListener('resize', syncHeight);
+        window.addEventListener('load', syncHeight);
+        if (typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(syncHeight).observe(metaCol);
+        }
     })();
 })();
 </script>
