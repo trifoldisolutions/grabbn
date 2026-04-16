@@ -187,7 +187,7 @@
             <div class="text-center">
                 <p class="text-sm text-gray-600">
                     Already have an account?
-                    <a href="/v2/login" class="font-semibold text-orchid-600 hover:text-orchid-700">
+                    <a href="/login" class="font-semibold text-orchid-600 hover:text-orchid-700">
                         Log In
                     </a>
                 </p>
@@ -406,7 +406,7 @@
                 const response = await fetch('/api/auth/status', { credentials: 'include' });
                 if (response.ok) {
                     const data = await response.json();
-                    if (!data.isAnonymous) window.location.href = '/v2';
+                    if (!data.isAnonymous) window.location.href = '/showroom';
                 }
             } catch {}
         }
@@ -525,7 +525,7 @@
                 });
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Verification failed');
-                window.location.href = '/v2';
+                window.location.href = '/showroom';
             } catch (error) {
                 otpError.textContent = error.message;
                 otpError.classList.remove('hidden');

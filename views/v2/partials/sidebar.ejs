@@ -9,25 +9,25 @@
     <div id="setsContainer" class="flex flex-col flex-1 py-5 justify-between">
         <!-- Set 1: Main nav -->
         <nav class="flex flex-col items-center gap-1">
-            <a href="/v2" title="Home"
+            <a href="/showroom" title="Home"
             class="h-12 w-16 flex flex-col items-center justify-center gap-1 transition-colors <%= page === 'home' ? 'text-orchid-600' : 'text-woodsmoke-800 hover:text-orchid-600' %>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M13.2 2.65a2 2 0 0 0-2.4 0l-7 5.25A2 2 0 0 0 3 9.5V19a2 2 0 0 0 2 2h3.9a1.1 1.1 0 0 0 1.1-1.1V15a2 2 0 1 1 4 0v4.9a1.1 1.1 0 0 0 1.1 1.1H19a2 2 0 0 0 2-2V9.5a2 2 0 0 0-.8-1.6z"/></g></svg>
                 <% if (page === 'home') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
             </a>
 
-            <a href="/v2/explore" title="Explore"
+            <a href="/explore" title="Explore"
             class="h-12 w-16 flex flex-col items-center justify-center gap-1 transition-colors <%= page === 'explore' ? 'text-orchid-600' : 'text-woodsmoke-800 hover:text-orchid-600' %>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>
                 <% if (page === 'explore') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
             </a>
 
-            <a href="/v2/transactions" title="Transactions"
+            <a href="/transactions" title="Transactions"
             class="h-12 w-16 flex flex-col items-center justify-center gap-1 transition-colors <%= page === 'transactions' ? 'text-orchid-600' : 'text-woodsmoke-800 hover:text-orchid-600' %>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17 2a3 3 0 0 1 3 3v16a1 1 0 0 1-1.625.78l-1.875-1.5l-1.875 1.5a1 1 0 0 1-1.332-.073L12 20.414l-1.293 1.293a1 1 0 0 1-1.332.074L7.5 20.28l-1.875 1.5A1 1 0 0 1 4 21V5a3 3 0 0 1 3-3zm-5 10H9a1 1 0 1 0 0 2h3a1 1 0 1 0 0-2m3-4H9a1 1 0 0 0-.117 1.993L9 10h6a1 1 0 0 0 .117-1.993z"/></g></svg>
                 <% if (page === 'transactions') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
             </a>
 
-            <a href="/v2/settings" title="Settings"
+            <a href="/settings" title="Settings"
             class="h-12 w-16 flex flex-col items-center justify-center gap-1 transition-colors <%= page === 'settings' ? 'text-orchid-600' : 'text-woodsmoke-800 hover:text-orchid-600' %>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M9.965 2.809a1.51 1.51 0 0 0-1.401-.203a10 10 0 0 0-2.982 1.725a1.51 1.51 0 0 0-.524 1.313c.075.753-.058 1.48-.42 2.106c-.361.627-.925 1.106-1.615 1.417a1.51 1.51 0 0 0-.875 1.113a10 10 0 0 0 0 3.44c.093.537.46.926.875 1.114c.69.31 1.254.79 1.616 1.416c.361.627.494 1.353.419 2.106c-.045.452.107.964.524 1.313a10 10 0 0 0 2.982 1.725a1.51 1.51 0 0 0 1.4-.203c.615-.442 1.312-.691 2.036-.691s1.42.249 2.035.691c.37.266.89.39 1.401.203a10 10 0 0 0 2.982-1.725c.417-.349.57-.86.524-1.313c-.075-.753.057-1.48.42-2.106c.361-.627.925-1.105 1.615-1.416c.414-.187.782-.577.875-1.114a10 10 0 0 0 0-3.44a1.51 1.51 0 0 0-.875-1.113c-.69-.311-1.254-.79-1.616-1.417c-.362-.626-.494-1.353-.419-2.106a1.51 1.51 0 0 0-.524-1.313a10 10 0 0 0-2.982-1.725a1.51 1.51 0 0 0-1.4.203C13.42 3.25 12.723 3.5 12 3.5s-1.42-.249-2.035-.691M9 12a3 3 0 1 1 6 0a3 3 0 0 1-6 0"/></g></svg>
                 <% if (page === 'settings') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
@@ -53,19 +53,19 @@
 
         <!-- Set 3: Bottom links -->
         <div class="flex flex-col items-center gap-1">
-            <a href="/v2/docs" title="Docs"
+            <a href="/docs" title="Docs"
             class="h-12 w-16 flex flex-col items-center justify-center gap-1 transition-colors <%= page === 'docs' ? 'text-orchid-600' : 'text-woodsmoke-800 hover:text-orchid-600' %>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M18 2a2 2 0 0 1 2 2v10h-6.5a1.5 1.5 0 0 0-1.5 1.5V22H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm1.957 14a2 2 0 0 1-.543 1L15 21.414a2 2 0 0 1-1 .543V16zM10 11H9a1 1 0 1 0 0 2h1a1 1 0 1 0 0-2m5-4H9a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2"/></g></svg>
                 <% if (page === 'docs') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
             </a>
 
-            <a href="/v2/faq" title="FAQ"
+            <a href="/faq" title="FAQ"
             class="h-12 w-16 flex flex-col items-center justify-center gap-1 transition-colors <%= page === 'faq' ? 'text-orchid-600' : 'text-woodsmoke-800 hover:text-orchid-600' %>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12.004 18.5a1.5 1.5 0 0 1 0 3H12a1.5 1.5 0 0 1 0-3zM12 2.5A6.5 6.5 0 0 1 18.5 9c0 1.896-1.174 3.605-2.88 4.578c-.637.364-1.2.782-1.589 1.23c-.38.437-.531.828-.531 1.192a1.5 1.5 0 0 1-3 0c0-1.293.567-2.354 1.266-3.16c.69-.795 1.566-1.41 2.368-1.867C15.093 10.425 15.5 9.618 15.5 9a3.5 3.5 0 1 0-7 0a1.5 1.5 0 1 1-3 0A6.5 6.5 0 0 1 12 2.5"/></g></svg>
                 <% if (page === 'faq') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
             </a>
 
-            <a href="/v2/contact" title="Contact"
+            <a href="/contact" title="Contact"
             class="h-12 w-16 flex flex-col items-center justify-center gap-1 transition-colors <%= page === 'contact' ? 'text-orchid-600' : 'text-woodsmoke-800 hover:text-orchid-600' %>">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17.5 3a4.5 4.5 0 0 1 4.495 4.288L22 7.5V15a2 2 0 0 1-1.85 1.995L20 17h-3v3a1 1 0 0 1-1.993.117L15 20v-3H4a2 2 0 0 1-1.995-1.85L2 15V7.5a4.5 4.5 0 0 1 4.288-4.495L6.5 3zm-11 2A2.5 2.5 0 0 0 4 7.5V15h5V7.5A2.5 2.5 0 0 0 6.5 5M7 8a1 1 0 0 1 .117 1.993L7 10H6a1 1 0 0 1-.117-1.993L6 8z"/></g></svg>
                 <% if (page === 'contact') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
@@ -78,19 +78,19 @@
 <!-- Bottom tab bar — mobile only -->
 <nav class="flex md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-white border-t border-woodsmoke-100 items-center justify-around">
 
-    <a href="/v2" title="Home"
+    <a href="/showroom" title="Home"
     class="flex flex-col items-center justify-center gap-1 h-full flex-1 transition-colors <%= page === 'home' ? 'text-orchid-600' : 'text-woodsmoke-800' %>">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M13.2 2.65a2 2 0 0 0-2.4 0l-7 5.25A2 2 0 0 0 3 9.5V19a2 2 0 0 0 2 2h3.9a1.1 1.1 0 0 0 1.1-1.1V15a2 2 0 1 1 4 0v4.9a1.1 1.1 0 0 0 1.1 1.1H19a2 2 0 0 0 2-2V9.5a2 2 0 0 0-.8-1.6z"/></g></svg>
         <% if (page === 'home') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
     </a>
 
-    <a href="/v2/explore" title="Explore"
+    <a href="/explore" title="Explore"
     class="flex flex-col items-center justify-center gap-1 h-full flex-1 transition-colors <%= page === 'explore' ? 'text-orchid-600' : 'text-woodsmoke-800' %>">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>
         <% if (page === 'explore') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
     </a>
 
-    <a href="/v2/transactions" title="Transactions"
+    <a href="/transactions" title="Transactions"
     class="flex flex-col items-center justify-center gap-1 h-full flex-1 transition-colors <%= page === 'transactions' ? 'text-orchid-600' : 'text-woodsmoke-800' %>">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17 2a3 3 0 0 1 3 3v16a1 1 0 0 1-1.625.78l-1.875-1.5l-1.875 1.5a1 1 0 0 1-1.332-.073L12 20.414l-1.293 1.293a1 1 0 0 1-1.332.074L7.5 20.28l-1.875 1.5A1 1 0 0 1 4 21V5a3 3 0 0 1 3-3zm-5 10H9a1 1 0 1 0 0 2h3a1 1 0 1 0 0-2m3-4H9a1 1 0 0 0-.117 1.993L9 10h6a1 1 0 0 0 .117-1.993z"/></g></svg>
         <% if (page === 'transactions') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
@@ -101,13 +101,13 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M11 20a1 1 0 1 0 2 0v-7h7a1 1 0 1 0 0-2h-7V4a1 1 0 1 0-2 0v7H4a1 1 0 1 0 0 2h7z"/></g></svg>
     </button>
 
-    <a href="/v2/settings" title="Settings"
+    <a href="/settings" title="Settings"
     class="flex flex-col items-center justify-center gap-1 h-full flex-1 transition-colors <%= page === 'settings' ? 'text-orchid-600' : 'text-woodsmoke-800' %>">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M9.965 2.809a1.51 1.51 0 0 0-1.401-.203a10 10 0 0 0-2.982 1.725a1.51 1.51 0 0 0-.524 1.313c.075.753-.058 1.48-.42 2.106c-.361.627-.925 1.106-1.615 1.417a1.51 1.51 0 0 0-.875 1.113a10 10 0 0 0 0 3.44c.093.537.46.926.875 1.114c.69.31 1.254.79 1.616 1.416c.361.627.494 1.353.419 2.106c-.045.452.107.964.524 1.313a10 10 0 0 0 2.982 1.725a1.51 1.51 0 0 0 1.4-.203c.615-.442 1.312-.691 2.036-.691s1.42.249 2.035.691c.37.266.89.39 1.401.203a10 10 0 0 0 2.982-1.725c.417-.349.57-.86.524-1.313c-.075-.753.057-1.48.42-2.106c.361-.627.925-1.105 1.615-1.416c.414-.187.782-.577.875-1.114a10 10 0 0 0 0-3.44a1.51 1.51 0 0 0-.875-1.113c-.69-.311-1.254-.79-1.616-1.417c-.362-.626-.494-1.353-.419-2.106a1.51 1.51 0 0 0-.524-1.313a10 10 0 0 0-2.982-1.725a1.51 1.51 0 0 0-1.4.203C13.42 3.25 12.723 3.5 12 3.5s-1.42-.249-2.035-.691M9 12a3 3 0 1 1 6 0a3 3 0 0 1-6 0"/></g></svg>
         <% if (page === 'settings') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
     </a>
 
-    <a href="/v2/docs" title="Docs"
+    <a href="/docs" title="Docs"
     class="flex flex-col items-center justify-center gap-1 h-full flex-1 transition-colors <%= page === 'docs' ? 'text-orchid-600' : 'text-woodsmoke-800' %>">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M18 2a2 2 0 0 1 2 2v10h-6.5a1.5 1.5 0 0 0-1.5 1.5V22H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm1.957 14a2 2 0 0 1-.543 1L15 21.414a2 2 0 0 1-1 .543V16zM10 11H9a1 1 0 1 0 0 2h1a1 1 0 1 0 0-2m5-4H9a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2"/></g></svg>
         <% if (page === 'docs') { %><span class="w-1 h-1 rounded-full bg-orchid-600"></span><% } %>
@@ -130,13 +130,13 @@
                     <div class="font-semibold text-sm truncate"><%= user.username %></div>
                     <div class="text-xs text-gray-400 truncate"><%= user.email %></div>
                 </div>
-                <a href="/v2/u/<%= user.username %>" class="block px-4 py-2.5 text-sm text-woodsmoke-700 hover:bg-silver-50 transition-colors">My Profile</a>
-                <a href="/v2/settings" class="block px-4 py-2.5 text-sm text-woodsmoke-700 hover:bg-silver-50 transition-colors">Settings</a>
+                <a href="/u/<%= user.username %>" class="block px-4 py-2.5 text-sm text-woodsmoke-700 hover:bg-silver-50 transition-colors">My Profile</a>
+                <a href="/settings" class="block px-4 py-2.5 text-sm text-woodsmoke-700 hover:bg-silver-50 transition-colors">Settings</a>
                 <button id="mobileProfileLogoutBtn" class="w-full px-4 py-2.5 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Log Out</button>
                 <div class="border-t border-silver-100 my-1"></div>
                 <button id="mobileProfileDeleteBtn" class="w-full px-4 py-2.5 text-sm font-medium text-left text-red-500 hover:bg-red-50 transition-colors">Delete Account</button>
             <% } else { %>
-                <a href="/v2/login" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">Sign In / Log In</a>
+                <a href="/login" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">Sign In / Log In</a>
             <% } %>
         </div>
     </div>

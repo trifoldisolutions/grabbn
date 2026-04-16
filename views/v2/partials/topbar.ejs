@@ -1,7 +1,7 @@
 <header class="flex items-center px-4 md:px-6 md:justify-center h-16 border-b border-gray-100 shrink-0 gap-x-3 md:gap-x-8">
 
     <!-- Mobile logo -->
-    <a href="/v2" class="flex md:hidden items-center gap-1.5 shrink-0 text-orchid-600">
+    <a href="/showroom" class="flex md:hidden items-center gap-1.5 shrink-0 text-orchid-600">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.5 5a2.5 2.5 0 0 1 2.461 2.058A2.5 2.5 0 0 1 21 9.5V12a8 8 0 0 1-8 8h-.674a8 8 0 0 1-7.155-4.422L2.329 9.894c-.36-.72-.093-1.683.747-2.028c1.043-.427 2.034-.507 3.055.012q.443.227.869.584V7.5a2.5 2.5 0 0 1 3.388-2.338a2.498 2.498 0 0 1 4.224 0A2.5 2.5 0 0 1 15.5 5"/></g></svg>
         <span class="font-bold text-[0.85rem] tracking-widest uppercase text-woodsmoke-950" style="font-variant: small-caps; letter-spacing: 0.12em;">GRABBn</span>
     </a>
@@ -68,7 +68,7 @@
                         </div>
                         <div class="flex items-center gap-3">
                             <button id="dmMarkReadBtn" class="text-xs text-gray-400 hover:text-woodsmoke-700 transition-colors">Mark all read</button>
-                            <a href="/v2/messages" onclick="event.stopPropagation()" class="text-xs text-gray-400 hover:text-woodsmoke-700 transition-colors">Open inbox</a>
+                            <a href="/messages" onclick="event.stopPropagation()" class="text-xs text-gray-400 hover:text-woodsmoke-700 transition-colors">Open inbox</a>
                         </div>
                     </div>
                     <div id="dmNotifList" class="overflow-y-auto max-h-[440px]">
@@ -102,13 +102,13 @@
                 <!-- Profile context menu -->
                 <div id="profileContextMenu" class="hidden absolute right-0 top-full mt-2 bg-white rounded-md shadow-lg border border-silver-100 py-1 z-50 w-44">
                     <% if (user && !user.isAnonymous) { %>
-                        <a href="/v2/u/<%= user.username %>" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">View Profile</a>
+                        <a href="/u/<%= user.username %>" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">View Profile</a>
                         <div class="border-t border-silver-100 my-1"></div>
                         <button id="profileLogoutBtn" class="w-full px-4 py-2.5 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Log Out</button>
                         <div class="border-t border-silver-100 my-1"></div>
                         <button id="profileDeleteBtn" class="w-full px-4 py-2.5 text-sm font-medium text-left text-red-500 hover:bg-red-50 transition-colors">Delete Account</button>
                     <% } else { %>
-                        <a href="/v2/login" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">Sign In / Log In</a>
+                        <a href="/login" class="block px-4 py-2.5 text-sm font-medium text-woodsmoke-700 hover:bg-silver-50 transition-colors">Sign In / Log In</a>
                     <% } %>
                 </div>
             </div>
@@ -127,7 +127,7 @@
     function submitSearch(input) {
         var q = (input ? input.value : '').trim();
         if (!q) return;
-        window.location.href = '/v2/search?q=' + encodeURIComponent(q);
+        window.location.href = '/search?q=' + encodeURIComponent(q);
     }
 
     if (searchInput) {
@@ -212,7 +212,7 @@
         const BUCKET_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="text-gray-300"><g fill="none"><path fill="currentColor" d="M13 3a1 1 0 1 0-2 0v1.07A8.002 8.002 0 0 0 4 12v1a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-1a8.002 8.002 0 0 0-7-7.93zm-1 15a3.001 3.001 0 0 0 2.83-2H9.17A3.001 3.001 0 0 0 12 18"/></g></svg>`;
 
         function avatarHtml(src, username) {
-            const href  = username ? `/v2/u/${encodeURIComponent(username)}` : null;
+            const href  = username ? `/u/${encodeURIComponent(username)}` : null;
             const inner = src
                 ? `<img src="${escHtml(src)}" class="w-9 h-9 rounded-full object-cover shrink-0" />`
                 : `<div class="w-9 h-9 rounded-full bg-orchid-50 shrink-0 flex items-center justify-center">${USER_ICON}</div>`;
@@ -221,7 +221,7 @@
         }
 
         function bucketThumbHtml(src, bucketId) {
-            const href  = bucketId ? `/v2/b/${escHtml(bucketId)}` : null;
+            const href  = bucketId ? `/b/${escHtml(bucketId)}` : null;
             const inner = src
                 ? `<img src="${escHtml(src)}" class="w-11 h-9 rounded-md object-cover shrink-0" />`
                 : `<div class="w-11 h-9 rounded-md bg-silver-100 shrink-0 flex items-center justify-center">${BUCKET_ICON}</div>`;
@@ -231,12 +231,12 @@
 
         function userLink(username) {
             if (!username) return '<span class="font-semibold">Someone</span>';
-            return `<a href="/v2/u/${encodeURIComponent(username)}" class="font-semibold hover:underline">@${escHtml(username)}</a>`;
+            return `<a href="/u/${encodeURIComponent(username)}" class="font-semibold hover:underline">@${escHtml(username)}</a>`;
         }
 
         function bucketLink(name, bucketId) {
             if (!bucketId) return `<span class="font-semibold">${escHtml(name || 'a bucket')}</span>`;
-            return `<a href="/v2/b/${escHtml(bucketId)}" class="font-semibold hover:underline">${escHtml(name || 'a bucket')}</a>`;
+            return `<a href="/b/${escHtml(bucketId)}" class="font-semibold hover:underline">${escHtml(name || 'a bucket')}</a>`;
         }
 
         function renderItem(n) {
@@ -268,7 +268,7 @@
                 const convId  = escHtml(d.conversationId || '');
                 const sender  = d.senderUsername || 'Someone';
                 const preview = (d.preview || '').slice(0, 80);
-                const href    = convId ? `/v2/messages/${convId}` : '/v2/messages';
+                const href    = convId ? `/messages/${convId}` : '/messages';
                 return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors" data-notif-id="${nid}">
                     ${avatarHtml(d.senderAvatar, d.senderUsername)}
                     <div class="flex-1 min-w-0">
@@ -285,7 +285,7 @@
 
             // comment-related notifications — use actor avatar on the left
             if (['comment_mention', 'bucket_tagged', 'comment_reply', 'comment_agreed'].includes(n.type)) {
-                const commentLink   = d.bucketId ? `/v2/b/${escHtml(String(d.bucketId))}#comments` : '';
+                const commentLink   = d.bucketId ? `/b/${escHtml(String(d.bucketId))}#comments` : '';
                 const actorAvatar   = d.commenterAvatar   || d.replierAvatar   || d.agreerAvatar   || '';
                 const actorUsername = d.commenterUsername  || d.replierUsername  || d.agreerUsername  || '';
                 // Use plain bold spans — outer row is clickable, so no nested <a> tags
@@ -355,7 +355,7 @@
         // ── DM unread dot ────────────────────────────────────────────────────
         // Skip on messages page — messages.ejs suppresses the dot and handles updates itself
         (function () {
-            if (window.location.pathname.startsWith('/v2/messages')) return;
+            if (window.location.pathname.startsWith('/messages')) return;
             const dmDot = document.getElementById('dmDot');
             if (!dmDot) return;
             fetch('/api/dm/unread-count')
@@ -378,7 +378,7 @@
                         loaded = false;
                     } else if (msg.type === 'new_dm') {
                         const dmDot = document.getElementById('dmDot');
-                        if (dmDot && !window.location.pathname.startsWith('/v2/messages')) {
+                        if (dmDot && !window.location.pathname.startsWith('/messages')) {
                             dmDot.classList.remove('hidden');
                         }
                         // Dispatch event so conversation/inbox pages can react
@@ -559,7 +559,7 @@
                 ? `<img src="${escDm(src)}" class="w-9 h-9 rounded-full object-cover shrink-0" />`
                 : `<div class="w-9 h-9 rounded-full bg-orchid-50 shrink-0 flex items-center justify-center">${DM_USER_ICON}</div>`;
             if (!username) return inner;
-            return `<a href="/v2/u/${encodeURIComponent(username)}" class="shrink-0" onclick="event.stopPropagation()">${inner}</a>`;
+            return `<a href="/u/${encodeURIComponent(username)}" class="shrink-0" onclick="event.stopPropagation()">${inner}</a>`;
         }
 
         function setBadge(count) {
@@ -572,7 +572,7 @@
         }
 
         function setDot(hasUnread) {
-            if (!window.location.pathname.startsWith('/v2/messages')) {
+            if (!window.location.pathname.startsWith('/messages')) {
                 dot.classList.toggle('hidden', !hasUnread);
             }
         }
@@ -601,7 +601,7 @@
             const convId  = escDm(d.conversationId || '');
             const sender  = d.senderUsername || 'Someone';
             const preview = (d.preview || '').slice(0, 80);
-            const href    = convId ? `/v2/messages/${convId}` : '/v2/messages';
+            const href    = convId ? `/messages/${convId}` : '/messages';
             const base    = n.read ? '' : 'bg-orchid-50';
             const nid     = escDm(String(n._id));
             return `<div class="flex items-center gap-3 px-4 py-3 ${base} hover:bg-silver-50 transition-colors" data-dm-notif-id="${nid}">
@@ -674,7 +674,7 @@
 
         // Mark individual notif as read when Reply is clicked
         list.addEventListener('click', function (e) {
-            if (!e.target.closest('a[href*="/v2/messages"]')) return;
+            if (!e.target.closest('a[href*="/messages"]')) return;
             const item = e.target.closest('[data-dm-notif-id]');
             if (!item) return;
             const id = item.dataset.dmNotifId;
@@ -698,10 +698,10 @@
     })();
     <% } else { %>
     document.getElementById('notificationBtn')?.addEventListener('click', function () {
-        window.location.href = '/v2/signup';
+        window.location.href = '/signup';
     });
     document.getElementById('messagesBtn')?.addEventListener('click', function () {
-        window.location.href = '/v2/signup';
+        window.location.href = '/signup';
     });
     <% } %>
 

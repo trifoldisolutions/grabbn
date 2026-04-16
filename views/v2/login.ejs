@@ -67,7 +67,7 @@
                         </button>
                     </div>
                     <div class="text-right mt-1">
-                        <a href="/v2/reset-password" class="text-xs text-orchid-600 hover:text-orchid-700 font-medium">Forgot password?</a>
+                        <a href="/reset-password" class="text-xs text-orchid-600 hover:text-orchid-700 font-medium">Forgot password?</a>
                     </div>
                 </div>
 
@@ -100,7 +100,7 @@
             <div class="text-center">
                 <p class="text-sm text-gray-600">
                     Don't have an account?
-                    <a href="/v2/signup" class="font-semibold text-orchid-600 hover:text-orchid-700">
+                    <a href="/signup" class="font-semibold text-orchid-600 hover:text-orchid-700">
                         Sign Up
                     </a>
                 </p>
@@ -343,7 +343,7 @@
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Verification failed');
                 const params = new URLSearchParams(window.location.search);
-                window.location.href = params.get('redirect') || '/v2';
+                window.location.href = params.get('redirect') || '/showroom';
             } catch (error) {
                 otpError.textContent = error.message;
                 otpError.classList.remove('hidden');

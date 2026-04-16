@@ -30,7 +30,7 @@
                     </div>
                     <% } %>
                     <div class="flex flex-col leading-tight min-w-0 flex-1">
-                        <a href="/v2/u/<%= curatorName %>" class="text-sm font-medium text-woodsmoke-800 hover:text-orchid-600 transition-colors truncate">@<%= curatorName %></a>
+                        <a href="/u/<%= curatorName %>" class="text-sm font-medium text-woodsmoke-800 hover:text-orchid-600 transition-colors truncate">@<%= curatorName %></a>
                         <span class="text-[11px] text-woodsmoke-400 truncate" id="bvTimeAgo"></span>
                     </div>
                     <% if (!isOwner) { %>
@@ -527,7 +527,7 @@
         const el = document.getElementById('bvTimeAgo');
         if (el) el.textContent = label;
     })();
-    const shareUrl  = '<%= `${shareBaseUrl}/v2/b/${bucketId}?ref=share` %>';
+    const shareUrl  = '<%= `${shareBaseUrl}/b/${bucketId}?ref=share` %>';
     const linkHrefs = <%- JSON.stringify(visibleLinks.map(function(l){ return l.href; })) %>;
 
     // Track link clicks
@@ -577,7 +577,7 @@
     document.querySelectorAll('.bv-report-link').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
-            window.location.href = '/v2/report/' + bucketId;
+            window.location.href = '/report/' + bucketId;
         });
     });
 
@@ -885,7 +885,7 @@
     const bvReportBtn = document.getElementById('bvReportBtn');
     if (bvReportBtn) {
         bvReportBtn.addEventListener('click', function () {
-            window.location.href = '/v2/report/' + bucketId;
+            window.location.href = '/report/' + bucketId;
         });
     }
 
@@ -1015,7 +1015,7 @@
 
             card.innerHTML = `
                 <div class="relative p-2">
-                    <a href="/v2/b/${esc(b._id)}" class="block aspect-square overflow-hidden rounded-sm bg-silver-100">
+                    <a href="/b/${esc(b._id)}" class="block aspect-square overflow-hidden rounded-sm bg-silver-100">
                         ${thumbContent}
                     </a>
                     <div class="absolute bottom-4 right-4 flex items-center gap-1">
@@ -1135,7 +1135,7 @@
                 let replacement  = '';
 
                 if (e.type === 'mention') {
-                    replacement = '<a href="/v2/u/' + esc(e.value) + '" '
+                    replacement = '<a href="/u/' + esc(e.value) + '" '
                         + 'class="inline-flex items-center p-1.5 rounded bg-orchid-100 text-orchid-700 text-xs font-semibold hover:bg-orchid-200 transition-colors no-underline">'
                         + '@' + esc(e.value) + '</a>';
 
@@ -1149,7 +1149,7 @@
                             ? '<span class="inline-flex items-center gap-0.75">' + STAR_ICON + esc(String(e.snapshot.ratingAvg)) + '</span>'
                             : 'No ratings';
                         replacement = '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-silver-100 border border-silver-200 text-xs text-woodsmoke-700" data-bucket-id="' + esc(e.value) + '">'
-                            + '<a href="/v2/b/' + esc(e.value) + '" '
+                            + '<a href="/b/' + esc(e.value) + '" '
                             + 'class="inline-flex items-center gap-1 font-semibold text-woodsmoke-800 hover:text-orchid-700 transition-colors">'
                             + BUCKET_ICON + esc(e.snapshot.name) + '</a>'
                             + '<span class="text-woodsmoke-400">·</span>'
@@ -1210,7 +1210,7 @@
                 + avatarHtml
                 + '<div class="flex-1 min-w-0">'
                     + '<div class="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 mb-0.5">'
-                        + '<a href="/v2/u/' + esc(c.username) + '" class="text-xs font-semibold text-woodsmoke-800 hover:text-orchid-600 transition-colors">@' + esc(c.username || 'user') + '</a>'
+                        + '<a href="/u/' + esc(c.username) + '" class="text-xs font-semibold text-woodsmoke-800 hover:text-orchid-600 transition-colors">@' + esc(c.username || 'user') + '</a>'
                         + '<span class="text-[11px] text-woodsmoke-400">' + timeAgo(c.createdAt) + '</span>'
                         + editedBadge
                         + pinnedBadge

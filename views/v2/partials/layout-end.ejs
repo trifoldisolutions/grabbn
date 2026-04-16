@@ -351,7 +351,7 @@
                     <div class="flex items-center justify-between py-3.5 border-b border-silver-100">
                         <div>
                             <p class="text-base font-medium text-woodsmoke-800">Platform Ran Ads</p>
-                            <a id="adsLabel" href="/v2/partnership" class="text-sm text-orchid-500 hover:text-orchid-700 underline mt-0.5 inline-block transition-colors">Don't run ads in my bucket</a>
+                            <a id="adsLabel" href="/partnership" class="text-sm text-orchid-500 hover:text-orchid-700 underline mt-0.5 inline-block transition-colors">Don't run ads in my bucket</a>
                         </div>
                         <button id="adsToggle" data-state="on" class="relative w-14 h-7 rounded-full bg-orchid-500 transition-colors shrink-0 focus:outline-none opacity-40 cursor-not-allowed">
                             <span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform translate-x-7"></span>
@@ -386,7 +386,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M3.783 2.826C5.496 1.949 8.5 1.5 12 1.5s6.504.449 8.217 1.326c.862.44 1.783 1.2 1.783 2.424v11c0 1.133-.812 1.87-1.618 2.297l-2.843 5.547a.75.75 0 0 1-1.078 0L12 19.054l-4.461 5.04a.75.75 0 0 1-1.078 0L3.618 18.547C2.812 18.12 2 17.383 2 16.25v-11c0-1.224.921-1.983 1.783-2.424"/></g></svg>
                             Promote this Bucket
                         </button>
-                        <a id="becomePartnerLink" href="/v2/partnership" class="mt-2 text-xs text-orchid-500 underline hover:text-orchid-700 transition-colors w-full text-center block">Become a Grabbn Partner</a>
+                        <a id="becomePartnerLink" href="/partnership" class="mt-2 text-xs text-orchid-500 underline hover:text-orchid-700 transition-colors w-full text-center block">Become a Grabbn Partner</a>
                     </div>
 
                 </div>
@@ -440,7 +440,7 @@
             if (btn) {
                 btn.addEventListener('click', function (e) {
                     e.stopImmediatePropagation();
-                    window.location.href = '/v2/signup';
+                    window.location.href = '/signup';
                 }, true);
             }
         });
@@ -948,7 +948,7 @@
         setVisSegment('public');
         setToggle(adsToggle, true);
         adsLabel.textContent = "Don't run ads in my bucket";
-        adsLabel.href = isPartner ? '#' : '/v2/partnership';
+        adsLabel.href = isPartner ? '#' : '/partnership';
         if (isPartner) {
             adsToggle.disabled = false;
             adsToggle.classList.remove('opacity-40', 'cursor-not-allowed');
@@ -1122,7 +1122,7 @@
 
         // Viewer link
         if (modalViewerLink) {
-            modalViewerLink.href = '/v2/b/' + bucket._id;
+            modalViewerLink.href = '/b/' + bucket._id;
             modalViewerLink.classList.remove('hidden');
         }
 
@@ -1982,7 +1982,7 @@
                 clearDraft(); // prevent closeModal() from deleting the just-saved bucket
                 closeModal();
                 // Reload the profile page to reflect changes
-                if (window.location.pathname.startsWith('/v2/u/')) {
+                if (window.location.pathname.startsWith('/u/')) {
                     window.location.reload();
                 }
             } else if (res.status === 409) {

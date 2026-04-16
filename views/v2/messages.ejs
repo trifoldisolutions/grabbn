@@ -394,7 +394,7 @@
             <span>${grabs} grabs</span>
         </div>`;
 
-        return `<a href="/v2/b/${esc(entity.value)}" class="block ${borderTop}" style="text-decoration:none">
+        return `<a href="/b/${esc(entity.value)}" class="block ${borderTop}" style="text-decoration:none">
             <div class="relative">
                 ${thumbHtml}
                 <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex flex-col justify-end px-2.5 pb-2">
@@ -428,7 +428,7 @@
                     ? 'bg-white/15 hover:bg-white/25 text-white'
                     : 'bg-orchid-50 hover:bg-orchid-100 text-orchid-700';
                 out = out.split(escapedRaw).join(
-                    `<a href="/v2/u/${esc(e.value)}" class="inline-flex items-center gap-1 ${chipCls} rounded-full pl-0.5 pr-2 py-0.5 align-middle transition-colors" style="text-decoration:none">${avatarHtml}<span class="text-xs font-semibold leading-none">@${esc(e.value)}</span></a>`
+                    `<a href="/u/${esc(e.value)}" class="inline-flex items-center gap-1 ${chipCls} rounded-full pl-0.5 pr-2 py-0.5 align-middle transition-colors" style="text-decoration:none">${avatarHtml}<span class="text-xs font-semibold leading-none">@${esc(e.value)}</span></a>`
                 );
             } else if (e.type === 'bucket_ref') {
                 // Strip from inline text — the card below is the visual representation
@@ -438,7 +438,7 @@
 
         // Fallback: any u: not resolved to an entity (user not found)
         out = out.replace(/\bu:([a-zA-Z0-9_]{1,30})/g, (_, u) =>
-            `<a href="/v2/u/${esc(u)}" class="underline underline-offset-2 opacity-90">u:${esc(u)}</a>`);
+            `<a href="/u/${esc(u)}" class="underline underline-offset-2 opacity-90">u:${esc(u)}</a>`);
         // Fallback: raw URLs
         out = out.replace(/(https?:\/\/[^\s<]+)/g, url =>
             `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" class="underline underline-offset-2 opacity-90 break-all">${esc(url)}</a>`);
@@ -460,7 +460,7 @@
             : `<span id="chatStatusText" class="text-[11px] text-silver-300 leading-none">—</span>`;
         chatHeader.innerHTML = `
             <div class="flex items-center gap-6 min-w-0 flex-1">
-                <a href="/v2/u/${esc(other.username)}" class="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity shrink-0">
+                <a href="/u/${esc(other.username)}" class="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity shrink-0">
                     ${avatarEl(other.username, other.avatar, 'w-11 h-11')}
                     <div class="flex flex-col gap-1 min-w-0">
                         <span class="font-semibold leading-none truncate">@${esc(other.username)}</span>
@@ -791,8 +791,8 @@
         contextCard.classList.remove('hidden');
         contextCard.innerHTML = `
             <p class="font-medium text-orchid-500 mb-1">
-                Comment by <a href="/v2/u/${esc(ctx.username)}" class="hover:underline">@${esc(ctx.username)}</a>
-                ${ctx.bucketName ? ` in <a href="/v2/b/${esc(ctx.bucketId)}" class="hover:underline">${esc(ctx.bucketName)}</a>` : ''}
+                Comment by <a href="/u/${esc(ctx.username)}" class="hover:underline">@${esc(ctx.username)}</a>
+                ${ctx.bucketName ? ` in <a href="/b/${esc(ctx.bucketId)}" class="hover:underline">${esc(ctx.bucketName)}</a>` : ''}
             </p>
             <p class="text-woodsmoke-500">${esc(ctx.body)}</p>`;
     }
@@ -862,7 +862,7 @@
         lastRenderedDate = null;
 
         // Update URL without reload
-        const newUrl = `/v2/messages/${convId}`;
+        const newUrl = `/messages/${convId}`;
         if (location.pathname !== newUrl) history.pushState({ convId }, '', newUrl);
 
         // Mobile: slide to chat panel. On md+ both columns stay side-by-side —
@@ -925,7 +925,7 @@
 
     chatBackBtn.addEventListener('click', () => {
         activeConvId = null;
-        history.pushState({}, '', '/v2/messages');
+        history.pushState({}, '', '/messages');
         // Mobile: slide back to conv panel
         chatPanel.classList.add('hidden');
         chatPanel.classList.remove('flex');
@@ -1204,7 +1204,7 @@
                     conversations = conversations.filter(c => String(c.otherUser._id) !== String(other._id));
                     renderConvList();
                     activeConvId = null;
-                    history.pushState({}, '', '/v2/messages');
+                    history.pushState({}, '', '/messages');
                     chatEmpty.classList.remove('hidden');
                     chatActive.classList.add('hidden');
                     chatActive.classList.remove('flex');
@@ -1216,7 +1216,7 @@
         // ── Report ──────────────────────────────────────────────────────────
         document.getElementById('chatReportBtn')?.addEventListener('click', function () {
             moreMenu?.classList.add('hidden');
-            window.location.href = `/v2/report/${this.dataset.userid}`;
+            window.location.href = `/report/${this.dataset.userid}`;
         });
 
         // ── Search button ────────────────────────────────────────────────────
@@ -1399,7 +1399,7 @@
         renderConvList();
         if (activeConvId) {
             activeConvId = null;
-            history.pushState({}, '', '/v2/messages');
+            history.pushState({}, '', '/messages');
             chatEmpty.classList.remove('hidden');
             chatActive.classList.add('hidden');
             chatActive.classList.remove('flex');
@@ -1544,7 +1544,7 @@
 
     if (recipientId) {
         // Clean URL
-        history.replaceState({}, '', '/v2/messages');
+        history.replaceState({}, '', '/messages');
 
         // Check if a conversation already exists
         loadConversations(function (convs) {
