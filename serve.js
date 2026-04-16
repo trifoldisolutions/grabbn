@@ -315,7 +315,7 @@ app.use('/share', bucketShareRouter);
 app.get('/', (req, res) => {
     const host = req.hostname; // excludes port
     if (host === 'app.grabbn.com') {
-        res.redirect('/v2');
+        res.redirect('/showroom');
     } else {
         res.sendFile(path.join(__dirname, 'public', 'landing.html'));
     }
@@ -1738,7 +1738,7 @@ async function addGuestPoints(user, topic, pts) {
 // ---------------------------------------------------------------------------
 // V2 API — showroom feed (personalized for logged-in users, public fallback)
 // ---------------------------------------------------------------------------
-app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
+app.get('/api/showroom', anonymousAuth, async (req, res) => {
     try {
         const page  = Math.max(1, parseInt(req.query.page)  || 1);
         const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
@@ -1928,7 +1928,7 @@ app.get('/api/v2/showroom', anonymousAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 // V2 API — explore feed (scored + personalized, paginated)
 // ---------------------------------------------------------------------------
-app.get('/api/v2/explore', anonymousAuth, async (req, res) => {
+app.get('/api/explore', anonymousAuth, async (req, res) => {
     try {
         const limit      = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
         const skip       = Math.max(0, parseInt(req.query.skip)  || 0);
@@ -2171,7 +2171,7 @@ async function buildGrabbedSet(buckets, userId) {
 }
 
 // Promoted row
-app.get('/api/v2/explore/promoted', anonymousAuth, async (req, res) => {
+app.get('/api/explore/promoted', anonymousAuth, async (req, res) => {
     try {
         const excludeIds = parseExcludeIds(req.query.excludeIds);
         const buckets = await Bucket.find({
@@ -2196,7 +2196,7 @@ app.get('/api/v2/explore/promoted', anonymousAuth, async (req, res) => {
 });
 
 // Paywalled row — excludes promoted buckets to avoid overlap
-app.get('/api/v2/explore/paywalled', anonymousAuth, async (req, res) => {
+app.get('/api/explore/paywalled', anonymousAuth, async (req, res) => {
     try {
         const excludeIds = parseExcludeIds(req.query.excludeIds);
         const buckets = await Bucket.find({
@@ -2222,7 +2222,7 @@ app.get('/api/v2/explore/paywalled', anonymousAuth, async (req, res) => {
 });
 
 // New row — sorted by creation date
-app.get('/api/v2/explore/new', anonymousAuth, async (req, res) => {
+app.get('/api/explore/new', anonymousAuth, async (req, res) => {
     try {
         const excludeIds = parseExcludeIds(req.query.excludeIds);
         const buckets = await Bucket.find({
@@ -2246,7 +2246,7 @@ app.get('/api/v2/explore/new', anonymousAuth, async (req, res) => {
 });
 
 // Revisit row — buckets the user viewed but never grabbed (logged-in only)
-app.get('/api/v2/explore/revisit', anonymousAuth, async (req, res) => {
+app.get('/api/explore/revisit', anonymousAuth, async (req, res) => {
     try {
         if (!req.user?._id || req.user.isAnonymous) return res.json({ buckets: [] });
 
@@ -2343,7 +2343,7 @@ app.get('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, a
 // ---------------------------------------------------------------------------
 // V2 API — repositories (pre-computed cache, rebuilt hourly)
 // ---------------------------------------------------------------------------
-app.get('/api/v2/repositories', anonymousAuth, async (req, res) => {
+app.get('/api/repositories', anonymousAuth, async (req, res) => {
     try {
         const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
         const skip  = Math.max(0, parseInt(req.query.skip)  || 0);
@@ -2437,7 +2437,7 @@ app.get('/api/v2/repositories', anonymousAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 // V2 API — single repository detail by domain + tag
 // ---------------------------------------------------------------------------
-app.get('/api/v2/repositories/:domain/:tag', anonymousAuth, async (req, res) => {
+app.get('/api/repositories/:domain/:tag', anonymousAuth, async (req, res) => {
     try {
         const { domain, tag } = req.params;
 
@@ -2473,7 +2473,7 @@ app.get('/api/v2/repositories/:domain/:tag', anonymousAuth, async (req, res) => 
 // ---------------------------------------------------------------------------
 // V2 API — mark a (domain, tag) repo as not interested
 // ---------------------------------------------------------------------------
-app.post('/api/v2/repositories/:domain/:tag/not-interested', anonymousAuth, async (req, res) => {
+app.post('/api/repositories/:domain/:tag/not-interested', anonymousAuth, async (req, res) => {
     try {
         const { domain, tag } = req.params;
         const userId = req.user && !req.user.isAnonymous ? req.user._id : null;
@@ -2493,25 +2493,24 @@ app.post('/api/v2/repositories/:domain/:tag/not-interested', anonymousAuth, asyn
 });
 
 // ---------------------------------------------------------------------------
-// V2 routes — server-rendered with EJS
+// App routes — server-rendered with EJS
 // ---------------------------------------------------------------------------
-const v2Pages = [
-    { path: '/v2',                view: 'v2/showroom',        title: 'Show Room',       page: 'home'          },
-    { path: '/v2/showroom',       view: 'v2/showroom',        title: 'Show Room',       page: 'home'          },
-    { path: '/v2/explore',        view: 'v2/explore',         title: 'Explore',         page: 'explore'       },
-    { path: '/v2/transactions',   view: 'v2/transactions',    title: 'Transactions',    page: 'transactions'  },
-    { path: '/v2/settings',       view: 'v2/settings',        title: 'Settings',        page: 'settings'      },
-    { path: '/v2/docs',           view: 'v2/docs',            title: 'Docs',            page: 'docs'          },
-    { path: '/v2/faq',            view: 'v2/faq',             title: 'FAQ',             page: 'faq'           },
-    { path: '/v2/contact',        view: 'v2/contact',         title: 'Contact',         page: 'contact'       },
-    { path: '/v2/login',          view: 'v2/login',           title: 'Log In',          page: 'login'         },
-    { path: '/v2/signup',         view: 'v2/signup',          title: 'Sign Up',         page: 'signup'        },
-    { path: '/v2/reset-password', view: 'v2/reset-password',  title: 'Reset Password',  page: 'reset-password'},
-    { path: '/v2/topup',          view: 'v2/topup',           title: 'Top Up Credits',  page: 'topup'         },
+const appPages = [
+    { path: '/showroom',       view: 'v2/showroom',        title: 'Show Room',       page: 'home'          },
+    { path: '/explore',        view: 'v2/explore',         title: 'Explore',         page: 'explore'       },
+    { path: '/transactions',   view: 'v2/transactions',    title: 'Transactions',    page: 'transactions'  },
+    { path: '/settings',       view: 'v2/settings',        title: 'Settings',        page: 'settings'      },
+    { path: '/docs',           view: 'v2/docs',            title: 'Docs',            page: 'docs'          },
+    { path: '/faq',            view: 'v2/faq',             title: 'FAQ',             page: 'faq'           },
+    { path: '/contact',        view: 'v2/contact',         title: 'Contact',         page: 'contact'       },
+    { path: '/login',          view: 'v2/login',           title: 'Log In',          page: 'login'         },
+    { path: '/signup',         view: 'v2/signup',          title: 'Sign Up',         page: 'signup'        },
+    { path: '/reset-password', view: 'v2/reset-password',  title: 'Reset Password',  page: 'reset-password'},
+    { path: '/topup',          view: 'v2/topup',           title: 'Top Up Credits',  page: 'topup'         },
 ];
 
-for (const { path: routePath, view, title, page } of v2Pages) {
-    app.get(routePath, anonymousAuth, (req, res) => {
+for (const { path: routePath, view, title, page } of appPages) {
+    app.get(routePath, anonymousAuth, requireNonAdmin, (req, res) => {
         res.render(view, { title, page, user: req.user ?? null });
     });
 }
@@ -2572,7 +2571,7 @@ app.get('/admin/users/:userId', adminPage(), async (req, res) => {
 });
 
 // ── Search: JSON pagination API ──────────────────────────────────────────────
-app.get('/api/v2/search', anonymousAuth, async (req, res) => {
+app.get('/api/search', anonymousAuth, async (req, res) => {
     const q    = (req.query.q    || '').trim();
     const type = (req.query.type || '').toLowerCase(); // people | buckets | repos
     const skip = Math.max(0, parseInt(req.query.skip) || 0);
@@ -2737,13 +2736,13 @@ app.get('/api/v2/search', anonymousAuth, async (req, res) => {
 });
 
 // Block admin accounts from the regular user frontend — redirect to /admin
-app.use('/v2', requireNonAdmin);
+app.use('/showroom', requireNonAdmin);
 
 // Search page — /v2/search?q=<query>[&type=people|buckets|repos]
-app.get('/v2/search', anonymousAuth, async (req, res) => {
+app.get('/search', anonymousAuth, async (req, res) => {
     const q          = (req.query.q    || '').trim();
     const searchType = (req.query.type || '').toLowerCase(); // '' | 'people' | 'buckets' | 'repos'
-    if (!q) return res.redirect('/v2/explore');
+    if (!q) return res.redirect('/explore');
 
     const BUCKET_SELECT = 'name thumbnail links isPaywalled price viewCount shareCount ratingSum ratingCount createdAt updatedAt userId grabbedBy description hashtags isDraft visibility isPublic';
     const U_LIMIT = 6, B_LIMIT = 9, R_LIMIT = 3, T_LIMIT = 18;
@@ -2990,19 +2989,19 @@ app.get('/v2/search', anonymousAuth, async (req, res) => {
 });
 
 // Profile page — redirect /v2/profile to the logged-in user's profile route
-app.get('/v2/profile', anonymousAuth, requireAuth, (req, res) => {
+app.get('/profile', anonymousAuth, requireAuth, (req, res) => {
     const username = req.user?.username;
-    if (username) return res.redirect(`/v2/u/${username}`);
-    res.redirect('/v2');
+    if (username) return res.redirect(`/u/${username}`);
+    res.redirect('/showroom');
 });
 
 // Legacy @username redirect
-app.get('/v2/@:username', (req, res) => {
-    res.redirect(301, `/v2/u/${req.params.username}`);
+app.get('/@:username', (req, res) => {
+    res.redirect(301, `/u/${req.params.username}`);
 });
 
 // Profile page — /v2/u/:username  (public — anyone can view)
-app.get('/v2/u/:username', anonymousAuth, async (req, res) => {
+app.get('/u/:username', anonymousAuth, async (req, res) => {
     // Who is being viewed
     const profileUser = await User.findOne({ username: req.params.username, isAnonymous: false }).lean();
     if (!profileUser) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null }).catch(() => res.status(404).send('User not found'));
@@ -3035,16 +3034,12 @@ app.get('/v2/u/:username', anonymousAuth, async (req, res) => {
             .lean(),
         Subscription.countDocuments({ followeeId: profileUser._id }),
         Subscription.countDocuments({ followerId: profileUser._id }),
-        isOwner
-            ? Bucket.find({ 'grabbedBy.userId': profileUser._id })
-                .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags ratingCount ratingSum createdAt updatedAt')
-                .populate('userId', 'username')
-                .sort({ createdAt: -1 })
-                .lean()
-            : Promise.resolve([]),
-        isOwner
-            ? UserRepo.find({ userId: profileUser._id }).sort({ name: 1 }).lean()
-            : Promise.resolve([]),
+        Bucket.find({ 'grabbedBy.userId': profileUser._id })
+            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags ratingCount ratingSum createdAt updatedAt')
+            .populate('userId', 'username')
+            .sort({ createdAt: -1 })
+            .lean(),
+        UserRepo.find({ userId: profileUser._id }).sort({ name: 1 }).lean(),
     ]);
 
     const ownBuckets     = allBuckets.map(addDisplayThumb);
@@ -3072,7 +3067,7 @@ app.get('/v2/u/:username', anonymousAuth, async (req, res) => {
 
 // Dynamic repository page — domain + tag come from the path
 // User-created repo page — single ObjectId segment distinguishes it from domain+tag repos
-app.get('/v2/o/:repoId', anonymousAuth, async (req, res) => {
+app.get('/o/:repoId', anonymousAuth, async (req, res) => {
     try {
         const { repoId } = req.params;
         if (!mongoose.Types.ObjectId.isValid(repoId)) {
@@ -3105,7 +3100,7 @@ app.get('/v2/o/:repoId', anonymousAuth, async (req, res) => {
         }));
 
         const createdAt = new Date(repo.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-        const pageUrl   = `${req.protocol}://${req.get('host')}/v2/o/${repoId}`;
+        const pageUrl   = `${req.protocol}://${req.get('host')}/o/${repoId}`;
 
         res.render('v2/repo', {
             title:          repo.name,
@@ -3127,14 +3122,14 @@ app.get('/v2/o/:repoId', anonymousAuth, async (req, res) => {
     }
 });
 
-app.get('/v2/o/:topic/:tag', anonymousAuth, (req, res) => {
+app.get('/o/:topic/:tag', anonymousAuth, (req, res) => {
     const topic = req.params.topic || '';
     const tag   = req.params.tag   || '';
     res.render('v2/repository', { title: `#${tag} in ${topic}`, page: 'repository', user: req.user ?? null, domain: topic, tag });
 });
 
 // Report page — /v2/report/:bucketId
-app.get('/v2/report/:bucketId', anonymousAuth, async (req, res) => {
+app.get('/report/:bucketId', anonymousAuth, async (req, res) => {
     try {
         const { bucketId } = req.params;
         const bucket = await Bucket.findById(bucketId).lean();
@@ -3168,7 +3163,7 @@ app.get('/v2/report/:bucketId', anonymousAuth, async (req, res) => {
 });
 
 // Bucket thumbnail — /v2/b/:bucketId/thumbnail.jpg
-app.get('/v2/b/:bucketId/thumbnail.jpg', async (req, res) => {
+app.get('/b/:bucketId/thumbnail.jpg', async (req, res) => {
     try {
         const bucket = await Bucket.findById(req.params.bucketId).lean();
         if (!bucket) return res.status(404).send('Not found');
@@ -3245,7 +3240,7 @@ app.get('/api/buckets/:id/recommendations', anonymousAuth, async (req, res) => {
 });
 
 // Bucket view page — /v2/b/:bucketId  (accessible to anyone)
-app.get('/v2/b/:bucketId', anonymousAuth, async (req, res) => {
+app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
     try {
         const { bucketId } = req.params;
         const bucket = await Bucket.findById(bucketId).lean();
@@ -3326,9 +3321,9 @@ app.get('/v2/b/:bucketId', anonymousAuth, async (req, res) => {
             })();
         }
 
-        const bucketUrl = `${shareBaseUrl}/v2/b/${bucketId}`;
+        const bucketUrl = `${shareBaseUrl}/b/${bucketId}`;
         const hasThumbnail = !!(bucket.thumbnail || bucket.links?.some(l => l.image));
-        const ogImage = hasThumbnail ? `${shareBaseUrl}/v2/b/${bucketId}/thumbnail.jpg` : null;
+        const ogImage = hasThumbnail ? `${shareBaseUrl}/b/${bucketId}/thumbnail.jpg` : null;
 
         res.render('v2/bucket', {
             title: bucket.name,
@@ -3366,11 +3361,11 @@ app.get('/v2/b/:bucketId', anonymousAuth, async (req, res) => {
 // Messages — shared template for both inbox and active conversation
 const MSG_DEFAULTS = { activeConversationId: null, conversation: null, otherUser: null };
 
-app.get('/v2/messages', anonymousAuth, requireAuth, requireVerification, (req, res) => {
+app.get('/messages', anonymousAuth, requireAuth, requireVerification, (req, res) => {
     res.render('v2/messages', { title: 'Messages', page: 'messages', user: req.user, ...MSG_DEFAULTS });
 });
 
-app.get('/v2/messages/:conversationId', anonymousAuth, requireAuth, requireVerification, async (req, res) => {
+app.get('/messages/:conversationId', anonymousAuth, requireAuth, requireVerification, async (req, res) => {
     try {
         const { conversationId } = req.params;
         if (!mongoose.Types.ObjectId.isValid(conversationId)) {
