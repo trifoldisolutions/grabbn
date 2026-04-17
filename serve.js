@@ -2343,6 +2343,28 @@ app.get('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, a
 // ---------------------------------------------------------------------------
 // V2 API — repositories (pre-computed cache, rebuilt hourly)
 // ---------------------------------------------------------------------------
+
+// Attach up to 4 bucket thumbnails to each repo for the 2x2 thumbnail grid
+async function enrichReposWithBucketThumbnails(repos) {
+    await Promise.all(repos.map(async repo => {
+        const escapedDomain = repo.domain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const domainPattern = new RegExp(`^https?://(www\\.)?${escapedDomain}`, 'i');
+        const buckets = await Bucket.find({
+            hashtags:     repo.tag,
+            visibility:   'public',
+            isDraft:      false,
+            'links.href': domainPattern
+        })
+        .sort({ exploreScore: -1 })
+        .limit(4)
+        .select('thumbnail links')
+        .lean();
+        repo.topBucketThumbnails = buckets
+            .map(b => b.thumbnail || b.links.find(l => l.image)?.image || '')
+            .filter(Boolean);
+    }));
+}
+
 app.get('/api/repositories', anonymousAuth, async (req, res) => {
     try {
         const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
@@ -2356,7 +2378,9 @@ app.get('/api/repositories', anonymousAuth, async (req, res) => {
             allRepos.sort((a, b) => b.totalClicks - a.totalClicks);
             const page    = allRepos.slice(skip, skip + limit + 1);
             const hasMore = page.length > limit;
-            return res.json({ hasMore, repositories: hasMore ? page.slice(0, limit) : page });
+            const items   = hasMore ? page.slice(0, limit) : page;
+            await enrichReposWithBucketThumbnails(items);
+            return res.json({ hasMore, repositories: items });
         }
 
         // ── Logged-in users: personalised scoring ────────────────────────────
@@ -2427,6 +2451,7 @@ app.get('/api/repositories', anonymousAuth, async (req, res) => {
         const items   = (hasMore ? page.slice(0, limit) : page)
             .map(({ _score, ...repo }) => repo); // strip internal field before sending
 
+        await enrichReposWithBucketThumbnails(items);
         res.json({ hasMore, repositories: items });
     } catch (err) {
         console.error('Repositories endpoint error:', err);
@@ -2717,14 +2742,13 @@ app.get('/api/search', anonymousAuth, async (req, res) => {
             const found       = await Repository.find({ domain: new RegExp(sEsc, 'i') })
                 .sort({ totalClicks: -1 }).skip(skip).limit(R_LIMIT + 1).lean();
             const hasMore = found.length > R_LIMIT;
-            return res.json({
-                hasMore,
-                items: found.slice(0, R_LIMIT).map(r => ({
-                    domain:      r.domain,
-                    bucketCount: r.bucketCount || 0,
-                    topLinks:    (r.topLinks || []).slice(0, 4).map(l => ({ image: l.image || '' })),
-                })),
-            });
+            const repoItems = found.slice(0, R_LIMIT).map(r => ({
+                domain:      r.domain,
+                tag:         r.tag,
+                bucketCount: r.bucketCount || 0,
+            }));
+            await enrichReposWithBucketThumbnails(repoItems);
+            return res.json({ hasMore, items: repoItems });
         }
 
         return res.json({ items: [], hasMore: false });
@@ -2942,10 +2966,12 @@ app.get('/search', anonymousAuth, async (req, res) => {
             ]);
         }
 
+        await enrichReposWithBucketThumbnails(repos);
         const formattedRepos = repos.map(r => ({
-            domain:      r.domain,
-            bucketCount: r.bucketCount || 0,
-            topLinks:    (r.topLinks || []).slice(0, 4).map(l => ({ image: l.image || '' })),
+            domain:               r.domain,
+            tag:                  r.tag,
+            bucketCount:          r.bucketCount || 0,
+            topBucketThumbnails:  r.topBucketThumbnails || [],
         }));
 
         const formattedTags = tagResults.map(t => ({ tag: t._id, count: t.count }));
