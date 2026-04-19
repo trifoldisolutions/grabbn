@@ -391,6 +391,48 @@ app.get('/api/auth/bookmarklet-token', requireAuth, async (req, res) => {
     }
 });
 
+
+// Scrape OG/meta tags from a URL — returns { title, image } for link auto-fill.
+app.get('/api/meta', requireAuth, async (req, res) => {
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: 'url required' });
+    try {
+        const controller = new AbortController();
+        setTimeout(() => controller.abort(), 10000);
+        const upstream = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml',
+            },
+            redirect: 'follow',
+        });
+        if (!upstream.ok) return res.json({ title: null, image: null });
+        const html = await upstream.text();
+
+        const metaContent = (prop, attr = 'property') => {
+            const a = html.match(new RegExp(`<meta[^>]+${attr}=["']${prop}["'][^>]+content=["']([^"']+)["']`, 'i'))?.[1];
+            const b = html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+${attr}=["']${prop}["']`, 'i'))?.[1];
+            return a || b || null;
+        };
+
+        const title = metaContent('og:title')
+            || metaContent('twitter:title', 'name')
+            || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim()
+            || null;
+
+        const image = metaContent('og:image')
+            || metaContent('og:image:url')
+            || metaContent('twitter:image', 'name')
+            || metaContent('twitter:image:src', 'name')
+            || null;
+
+        res.json({ title, image });
+    } catch {
+        res.json({ title: null, image: null });
+    }
+});
+
 // Get user info (for debugging/testing)
 app.get('/api/user', requireAuth, requireVerification, (req, res) => {
     res.json({

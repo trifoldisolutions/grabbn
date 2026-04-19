@@ -364,7 +364,7 @@
                             <p class="text-base font-medium text-woodsmoke-800">Monetization</p>
                             <p id="monetizationLabel" class="text-sm text-woodsmoke-400 mt-0.5">Disabled</p>
                         </div>
-                        <button id="monetizationToggle" data-state="off" class="relative w-14 h-7 rounded-full bg-silver-200 transition-colors shrink-0 focus:outline-none">
+                        <button id="monetizationToggle" data-state="off" class="relative w-14 h-7 rounded-full bg-silver-200 transition-colors shrink-0 focus:outline-none opacity-40 cursor-not-allowed">
                             <span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform"></span>
                         </button>
                     </div>
@@ -954,8 +954,9 @@
             adsToggle.classList.remove('opacity-40', 'cursor-not-allowed');
         }
         setToggle(monetizationToggle, false);
-        monetizationToggle.disabled = false;
-        monetizationToggle.classList.remove('opacity-40', 'cursor-not-allowed');
+        monetizationToggle.disabled = !isPartner;
+        monetizationToggle.classList.toggle('opacity-40', !isPartner);
+        monetizationToggle.classList.toggle('cursor-not-allowed', !isPartner);
         monetizationLabel.textContent = 'Disabled';
         monetizationAmountPanel.classList.add('hidden');
         monetizationAmountInput.value = '';
@@ -1095,9 +1096,10 @@
         // resetUI hardcodes toggles — fix them to match the bucket's actual settings
         setVisSegment(bucketVisibility);
         setToggle(monetizationToggle, state.monetization);
-        monetizationToggle.disabled = bucketVisibility !== 'public';
-        monetizationToggle.classList.toggle('opacity-40', bucketVisibility !== 'public');
-        monetizationToggle.classList.toggle('cursor-not-allowed', bucketVisibility !== 'public');
+        var monetizationDisabled = bucketVisibility !== 'public' || !isPartner;
+        monetizationToggle.disabled = monetizationDisabled;
+        monetizationToggle.classList.toggle('opacity-40', monetizationDisabled);
+        monetizationToggle.classList.toggle('cursor-not-allowed', monetizationDisabled);
         monetizationLabel.textContent = state.monetization ? 'Enabled' : 'Disabled';
         monetizationAmountPanel.classList.toggle('hidden', !state.monetization);
         if (state.monetization) monetizationAmountInput.value = bucket.price
@@ -1372,7 +1374,7 @@
             }
         });
         // Monetization is only available for public buckets
-        var canMonetize = vis === 'public';
+        var canMonetize = vis === 'public' && isPartner;
         if (!canMonetize && state.monetization) {
             state.monetization = false;
             setToggle(monetizationToggle, false);
@@ -1397,6 +1399,7 @@
     });
 
     monetizationToggle.addEventListener('click', function () {
+        if (!isPartner) return;
         state.monetization = !state.monetization;
         setToggle(this, state.monetization);
         monetizationLabel.textContent = state.monetization ? 'Enabled' : 'Disabled';
@@ -1817,11 +1820,29 @@
     });
 
     // Add link
-    function tryAddLink() {
+    async function tryAddLink() {
         var title = newLinkTitle.value.trim();
         var url   = newLinkUrl.value.trim();
         if (!url) { newLinkUrl.focus(); return; }
-        state.links.push({ id: uid(), title: title || url, url: url, thumb: null, monetized: false, checked: false, clickCount: 0, pinned: false });
+
+        var thumb = null;
+
+        if (!title) {
+            addLinkBtn.disabled = true;
+            addLinkBtn.textContent = '…';
+            try {
+                var metaRes = await fetch('/api/meta?url=' + encodeURIComponent(url));
+                if (metaRes.ok) {
+                    var meta = await metaRes.json();
+                    if (meta.title) title = meta.title;
+                    if (meta.image) thumb = meta.image;
+                }
+            } catch {}
+            addLinkBtn.textContent = 'Add';
+            updateAddBtn();
+        }
+
+        state.links.push({ id: uid(), title: title || url, url: url, thumb: thumb, monetized: false, checked: false, clickCount: 0, pinned: false });
         newLinkTitle.value = '';
         newLinkUrl.value   = '';
         newLinkTitle.focus();
@@ -1829,7 +1850,7 @@
     }
 
     function updateAddBtn() {
-        addLinkBtn.disabled = !newLinkTitle.value.trim() || !newLinkUrl.value.trim();
+        addLinkBtn.disabled = !newLinkUrl.value.trim();
     }
 
     newLinkTitle.addEventListener('input', updateAddBtn);
