@@ -182,6 +182,10 @@
                         <button id="addLinkBtn" disabled class="w-full h-12 items-center justify-center bg-orchid-200 text-orchid-600 font-semibold rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-orchid-600">
                             Add
                         </button>
+                        <div id="metaUsageBar" class="hidden flex items-center justify-between text-xs text-gray-400">
+                            <span id="metaUsageLabel"></span>
+                            <a href="#" class="text-orchid-500 hover:text-orchid-600 underline transition-colors">Increase limit</a>
+                        </div>
                     </div>
                 </div>
 
@@ -425,6 +429,56 @@
 </div>
 <!-- ── End New Bucket Modal ───────────────────────────────────────────────── -->
 
+<!-- ── Meta Topup Modal ───────────────────────────────────────────────────── -->
+<div id="metaTopupModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center px-4" aria-modal="true" role="dialog">
+    <div class="absolute inset-0 bg-woodsmoke-950/40" id="metaTopupBackdrop"></div>
+    <div class="relative w-full max-w-sm bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-silver-100">
+            <h2 class="font-semibold text-woodsmoke-950">Boost daily limit</h2>
+            <button id="metaTopupCloseBtn" class="w-8 h-8 flex items-center justify-center rounded text-woodsmoke-400 hover:text-woodsmoke-950 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M15.889 6.697a1.001 1.001 0 0 1 1.415 1.414L13.414 12l3.89 3.89a1 1 0 0 1-1.414 1.414L12 13.414l-3.889 3.89a1 1 0 1 1-1.414-1.414L10.586 12L6.697 8.11a1 1 0 0 1 1.414-1.414L12 10.586z"/></g></svg>
+            </button>
+        </div>
+        <!-- Balance -->
+        <div class="px-5 py-4 border-b border-silver-100 flex items-center justify-between">
+            <span class="text-sm text-woodsmoke-500">Your balance</span>
+            <span id="metaTopupBalance" class="text-sm font-semibold text-woodsmoke-950">— JWL</span>
+        </div>
+        <!-- Bundles -->
+        <div class="px-5 py-4 flex flex-col gap-2">
+            <p class="text-xs text-woodsmoke-400 mb-1">Each fetch costs 2 JWL</p>
+            <div id="metaTopupBundles" class="grid grid-cols-2 gap-2">
+                <button data-fetches="25"  data-cost="50"  class="meta-bundle-btn flex flex-col items-center py-3 rounded-xl border-2 border-silver-200 hover:border-orchid-400 transition-colors">
+                    <span class="font-semibold text-woodsmoke-950">+25 fetches</span>
+                    <span class="text-xs text-woodsmoke-400 mt-0.5">50 JWL</span>
+                </button>
+                <button data-fetches="50"  data-cost="100" class="meta-bundle-btn flex flex-col items-center py-3 rounded-xl border-2 border-silver-200 hover:border-orchid-400 transition-colors">
+                    <span class="font-semibold text-woodsmoke-950">+50 fetches</span>
+                    <span class="text-xs text-woodsmoke-400 mt-0.5">100 JWL</span>
+                </button>
+                <button data-fetches="100" data-cost="200" class="meta-bundle-btn flex flex-col items-center py-3 rounded-xl border-2 border-silver-200 hover:border-orchid-400 transition-colors">
+                    <span class="font-semibold text-woodsmoke-950">+100 fetches</span>
+                    <span class="text-xs text-woodsmoke-400 mt-0.5">200 JWL</span>
+                </button>
+                <button data-fetches="200" data-cost="400" class="meta-bundle-btn flex flex-col items-center py-3 rounded-xl border-2 border-silver-200 hover:border-orchid-400 transition-colors">
+                    <span class="font-semibold text-woodsmoke-950">+200 fetches</span>
+                    <span class="text-xs text-woodsmoke-400 mt-0.5">400 JWL</span>
+                </button>
+            </div>
+        </div>
+        <!-- Footer -->
+        <div class="px-5 pb-5 flex flex-col gap-2">
+            <div id="metaTopupSummary" class="hidden text-xs text-woodsmoke-400 text-center"></div>
+            <button id="metaTopupConfirmBtn" disabled class="w-full h-11 bg-orchid-200 text-orchid-600 font-semibold rounded-xl border border-orchid-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-orchid-300">
+                Confirm purchase
+            </button>
+            <p id="metaTopupError" class="hidden text-xs text-red-500 text-center"></p>
+        </div>
+    </div>
+</div>
+<!-- ── End Meta Topup Modal ───────────────────────────────────────────────── -->
+
 <!-- Hidden file input for per-link thumbnail uploads -->
 <input id="linkThumbFileInput" type="file" accept=".jpg,.jpeg,.png" class="hidden" />
 
@@ -528,6 +582,86 @@
     var bulkCopyBtn      = document.getElementById('bulkCopyBtn');
     var bulkMonetizeBtn  = document.getElementById('bulkMonetizeBtn');
     var linkThumbInput   = document.getElementById('linkThumbFileInput');
+    var metaUsageBar     = document.getElementById('metaUsageBar');
+    var metaUsageLabel   = document.getElementById('metaUsageLabel');
+
+    // Meta topup modal
+    (function () {
+        var topupModal      = document.getElementById('metaTopupModal');
+        var topupBackdrop   = document.getElementById('metaTopupBackdrop');
+        var topupCloseBtn   = document.getElementById('metaTopupCloseBtn');
+        var topupBalance    = document.getElementById('metaTopupBalance');
+        var topupSummary    = document.getElementById('metaTopupSummary');
+        var topupConfirmBtn = document.getElementById('metaTopupConfirmBtn');
+        var topupError      = document.getElementById('metaTopupError');
+        var bundleBtns      = document.querySelectorAll('.meta-bundle-btn');
+        var increaseLimitLink = metaUsageBar.querySelector('a');
+
+        var selectedFetches = 0;
+        var selectedCost    = 0;
+
+        function openTopupModal() {
+            topupModal.classList.remove('hidden');
+            topupBalance.textContent = '— JWL';
+            topupConfirmBtn.disabled = true;
+            topupSummary.classList.add('hidden');
+            topupError.classList.add('hidden');
+            bundleBtns.forEach(function (b) { b.classList.remove('border-orchid-500', 'bg-orchid-50'); });
+            selectedFetches = 0;
+            fetch('/api/credits/balance')
+                .then(function (r) { return r.json(); })
+                .then(function (d) { topupBalance.textContent = (d.credits ?? 0) + ' JWL'; })
+                .catch(function () {});
+        }
+
+        function closeTopupModal() { topupModal.classList.add('hidden'); }
+
+        increaseLimitLink.addEventListener('click', function (e) { e.preventDefault(); openTopupModal(); });
+        topupBackdrop.addEventListener('click', closeTopupModal);
+        topupCloseBtn.addEventListener('click', closeTopupModal);
+
+        bundleBtns.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                bundleBtns.forEach(function (b) { b.classList.remove('border-orchid-500', 'bg-orchid-50'); });
+                btn.classList.add('border-orchid-500', 'bg-orchid-50');
+                selectedFetches = parseInt(btn.dataset.fetches);
+                selectedCost    = parseInt(btn.dataset.cost);
+                topupSummary.textContent = selectedFetches + ' fetches for ' + selectedCost + ' JWL';
+                topupSummary.classList.remove('hidden');
+                topupError.classList.add('hidden');
+                topupConfirmBtn.disabled = false;
+            });
+        });
+
+        topupConfirmBtn.addEventListener('click', async function () {
+            if (!selectedFetches) return;
+            topupConfirmBtn.disabled = true;
+            topupConfirmBtn.textContent = '…';
+            topupError.classList.add('hidden');
+            try {
+                var r = await fetch('/api/meta/topup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fetches: selectedFetches }),
+                });
+                var data = await r.json();
+                if (!r.ok) {
+                    topupError.textContent = data.error === 'Insufficient balance' ? 'Not enough JWL.' : 'Something went wrong.';
+                    topupError.classList.remove('hidden');
+                } else {
+                    topupBalance.textContent = data.credits + ' JWL';
+                    metaUsageBar.classList.remove('hidden');
+                    metaUsageLabel.textContent = data.usage.used + ' / ' + data.usage.limit + ' fetches today';
+                    closeTopupModal();
+                }
+            } catch {
+                topupError.textContent = 'Something went wrong.';
+                topupError.classList.remove('hidden');
+            }
+            topupConfirmBtn.disabled = false;
+            topupConfirmBtn.textContent = 'Confirm purchase';
+        });
+    })();
 
     // Tags
     var tagsContainer    = document.getElementById('tagsContainer');
@@ -1832,10 +1966,21 @@
             addLinkBtn.textContent = '…';
             try {
                 var metaRes = await fetch('/api/meta?url=' + encodeURIComponent(url));
-                if (metaRes.ok) {
-                    var meta = await metaRes.json();
+                var meta = await metaRes.json();
+                if (metaRes.status === 429) {
+                    if (meta.error === 'rate_daily') {
+                        metaUsageBar.classList.remove('hidden');
+                        metaUsageLabel.textContent = meta.used + ' / ' + meta.limit + ' fetches today — limit reached';
+                    } else {
+                        alert('Too many requests. Please wait a moment.');
+                    }
+                } else if (metaRes.ok) {
                     if (meta.title) title = meta.title;
                     if (meta.image) thumb = meta.image;
+                    if (meta.usage) {
+                        metaUsageBar.classList.remove('hidden');
+                        metaUsageLabel.textContent = meta.usage.used + ' / ' + meta.usage.limit + ' fetches today';
+                    }
                 }
             } catch {}
             addLinkBtn.textContent = 'Add';

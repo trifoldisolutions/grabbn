@@ -392,10 +392,51 @@ app.get('/api/auth/bookmarklet-token', requireAuth, async (req, res) => {
 });
 
 
+const META_DAILY_LIMIT = 50;
+const META_FETCH_COST  = 2; // JWL per extra fetch
+
+// Per-minute sliding window (hidden, alert only)
+const _metaMinuteMap = new Map();
+function metaMinuteCheck(userId) {
+    const now = Date.now();
+    const timestamps = (_metaMinuteMap.get(userId) || []).filter(t => now - t < 60_000);
+    if (timestamps.length >= 20) return false;
+    timestamps.push(now);
+    _metaMinuteMap.set(userId, timestamps);
+    return true;
+}
+
+// Daily counter with optional bonus quota (calendar day, UTC)
+const _metaDailyMap = new Map();
+function metaDailyCheck(userId) {
+    const today = new Date().toISOString().slice(0, 10);
+    let entry = _metaDailyMap.get(userId);
+    if (!entry || entry.date !== today) {
+        entry = { date: today, count: 0, bonus: 0 };
+        _metaDailyMap.set(userId, entry);
+    }
+    const limit = META_DAILY_LIMIT + entry.bonus;
+    if (entry.count >= limit) return { ok: false, used: entry.count, limit };
+    entry.count++;
+    return { ok: true, used: entry.count, limit };
+}
+
+function metaDailyAddBonus(userId, fetches) {
+    const today = new Date().toISOString().slice(0, 10);
+    let entry = _metaDailyMap.get(userId);
+    if (!entry || entry.date !== today) entry = { date: today, count: 0, bonus: 0 };
+    entry.bonus += fetches;
+    _metaDailyMap.set(userId, entry);
+    return { limit: META_DAILY_LIMIT + entry.bonus, used: entry.count };
+}
+
 // Scrape OG/meta tags from a URL — returns { title, image } for link auto-fill.
 app.get('/api/meta', requireAuth, async (req, res) => {
     const { url } = req.query;
     if (!url) return res.status(400).json({ error: 'url required' });
+    if (!metaMinuteCheck(String(req.user._id))) return res.status(429).json({ error: 'rate_minute' });
+    const daily = metaDailyCheck(String(req.user._id));
+    if (!daily.ok) return res.status(429).json({ error: 'rate_daily', used: daily.used, limit: META_DAILY_LIMIT });
     try {
         const controller = new AbortController();
         setTimeout(() => controller.abort(), 10000);
@@ -427,10 +468,27 @@ app.get('/api/meta', requireAuth, async (req, res) => {
             || metaContent('twitter:image:src', 'name')
             || null;
 
-        res.json({ title, image });
+        res.json({ title, image, usage: { used: daily.used, limit: daily.limit } });
     } catch {
         res.json({ title: null, image: null });
     }
+});
+
+// Purchase extra daily meta fetches with JWL credits (2 JWL each).
+app.post('/api/meta/topup', requireAuth, async (req, res) => {
+    const fetches = parseInt(req.body?.fetches);
+    if (!Number.isInteger(fetches) || fetches <= 0 || fetches > 500) {
+        return res.status(400).json({ error: 'Invalid fetch count' });
+    }
+    const cost = fetches * META_FETCH_COST;
+    const user = await User.findOneAndUpdate(
+        { _id: req.user._id, credits: { $gte: cost } },
+        { $inc: { credits: -cost } },
+        { new: true }
+    );
+    if (!user) return res.status(402).json({ error: 'Insufficient balance' });
+    const { limit, used } = metaDailyAddBonus(String(req.user._id), fetches);
+    res.json({ credits: user.credits, usage: { used, limit } });
 });
 
 // Get user info (for debugging/testing)
