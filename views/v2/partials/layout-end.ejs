@@ -432,7 +432,7 @@
 <!-- ── Meta Topup Modal ───────────────────────────────────────────────────── -->
 <div id="metaTopupModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center px-4" aria-modal="true" role="dialog">
     <div class="absolute inset-0 bg-woodsmoke-950/40" id="metaTopupBackdrop"></div>
-    <div class="relative w-full max-w-sm bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden">
+    <div class="relative w-full max-w-sm bg-white rounded-md shadow-xl flex flex-col overflow-hidden">
         <!-- Header -->
         <div class="flex items-center justify-between px-5 py-4 border-b border-silver-100">
             <h2 class="font-semibold text-woodsmoke-950">Boost daily limit</h2>
@@ -449,19 +449,19 @@
         <div class="px-5 py-4 flex flex-col gap-2">
             <p class="text-xs text-woodsmoke-400 mb-1">Each fetch costs 2 JWL</p>
             <div id="metaTopupBundles" class="grid grid-cols-2 gap-2">
-                <button data-fetches="25"  data-cost="50"  class="meta-bundle-btn flex flex-col items-center py-3 rounded-xl border-2 border-silver-200 hover:border-orchid-400 transition-colors">
+                <button data-fetches="25"  data-cost="50"  class="meta-bundle-btn flex flex-col items-center py-3 rounded-md border-2 border-silver-200 hover:border-orchid-400 transition-colors">
                     <span class="font-semibold text-woodsmoke-950">+25 fetches</span>
                     <span class="text-xs text-woodsmoke-400 mt-0.5">50 JWL</span>
                 </button>
-                <button data-fetches="50"  data-cost="100" class="meta-bundle-btn flex flex-col items-center py-3 rounded-xl border-2 border-silver-200 hover:border-orchid-400 transition-colors">
+                <button data-fetches="50"  data-cost="100" class="meta-bundle-btn flex flex-col items-center py-3 rounded-md border-2 border-silver-200 hover:border-orchid-400 transition-colors">
                     <span class="font-semibold text-woodsmoke-950">+50 fetches</span>
                     <span class="text-xs text-woodsmoke-400 mt-0.5">100 JWL</span>
                 </button>
-                <button data-fetches="100" data-cost="200" class="meta-bundle-btn flex flex-col items-center py-3 rounded-xl border-2 border-silver-200 hover:border-orchid-400 transition-colors">
+                <button data-fetches="100" data-cost="200" class="meta-bundle-btn flex flex-col items-center py-3 rounded-md border-2 border-silver-200 hover:border-orchid-400 transition-colors">
                     <span class="font-semibold text-woodsmoke-950">+100 fetches</span>
                     <span class="text-xs text-woodsmoke-400 mt-0.5">200 JWL</span>
                 </button>
-                <button data-fetches="200" data-cost="400" class="meta-bundle-btn flex flex-col items-center py-3 rounded-xl border-2 border-silver-200 hover:border-orchid-400 transition-colors">
+                <button data-fetches="200" data-cost="400" class="meta-bundle-btn flex flex-col items-center py-3 rounded-md border-2 border-silver-200 hover:border-orchid-400 transition-colors">
                     <span class="font-semibold text-woodsmoke-950">+200 fetches</span>
                     <span class="text-xs text-woodsmoke-400 mt-0.5">400 JWL</span>
                 </button>
@@ -470,7 +470,7 @@
         <!-- Footer -->
         <div class="px-5 pb-5 flex flex-col gap-2">
             <div id="metaTopupSummary" class="hidden text-xs text-woodsmoke-400 text-center"></div>
-            <button id="metaTopupConfirmBtn" disabled class="w-full h-11 bg-orchid-200 text-orchid-600 font-semibold rounded-xl border border-orchid-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-orchid-300">
+            <button id="metaTopupConfirmBtn" disabled class="w-full h-11 flex items-center justify-center bg-orchid-600 text-white font-semibold rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-orchid-700">
                 Confirm purchase
             </button>
             <p id="metaTopupError" class="hidden text-xs text-red-500 text-center"></p>
