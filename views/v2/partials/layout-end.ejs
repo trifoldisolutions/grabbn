@@ -650,7 +650,7 @@
                 });
                 var data = await r.json();
                 if (!r.ok) {
-                    if (r.status === 402) { window.location.href = '/topup'; return; }
+                    if (r.status === 402) { window.location.href = '/topup?jwl=' + selectedCost; return; }
                     topupError.textContent = 'Something went wrong.';
                     topupError.classList.remove('hidden');
                 } else {
