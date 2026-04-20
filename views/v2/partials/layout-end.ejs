@@ -182,8 +182,8 @@
                         <button id="addLinkBtn" disabled class="w-full h-12 items-center justify-center bg-orchid-200 text-orchid-600 font-semibold rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed border border-orchid-600">
                             Add
                         </button>
-                        <div id="metaUsageBar" class="hidden flex items-center justify-between text-xs text-gray-400">
-                            <span id="metaUsageLabel"></span>
+                        <div id="metaUsageBar" class="flex items-center justify-between text-sm text-gray-400">
+                            <span id="metaUsageLabel">0 / 50 fetches today</span>
                             <a href="#" class="text-orchid-500 hover:text-orchid-600 underline transition-colors">Increase limit</a>
                         </div>
                     </div>
@@ -646,11 +646,11 @@
                 });
                 var data = await r.json();
                 if (!r.ok) {
-                    topupError.textContent = data.error === 'Insufficient balance' ? 'Not enough JWL.' : 'Something went wrong.';
+                    if (r.status === 402) { window.location.href = '/topup'; return; }
+                    topupError.textContent = 'Something went wrong.';
                     topupError.classList.remove('hidden');
                 } else {
                     topupBalance.textContent = data.credits + ' JWL';
-                    metaUsageBar.classList.remove('hidden');
                     metaUsageLabel.textContent = data.usage.used + ' / ' + data.usage.limit + ' fetches today';
                     closeTopupModal();
                 }
@@ -1969,7 +1969,6 @@
                 var meta = await metaRes.json();
                 if (metaRes.status === 429) {
                     if (meta.error === 'rate_daily') {
-                        metaUsageBar.classList.remove('hidden');
                         metaUsageLabel.textContent = meta.used + ' / ' + meta.limit + ' fetches today — limit reached';
                     } else {
                         alert('Too many requests. Please wait a moment.');
@@ -1978,7 +1977,6 @@
                     if (meta.title) title = meta.title;
                     if (meta.image) thumb = meta.image;
                     if (meta.usage) {
-                        metaUsageBar.classList.remove('hidden');
                         metaUsageLabel.textContent = meta.usage.used + ' / ' + meta.usage.limit + ' fetches today';
                     }
                 }
