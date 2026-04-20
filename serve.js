@@ -475,6 +475,15 @@ app.get('/api/meta', requireAuth, async (req, res) => {
 });
 
 // Purchase extra daily meta fetches with JWL credits (2 JWL each).
+app.get('/api/meta/usage', requireAuth, (req, res) => {
+    const userId = String(req.user._id);
+    const today  = new Date().toISOString().slice(0, 10);
+    const entry  = _metaDailyMap.get(userId);
+    const used   = (entry?.date === today ? entry.count : 0);
+    const limit  = META_DAILY_LIMIT + (entry?.date === today ? (entry.bonus ?? 0) : 0);
+    res.json({ used, limit });
+});
+
 app.post('/api/meta/topup', requireAuth, async (req, res) => {
     const fetches = parseInt(req.body?.fetches);
     if (!Number.isInteger(fetches) || fetches <= 0 || fetches > 500) {
