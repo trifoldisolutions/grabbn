@@ -5,6 +5,7 @@ const devTodoSchema = new mongoose.Schema({
   description: { type: String, default: '', trim: true },
   tags:        [{ type: String, trim: true }],
   completedAt: { type: Date, default: null },
+  deletedAt:   { type: Date, default: null },
 }, { timestamps: true });
 
 export default mongoose.model('DevTodo', devTodoSchema);
