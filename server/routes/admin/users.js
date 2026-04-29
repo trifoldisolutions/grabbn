@@ -163,27 +163,6 @@ router.patch('/:userId/role', requireSuperadmin, async (req, res) => {
     }
 });
 
-// ── PATCH /api/admin/users/:userId/partner ───────────────────────────────────
-// Grant or revoke partner status. Superadmin only.
-// Body: { isPartner: true | false }
-router.patch('/:userId/partner', requireSuperadmin, async (req, res) => {
-    try {
-        const { userId } = req.params;
-        if (!isValidId(userId)) return res.status(400).json({ error: 'Invalid user ID' });
-
-        const { isPartner } = req.body;
-        if (typeof isPartner !== 'boolean') return res.status(400).json({ error: '`isPartner` (boolean) is required' });
-
-        const user = await User.findByIdAndUpdate(userId, { isPartner }, { new: true }).select('email isPartner');
-        if (!user) return res.status(404).json({ error: 'User not found' });
-
-        res.json({ message: isPartner ? 'Partner status granted' : 'Partner status revoked', user });
-    } catch (err) {
-        console.error('[admin/users/:id/partner]', err);
-        res.status(500).json({ error: 'Failed to update partner status' });
-    }
-});
-
 // ── PATCH /api/admin/users/:userId/credits ───────────────────────────────────
 // Adjust credits balance. Superadmin only.
 // Body: { adjustment: Number (positive to add, negative to subtract), reason: String }

@@ -1,0 +1,8 @@
+- forgot password/username/email links (02/15/2026 - 03/01/2026)
+- report card feature (02/15/2026 - 02/18/2026)
+- delete account link (02/15/2026 - 02/19/2026)
+- the shared card page ui : re design it (02/15/2026 - 02/20/2026)
+- add links/cards under paywall (02/15/2026 - done) 
+- grabbing card feature (02/15/2026 - 02/16/2026)
+- the all bucket dropdown to include options : recently updated, most recent, (02/15/2026 - revamped)
+- verify when a scrape was successful or not before decrementing the user's daily rate (03/01/2026 - abandonned)

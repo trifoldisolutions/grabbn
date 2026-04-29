@@ -88,6 +88,63 @@ export async function sendAccountDeletedEmail(toEmail) {
     });
 }
 
+export async function sendPartnerApprovedEmail(toEmail) {
+    const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+        <h2 style="color: #1f2937; margin-bottom: 16px;">You're a Grabbn Partner</h2>
+        <p style="color: #4b5563; line-height: 1.6;">
+            Your application has been reviewed and approved. You now have full access to the Grabbn Partner Program.
+        </p>
+        <p style="color: #4b5563; line-height: 1.6;">
+            Your revenue share begins from today. You can manage your ad and monetization settings from within any bucket you own.
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${process.env.APP_URL || 'http://localhost:3000'}/showroom"
+               style="background-color: #a21caf; color: white; padding: 12px 32px;
+                      text-decoration: none; border-radius: 6px; font-weight: 600;
+                      display: inline-block;">
+                Go to Grabbn
+            </a>
+        </div>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+        <p style="color: #9ca3af; font-size: 12px;">Grabbn &bull; Link Grabber</p>
+    </div>`;
+
+    await resend.emails.send({
+        from: process.env.RESEND_FROM,
+        to: toEmail,
+        subject: "You're a Grabbn Partner",
+        html
+    });
+}
+
+export async function sendPartnerRejectedEmail(toEmail, reason) {
+    const reasonBlock = reason
+        ? `<p style="color: #4b5563; line-height: 1.6;"><strong>Reason:</strong> ${reason}</p>`
+        : '';
+
+    const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+        <h2 style="color: #1f2937; margin-bottom: 16px;">Partner application not approved</h2>
+        <p style="color: #4b5563; line-height: 1.6;">
+            Thank you for applying to the Grabbn Partner Program. After review, we're unable to approve your application at this time.
+        </p>
+        ${reasonBlock}
+        <p style="color: #4b5563; line-height: 1.6;">
+            You're welcome to continue using Grabbn and re-apply in the future.
+        </p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+        <p style="color: #9ca3af; font-size: 12px;">Grabbn &bull; Link Grabber</p>
+    </div>`;
+
+    await resend.emails.send({
+        from: process.env.RESEND_FROM,
+        to: toEmail,
+        subject: 'Your Grabbn Partner application',
+        html
+    });
+}
+
 export async function sendPasswordResetEmail(toEmail, resetUrl) {
     const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">

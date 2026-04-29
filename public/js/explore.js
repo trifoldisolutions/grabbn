@@ -299,10 +299,13 @@
 
         if (navigator.share) {
             try { await navigator.share({ text: shareText, url }); delete btn.dataset.busy; }
-            catch (_) { await navigator.clipboard.writeText(shareText + '\n' + url).catch(() => {}); showFeedback(); }
+            catch (_) {
+                try { await navigator.clipboard.writeText(shareText + '\n' + url); showFeedback(); }
+                catch (_e) { btn.innerHTML = origHtml; delete btn.dataset.busy; }
+            }
         } else {
-            await navigator.clipboard.writeText(shareText + '\n' + url).catch(() => {});
-            showFeedback();
+            try { await navigator.clipboard.writeText(shareText + '\n' + url); showFeedback(); }
+            catch (_) { btn.innerHTML = origHtml; delete btn.dataset.busy; }
         }
         fetch(`/api/buckets/${bucketId}/share`, { method: 'POST', credentials: 'include' }).catch(() => {});
     }

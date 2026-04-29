@@ -112,28 +112,71 @@
                     </div>
                 </div>
 
-                <!-- Stats (edit mode only) -->
-                <div id="modalBucketStats" class="hidden flex flex-col gap-1.5 pt-2 border-t border-silver-100">
-                    <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Stats</p>
-                    <div class="flex flex-row flex-wrap gap-x-4 gap-y-1 text-base text-gray-500">
-                        <span class="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0V6.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/></g></svg>
-                            <span id="modalStatGrabs">0</span> grabs
-                        </span>
-                        <span class="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 5c3.679 0 8.162 2.417 9.73 5.901c.146.328.27.71.27 1.099c0 .388-.123.771-.27 1.099C20.161 16.583 15.678 19 12 19s-8.162-2.417-9.73-5.901C2.124 12.77 2 12.389 2 12c0-.388.123-.771.27-1.099C3.839 7.417 8.322 5 12 5m0 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8m0 2a2 2 0 1 1 0 4a2 2 0 0 1 0-4"/></g></svg>
-                            <span id="modalStatViews">0</span> views
-                        </span>
-                        <span class="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
-                            <span id="modalStatShares">0</span> shares
-                        </span>
+                <!-- Bucket IDs (edit mode only — visible to owner) -->
+                <div id="modalBucketOwningId" class="hidden flex flex-col gap-2">
+                    <!-- Public Bucket ID -->
+                    <div class="flex flex-col gap-1">
+                        <label class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Public ID</label>
+                        <div class="flex items-center gap-1 h-10 px-3 rounded-lg border border-silver-200 bg-silver-50">
+                            <span id="modalBucketIdValue" class="flex-1 min-w-0 text-xs font-mono text-woodsmoke-500 truncate select-all"></span>
+                            <button id="copyBucketIdBtn" title="Copy bucket ID" class="shrink-0 w-8 h-8 flex items-center justify-center rounded text-woodsmoke-400 hover:text-orchid-600 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Private Owning ID -->
+                    <div class="flex flex-col gap-1">
+                        <label class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Private ID</label>
+                        <div class="flex items-center gap-1 h-10 px-3 rounded-lg border border-silver-200 bg-silver-50">
+                            <span id="modalBucketOwningIdValue" class="flex-1 min-w-0 text-xs font-mono text-woodsmoke-500 truncate select-all"></span>
+                            <button id="copyBucketOwningIdBtn" title="Copy private ID" class="shrink-0 w-8 h-8 flex items-center justify-center rounded text-woodsmoke-400 hover:text-orchid-600 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
+                            </button>
+                        </div>
+                        <p class="text-xs text-woodsmoke-300">Only visible to you — use it to prove ownership.</p>
                     </div>
                 </div>
 
-                <!-- View as viewer link (edit mode only) -->
+                <!-- Stats (edit mode only) -->
+                <div id="modalBucketStats" class="hidden flex flex-col gap-1.5 pt-2 border-t border-silver-100">
+                    <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Stats</p>
+                    <div class="flex flex-col gap-y-1 text-base text-gray-500">
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center gap-2">
+                                <!-- mingcute:link-fill -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M13.06 8.11a5.01 5.01 0 0 1 0 7.07l-1.83 1.83a5 5 0 0 1-7.07-7.07l1-1a1 1 0 0 1 1.42 1.41l-1 1a3 3 0 1 0 4.24 4.24l1.83-1.83a3.003 3.003 0 0 0 0-4.24a1 1 0 1 1 1.41-1.41m5.65-5.65a5 5 0 0 1 0 7.07l-1 1a1 1 0 1 1-1.41-1.41l1-1a3 3 0 1 0-4.24-4.24l-1.83 1.83a3.003 3.003 0 0 0 0 4.24a1 1 0 1 1-1.41 1.41a5.01 5.01 0 0 1 0-7.07l1.83-1.83a5 5 0 0 1 7.06 0"/></g></svg>
+                                <span id="modalStatLinks">0</span> links
+                            </span>
+                            <span class="flex items-center gap-2">
+                                <!-- mingcute:cursor-fill -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M4.144 4.144a1 1 0 0 1 1.09-.22l14 5.5a1 1 0 0 1-.04 1.87l-5.58 1.86l-1.86 5.58a1 1 0 0 1-1.87.04l-5.5-14a1 1 0 0 1 .22-1.09z"/></g></svg>
+                                <span id="modalStatClicks">0</span> clicks
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0V6.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/></g></svg>
+                                <span id="modalStatGrabs">0</span> grabs
+                            </span>
+                            <span class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 5c3.679 0 8.162 2.417 9.73 5.901c.146.328.27.71.27 1.099c0 .388-.123.771-.27 1.099C20.161 16.583 15.678 19 12 19s-8.162-2.417-9.73-5.901C2.124 12.77 2 12.389 2 12c0-.388.123-.771.27-1.099C3.839 7.417 8.322 5 12 5m0 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8m0 2a2 2 0 1 1 0 4a2 2 0 0 1 0-4"/></g></svg>
+                                <span id="modalStatViews">0</span> views
+                            </span>
+                            <span class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
+                                <span id="modalStatShares">0</span> shares
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- More Statistics + viewer link (edit mode only) -->
                 <a id="modalViewAsViewerLink" href="#" target="_blank" rel="noopener noreferrer"
-                   class="hidden w-full h-12 flex items-center justify-center gap-2 rounded-md border border-orchid-300 text-sm font-semibold text-orchid-600 hover:bg-orchid-50 hover:border-orchid-400 transition-colors">
+                   class="hidden w-full h-12 shrink-0 flex items-center justify-center gap-2 rounded-md border border-orchid-300 text-sm font-semibold text-orchid-600 hover:bg-orchid-50 hover:border-orchid-400 transition-colors">
+                    More Statistics
+                </a>
+                <a id="modalViewAsViewerLinkPlain" href="#" target="_blank" rel="noopener noreferrer"
+                   class="hidden text-sm text-woodsmoke-500 underline hover:text-woodsmoke-700 transition-colors text-center">
                     Navigate to bucket as a viewer
                 </a>
 
@@ -214,6 +257,8 @@
                     <div id="bulkActions" class="hidden items-center gap-2 pb-2">
                         <button id="bulkDeleteBtn" class="px-3 h-8 flex items-center justify-center text-sm rounded-md bg-red-50 text-red-600 hover:bg-red-100 font-medium transition-colors">Delete All</button>
                         <button id="bulkCopyBtn"   class="px-3 h-8 flex items-center justify-center text-sm rounded-md bg-silver-100 text-woodsmoke-600 hover:bg-silver-200 font-medium transition-colors">Copy All</button>
+                        <button id="bulkCloneBtn"  class="px-3 h-8 flex items-center justify-center text-sm rounded-md bg-silver-100 text-woodsmoke-600 hover:bg-silver-200 font-medium transition-colors">Clone All</button>
+                        <button id="bulkMoveBtn"   class="px-3 h-8 flex items-center justify-center text-sm rounded-md bg-silver-100 text-woodsmoke-600 hover:bg-silver-200 font-medium transition-colors">Move All</button>
                         <button id="bulkMonetizeBtn" class="px-3 h-8 flex items-center justify-center text-sm rounded-md bg-orchid-50 text-orchid-600 hover:bg-orchid-100 font-medium transition-colors">Monetize All</button>
                     </div>
                 </div>
@@ -251,40 +296,12 @@
 
                     <!-- Repo -->
                     <div class="flex flex-col gap-1.5 mb-5">
-                        <label class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Repo</label>
-                        <div class="flex items-center gap-2">
-                            <!-- Custom dropdown -->
-                            <div class="relative flex-1" id="repoDropdownWrapper">
-                                <!-- Trigger -->
-                                <button id="repoDropdownBtn" type="button"
-                                    class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md border border-silver-200 bg-white text-left hover:border-orchid-300 focus:outline-none focus:border-orchid-400 focus:ring-2 focus:ring-orchid-100 transition-colors">
-                                    <span id="repoDropdownThumb" class="w-7 h-7 rounded shrink-0 flex items-center justify-center bg-silver-100 text-woodsmoke-300">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><path fill="currentColor" d="M19 11H5a1 1 0 0 0 0 2h14a1 1 0 0 0 0-2z"/></svg>
-                                    </span>
-                                    <span id="repoDropdownLabel" class="flex-1 text-sm text-woodsmoke-400 truncate">— No repo —</span>
-                                    <svg id="repoDropdownChevron" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" class="text-woodsmoke-400 shrink-0 transition-transform duration-150"><path fill="currentColor" d="m12 15.586l-7.293-7.293-1.414 1.414L12 18.414l8.707-8.707-1.414-1.414z"/></svg>
-                                </button>
-                                <!-- List -->
-                                <div id="repoDropdownList" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-silver-200 rounded-md shadow-lg z-50 overflow-y-auto max-h-52">
-                                    <!-- "No repo" option -->
-                                    <button type="button" data-repo-id=""
-                                        class="repo-dropdown-option w-full flex items-center gap-3 px-3 py-2.5 hover:bg-silver-50 transition-colors">
-                                        <span class="w-8 h-8 rounded shrink-0 flex items-center justify-center bg-silver-100 text-woodsmoke-300">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><path fill="currentColor" d="M19 11H5a1 1 0 0 0 0 2h14a1 1 0 0 0 0-2z"/></svg>
-                                        </span>
-                                        <span class="text-sm text-woodsmoke-400">— No repo —</span>
-                                    </button>
-                                    <!-- Repo options injected by JS -->
-                                </div>
-                            </div>
-                            <!-- + button -->
-                            <button
-                                id="newRepoPlusBtn"
-                                type="button"
-                                title="Create new repo"
-                                class="h-9 px-3 flex items-center justify-center rounded-md border border-silver-200 text-woodsmoke-500 hover:border-orchid-400 hover:text-orchid-600 transition-colors shrink-0"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Repo</label>
+                            <button id="newRepoPlusBtn" type="button" title="Create new repo"
+                                class="flex items-center gap-1 h-7 px-2 rounded text-xs font-medium text-woodsmoke-500 hover:text-orchid-600 hover:bg-orchid-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                New
                             </button>
                         </div>
                         <!-- Inline new repo creation -->
@@ -300,6 +317,10 @@
                             <button id="newRepoCancelBtn" type="button" class="w-9 h-9 flex items-center justify-center rounded-md border border-silver-200 text-woodsmoke-500 hover:border-orchid-400 hover:text-orchid-600 transition-colors shrink-0">✕</button>
                         </div>
                         <p id="newRepoError" class="hidden text-xs text-red-500"></p>
+                        <!-- Repo checklist -->
+                        <div id="repoCheckList" class="flex flex-col rounded-md border border-silver-200 divide-y divide-silver-50 overflow-y-auto max-h-40">
+                            <p id="repoNoReposMsg" class="px-3 py-3 text-sm text-woodsmoke-400 text-center italic">No repos yet</p>
+                        </div>
                     </div>
 
                     <!-- Tags -->
@@ -429,6 +450,25 @@
 </div>
 <!-- ── End New Bucket Modal ───────────────────────────────────────────────── -->
 
+<!-- ── Link Transfer (Clone / Move) Modal ────────────────────────────────── -->
+<div id="linkTransferModal" class="hidden fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4" aria-modal="true" role="dialog">
+    <div id="linkTransferBackdrop" class="absolute inset-0 bg-woodsmoke-950/60 backdrop-blur-sm"></div>
+    <div class="relative w-full sm:max-w-sm bg-white sm:rounded-xl shadow-xl flex flex-col max-h-[85dvh]">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-silver-100 shrink-0">
+            <h2 id="linkTransferTitle" class="text-sm font-semibold text-woodsmoke-950">Clone to bucket</h2>
+            <button id="linkTransferClose" class="w-7 h-7 flex items-center justify-center rounded-md text-woodsmoke-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 10.586L6.707 5.293a1 1 0 0 0-1.414 1.414L10.586 12l-5.293 5.293a1 1 0 1 0 1.414 1.414L12 13.414l5.293 5.293a1 1 0 0 0 1.414-1.414L13.414 12l5.293-5.293a1 1 0 0 0-1.414-1.414z"/></g></svg>
+            </button>
+        </div>
+        <div id="linkTransferList" class="overflow-y-auto flex-1 py-1"></div>
+        <div class="px-4 py-3 border-t border-silver-100 shrink-0">
+            <button id="linkTransferConfirm" disabled class="w-full h-10 bg-orchid-700 hover:bg-orchid-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-md transition-colors flex items-center justify-center gap-2">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ── Meta Topup Modal ───────────────────────────────────────────────────── -->
 <div id="metaTopupModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center px-4" aria-modal="true" role="dialog">
     <div class="absolute inset-0 bg-woodsmoke-950/40" id="metaTopupBackdrop"></div>
@@ -510,19 +550,28 @@
         monetization: false,
         mature:       false,
         thumbnail:    null, // { dataUrl, visible }
-        repoId:       null, // ObjectId string of the selected UserRepo, or null
+        repoIds:      [], // array of ObjectId strings for selected UserRepos
         _linkThumbTargetId: null,
         _editBucket:        null,  // { _id, name } when editing an existing bucket
         _originalSnapshot:  null   // snapshot of form state at modal open; used to detect no-op saves
     };
+    window._nbState = state;
 
     // ── Element refs ─────────────────────────────────────────────────────────
     var modal          = document.getElementById('newBucketModal');
     var modalStats          = document.getElementById('modalBucketStats');
+    var modalOwningId       = document.getElementById('modalBucketOwningId');
+    var modalBucketIdValue  = document.getElementById('modalBucketIdValue');
+    var copyBucketIdBtn     = document.getElementById('copyBucketIdBtn');
+    var modalOwningIdValue  = document.getElementById('modalBucketOwningIdValue');
+    var copyOwningIdBtn     = document.getElementById('copyBucketOwningIdBtn');
+    var modalStatLinks      = document.getElementById('modalStatLinks');
+    var modalStatClicks     = document.getElementById('modalStatClicks');
     var modalStatGrabs      = document.getElementById('modalStatGrabs');
     var modalStatViews      = document.getElementById('modalStatViews');
     var modalStatShares     = document.getElementById('modalStatShares');
     var modalViewerLink     = document.getElementById('modalViewAsViewerLink');
+    var modalViewerLinkPlain = document.getElementById('modalViewAsViewerLinkPlain');
     var backdrop       = document.getElementById('newBucketBackdrop');
     var nameInput      = document.getElementById('newBucketNameInput');
     var charCount      = document.getElementById('newBucketCharCount');
@@ -580,6 +629,8 @@
     var bulkActions      = document.getElementById('bulkActions');
     var bulkDeleteBtn    = document.getElementById('bulkDeleteBtn');
     var bulkCopyBtn      = document.getElementById('bulkCopyBtn');
+    var bulkCloneBtn     = document.getElementById('bulkCloneBtn');
+    var bulkMoveBtn      = document.getElementById('bulkMoveBtn');
     var bulkMonetizeBtn  = document.getElementById('bulkMonetizeBtn');
     var linkThumbInput   = document.getElementById('linkThumbFileInput');
     var metaUsageBar     = document.getElementById('metaUsageBar');
@@ -688,133 +739,82 @@
     var matureToggle            = document.getElementById('matureToggle');
     var isPartner = !!(user && user.isPartner);
 
-    // ── Repo custom dropdown ─────────────────────────────────────────────────
-    var repoDropdownWrapper = document.getElementById('repoDropdownWrapper');
-    var repoDropdownBtn     = document.getElementById('repoDropdownBtn');
-    var repoDropdownList    = document.getElementById('repoDropdownList');
-    var repoDropdownLabel   = document.getElementById('repoDropdownLabel');
-    var repoDropdownThumb   = document.getElementById('repoDropdownThumb');
-    var repoDropdownChevron = document.getElementById('repoDropdownChevron');
-    var newRepoPlusBtn      = document.getElementById('newRepoPlusBtn');
-    var newRepoInline       = document.getElementById('newRepoInline');
-    var newRepoNameInput    = document.getElementById('newRepoNameInput');
-    var newRepoConfirmBtn   = document.getElementById('newRepoConfirmBtn');
-    var newRepoCancelBtn    = document.getElementById('newRepoCancelBtn');
-    var newRepoError        = document.getElementById('newRepoError');
-    var _cachedRepos        = [];
+    // ── Repo checklist ───────────────────────────────────────────────────────
+    var newRepoPlusBtn    = document.getElementById('newRepoPlusBtn');
+    var newRepoInline     = document.getElementById('newRepoInline');
+    var newRepoNameInput  = document.getElementById('newRepoNameInput');
+    var newRepoConfirmBtn = document.getElementById('newRepoConfirmBtn');
+    var newRepoCancelBtn  = document.getElementById('newRepoCancelBtn');
+    var newRepoError      = document.getElementById('newRepoError');
+    var repoCheckList     = document.getElementById('repoCheckList');
+    var repoNoReposMsg    = document.getElementById('repoNoReposMsg');
+    var _cachedRepos      = [];
 
     var REPO_FOLDER_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h3.93a3 3 0 0 1 2.121.879l.707.707A1 1 0 0 0 13.465 5H19a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" opacity=".3"/><path fill="currentColor" fill-rule="evenodd" d="M6 5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-5.535a3 3 0 0 1-2.12-.879l-.708-.707A1 1 0 0 0 8.929 5zm-3 1a3 3 0 0 1 3-3h2.929a3 3 0 0 1 2.12.879l.708.707A1 1 0 0 0 12.465 5H18a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" clip-rule="evenodd"/></g></svg>';
-    var REPO_DASH_ICON   = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><path fill="currentColor" d="M19 11H5a1 1 0 0 0 0 2h14a1 1 0 0 0 0-2z"/></svg>';
 
     function _repoEscHtml(str) {
         return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    function closeRepoDropdown() {
-        repoDropdownList.classList.add('hidden');
-        repoDropdownChevron.style.transform = '';
-    }
-
-    function openRepoDropdown() {
-        repoDropdownList.classList.remove('hidden');
-        repoDropdownChevron.style.transform = 'rotate(180deg)';
-    }
-
-    function setRepoTrigger(repo) {
-        if (!repo) {
-            repoDropdownLabel.textContent = '— No repo —';
-            repoDropdownLabel.classList.add('text-woodsmoke-400');
-            repoDropdownLabel.classList.remove('text-woodsmoke-950');
-            repoDropdownThumb.className = 'w-7 h-7 rounded shrink-0 flex items-center justify-center bg-silver-100 text-woodsmoke-300';
-            repoDropdownThumb.innerHTML = REPO_DASH_ICON;
-        } else {
-            repoDropdownLabel.textContent = repo.name;
-            repoDropdownLabel.classList.remove('text-woodsmoke-400');
-            repoDropdownLabel.classList.add('text-woodsmoke-950');
-            if (repo.thumb) {
-                repoDropdownThumb.className = 'w-7 h-7 rounded shrink-0 overflow-hidden';
-                repoDropdownThumb.innerHTML = '<img src="' + repo.thumb + '" class="w-full h-full object-cover" />';
-            } else {
-                repoDropdownThumb.className = 'w-7 h-7 rounded shrink-0 flex items-center justify-center bg-orchid-50 text-orchid-500';
-                repoDropdownThumb.innerHTML = REPO_FOLDER_ICON;
-            }
+    function populateRepoList(repos, selectedIds) {
+        var sel = new Set((selectedIds || []).map(String));
+        Array.from(repoCheckList.querySelectorAll('.repo-check-item')).forEach(function(el) { el.remove(); });
+        if (repos.length === 0) {
+            repoNoReposMsg.classList.remove('hidden');
+            return;
         }
-    }
-
-    function populateRepoSelect(repos, selectedId) {
-        // Keep the static "no repo" first child, rebuild the rest
-        var noRepoOpt = repoDropdownList.querySelector('[data-repo-id=""]');
-        repoDropdownList.innerHTML = '';
-        if (noRepoOpt) repoDropdownList.appendChild(noRepoOpt);
-
-        repos.forEach(function (r) {
+        repoNoReposMsg.classList.add('hidden');
+        repos.forEach(function(r) {
             var count = r.bucketCount != null ? r.bucketCount : 0;
             var thumbHtml = r.thumb
                 ? '<img src="' + r.thumb + '" class="w-full h-full object-cover" />'
                 : REPO_FOLDER_ICON;
             var thumbClass = r.thumb
-                ? 'w-8 h-8 rounded shrink-0 overflow-hidden'
-                : 'w-8 h-8 rounded shrink-0 flex items-center justify-center bg-orchid-50 text-orchid-500';
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.dataset.repoId = r._id;
-            btn.className = 'repo-dropdown-option w-full flex items-center gap-3 px-3 py-2.5 hover:bg-silver-50 transition-colors border-t border-silver-50 text-left';
-            btn.innerHTML =
+                ? 'w-7 h-7 rounded shrink-0 overflow-hidden'
+                : 'w-7 h-7 rounded shrink-0 flex items-center justify-center bg-orchid-50 text-orchid-500';
+            var row = document.createElement('label');
+            row.className = 'repo-check-item flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-silver-50 transition-colors';
+            row.innerHTML =
+                '<input type="checkbox" class="repo-cb shrink-0 w-4 h-4 rounded accent-orchid-700 cursor-pointer"' +
+                ' data-repo-id="' + _repoEscHtml(String(r._id)) + '"' + (sel.has(String(r._id)) ? ' checked' : '') + ' />' +
                 '<span class="' + thumbClass + '">' + thumbHtml + '</span>' +
-                '<span class="flex flex-col items-start min-w-0">' +
+                '<span class="flex flex-col items-start min-w-0 flex-1">' +
                     '<span class="text-sm font-medium text-woodsmoke-900 truncate w-full leading-tight">' + _repoEscHtml(r.name) + '</span>' +
                     '<span class="text-xs text-woodsmoke-400 leading-tight mt-0.5">' + count + ' ' + (count === 1 ? 'bucket' : 'buckets') + '</span>' +
                 '</span>';
-            repoDropdownList.appendChild(btn);
+            repoCheckList.appendChild(row);
         });
-
-        var selected = selectedId ? repos.find(function (r) { return String(r._id) === String(selectedId); }) : null;
-        state.repoId = selected ? String(selected._id) : null;
-        setRepoTrigger(selected || null);
     }
 
-    async function loadRepos(selectedId) {
-        if (_cachedRepos.length) populateRepoSelect(_cachedRepos, selectedId);
+    async function loadRepos(selectedIds) {
+        if (_cachedRepos.length) populateRepoList(_cachedRepos, selectedIds);
         try {
             var res = await fetch('/api/repos', { credentials: 'include' });
             if (!res.ok) return;
             _cachedRepos = await res.json();
-            populateRepoSelect(_cachedRepos, selectedId || null);
+            populateRepoList(_cachedRepos, selectedIds || []);
         } catch (e) { /* ignore silently */ }
     }
 
-    // Toggle dropdown
-    repoDropdownBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (repoDropdownList.classList.contains('hidden')) openRepoDropdown();
-        else closeRepoDropdown();
+    repoCheckList.addEventListener('change', function(e) {
+        var cb = e.target.closest('.repo-cb');
+        if (!cb) return;
+        var repoId = cb.dataset.repoId;
+        if (cb.checked) {
+            if (state.repoIds.indexOf(repoId) === -1) state.repoIds.push(repoId);
+        } else {
+            state.repoIds = state.repoIds.filter(function(id) { return id !== repoId; });
+        }
     });
 
-    // Select option
-    repoDropdownList.addEventListener('click', function (e) {
-        var opt = e.target.closest('.repo-dropdown-option');
-        if (!opt) return;
-        var repoId = opt.dataset.repoId;
-        var repo   = repoId ? _cachedRepos.find(function (r) { return String(r._id) === String(repoId); }) : null;
-        state.repoId = repoId || null;
-        setRepoTrigger(repo || null);
-        closeRepoDropdown();
-    });
-
-    // Close on outside click
-    document.addEventListener('click', function (e) {
-        if (repoDropdownWrapper && !repoDropdownWrapper.contains(e.target)) closeRepoDropdown();
-    });
-
-    newRepoPlusBtn.addEventListener('click', function () {
-        closeRepoDropdown();
+    newRepoPlusBtn.addEventListener('click', function() {
         newRepoInline.classList.remove('hidden');
         newRepoError.classList.add('hidden');
         newRepoNameInput.value = '';
         newRepoNameInput.focus();
     });
 
-    newRepoCancelBtn.addEventListener('click', function () {
+    newRepoCancelBtn.addEventListener('click', function() {
         newRepoInline.classList.add('hidden');
         newRepoError.classList.add('hidden');
     });
@@ -841,10 +841,11 @@
                 newRepoError.classList.remove('hidden');
                 return;
             }
-            data.bucketCount = 0; // newly created repo has no buckets
+            data.bucketCount = 0;
             _cachedRepos.push(data);
-            _cachedRepos.sort(function (a, b) { return a.name.localeCompare(b.name); });
-            populateRepoSelect(_cachedRepos, data._id);
+            _cachedRepos.sort(function(a, b) { return a.name.localeCompare(b.name); });
+            state.repoIds.push(String(data._id));
+            populateRepoList(_cachedRepos, state.repoIds);
             newRepoInline.classList.add('hidden');
             newRepoError.classList.add('hidden');
         } catch (e) {
@@ -857,7 +858,7 @@
     }
 
     newRepoConfirmBtn.addEventListener('click', confirmCreateRepo);
-    newRepoNameInput.addEventListener('keydown', function (e) {
+    newRepoNameInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') { e.preventDefault(); confirmCreateRepo(); }
     });
 
@@ -939,7 +940,7 @@
         state.monetization = false;
         state.mature       = false;
         state.thumbnail    = null;
-        state.repoId       = null;
+        state.repoIds      = [];
         state._linkThumbTargetId = null;
         state._editBucket        = null;
         state._editBucketIsDraft = false;
@@ -1110,8 +1111,6 @@
         addLinkBtn.disabled = true;
 
         // Repo
-        closeRepoDropdown();
-        setRepoTrigger(null);
         newRepoInline.classList.add('hidden');
         newRepoError.classList.add('hidden');
         newRepoNameInput.value = '';
@@ -1171,8 +1170,10 @@
         resetUI();
         loadRepos(null);
         deleteBtn.disabled = true;               // not available in create mode
-        if (modalStats)      modalStats.classList.add('hidden');
-        if (modalViewerLink) modalViewerLink.classList.add('hidden');
+        if (modalStats)           modalStats.classList.add('hidden');
+        if (modalOwningId)        modalOwningId.classList.add('hidden');
+        if (modalViewerLink)      modalViewerLink.classList.add('hidden');
+        if (modalViewerLinkPlain) modalViewerLinkPlain.classList.add('hidden');
         modal.classList.remove('hidden');
         resetMobileTabs();
         if (!isMobileLayout()) newLinkUrl.focus();
@@ -1193,7 +1194,7 @@
                 description: descInput.value.trim(),
                 sourceUrl:   sourceUrlInput.value.trim(),
                 thumbnail:   state.thumbnail ? state.thumbnail.dataUrl : null,
-                repoId:      state.repoId || null,
+                repoIds:     state.repoIds,
                 isDraft:     true,
                 links:       state.links.map(function (l) {
                     return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: l.pinned };
@@ -1222,14 +1223,14 @@
         state.monetization = !!bucket.isPaywalled;
         state.mature       = !!bucket.mature;
         state.thumbnail    = bucket.thumbnail ? { dataUrl: bucket.thumbnail, visible: true } : null;
-        state.repoId       = bucket.repoId ? String(bucket.repoId) : null;
+        state.repoIds      = Array.isArray(bucket.repoIds) ? bucket.repoIds.map(String) : [];
 
         // Capture visibility before resetUI overwrites state.visibility to 'public'
         var bucketVisibility = bucket.visibility || (bucket.isPublic ? 'public' : 'private');
 
         // Reset the UI using the populated state
         resetUI();
-        loadRepos(state.repoId);
+        loadRepos(state.repoIds);
 
         // resetUI hardcodes toggles — fix them to match the bucket's actual settings
         setVisSegment(bucketVisibility);
@@ -1265,12 +1266,27 @@
             modalViewerLink.href = '/b/' + bucket._id;
             modalViewerLink.classList.remove('hidden');
         }
+        if (modalViewerLinkPlain) {
+            modalViewerLinkPlain.href = '/b/' + bucket._id;
+            modalViewerLinkPlain.classList.remove('hidden');
+        }
+
+        // Populate + show owning ID (owner only — passed from server)
+        if (modalOwningId && bucket._id) {
+            if (modalBucketIdValue) modalBucketIdValue.textContent = String(bucket._id);
+            if (modalOwningIdValue && bucket.bucketOwningId) modalOwningIdValue.textContent = bucket.bucketOwningId;
+            modalOwningId.classList.remove('hidden');
+        }
 
         // Populate + show stats block
         if (modalStats) {
             var grabs  = (bucket.grabbedBy  ? bucket.grabbedBy.length  : 0);
             var views  = bucket.viewCount  || 0;
             var shares = bucket.shareCount || 0;
+            var links  = (bucket.links ? bucket.links.length : 0);
+            var clicks = (bucket.links ? bucket.links.reduce(function (s, l) { return s + (l.clickCount || 0); }, 0) : 0);
+            if (modalStatLinks)  modalStatLinks.textContent  = links.toLocaleString();
+            if (modalStatClicks) modalStatClicks.textContent = clicks.toLocaleString();
             if (modalStatGrabs)  modalStatGrabs.textContent  = grabs.toLocaleString();
             if (modalStatViews)  modalStatViews.textContent  = views.toLocaleString();
             if (modalStatShares) modalStatShares.textContent = shares.toLocaleString();
@@ -1293,7 +1309,7 @@
             tags:        (bucket.hashtags || []).slice().sort().join('|'),
             links:       (bucket.links || []).map(function (l) { return l.href + ':' + (l.isFree ? '1' : '0'); }).sort().join('|'),
             thumbnail:   bucket.thumbnail || '',
-            repoId:      bucket.repoId ? String(bucket.repoId) : null
+            repoIds:     Array.isArray(bucket.repoIds) ? bucket.repoIds.map(String).sort().join('|') : ''
         };
 
         // Enable delete button (edit mode) and reset its confirm state
@@ -1449,6 +1465,38 @@
         sourceUrlInput.value = '';
         sourceUrlInput.focus();
     });
+
+    if (copyBucketIdBtn) {
+        copyBucketIdBtn.addEventListener('click', function () {
+            var v = modalBucketIdValue ? modalBucketIdValue.textContent.trim() : '';
+            if (!v) return;
+            navigator.clipboard.writeText(v).then(function () {
+                var orig = copyBucketIdBtn.innerHTML;
+                copyBucketIdBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="m10 16.4l-4-4L7.4 11l2.6 2.6L16.6 7L18 8.4z"/></svg>';
+                copyBucketIdBtn.classList.add('text-emerald-500');
+                setTimeout(function () {
+                    copyBucketIdBtn.innerHTML = orig;
+                    copyBucketIdBtn.classList.remove('text-emerald-500');
+                }, 1500);
+            }).catch(function () {});
+        });
+    }
+
+    if (copyOwningIdBtn) {
+        copyOwningIdBtn.addEventListener('click', function () {
+            var v = modalOwningIdValue ? modalOwningIdValue.textContent.trim() : '';
+            if (!v) return;
+            navigator.clipboard.writeText(v).then(function () {
+                var orig = copyOwningIdBtn.innerHTML;
+                copyOwningIdBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="m10 16.4l-4-4L7.4 11l2.6 2.6L16.6 7L18 8.4z"/></svg>';
+                copyOwningIdBtn.classList.add('text-emerald-500');
+                setTimeout(function () {
+                    copyOwningIdBtn.innerHTML = orig;
+                    copyOwningIdBtn.classList.remove('text-emerald-500');
+                }, 1500);
+            }).catch(function () {});
+        });
+    }
 
     // ── Content input actions ─────────────────────────────────────────────────
     pasteLinkTitleBtn.addEventListener('click', function () {
@@ -1809,6 +1857,9 @@
                         (link.thumb ? 'text-woodsmoke-700 hover:bg-silver-50' : 'text-woodsmoke-300 cursor-not-allowed') +
                     '"' + (!link.thumb ? ' disabled' : '') + '>Set as bucket thumbnail</button>' +
                     '<div class="my-1 border-t border-silver-100"></div>' +
+                    '<button class="link-clone w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Clone Link</button>' +
+                    '<button class="link-move w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Move Link</button>' +
+                    '<div class="my-1 border-t border-silver-100"></div>' +
                     '<button class="link-delete w-full px-3 py-2 text-sm font-medium text-left text-red-500 hover:bg-red-50 transition-colors">Delete link</button>' +
                 '</div>' +
             '</div>';
@@ -1883,6 +1934,16 @@
             });
         }
 
+        row.querySelector('.link-clone').addEventListener('click', function () {
+            contextMenu.classList.add('hidden');
+            openLinkTransferModal('clone', link);
+        });
+
+        row.querySelector('.link-move').addEventListener('click', function () {
+            contextMenu.classList.add('hidden');
+            openLinkTransferModal('move', link);
+        });
+
         row.querySelector('.link-delete').addEventListener('click', function () {
             contextMenu.classList.add('hidden');
             state.links = state.links.filter(function (l) { return l.id !== link.id; });
@@ -1947,6 +2008,7 @@
         updateBulkBar();
         applySearch(); // re-apply any active filter after re-render
     }
+    window._nbRenderLinks = renderLinks;
 
     linksSearchInput.addEventListener('input', applySearch);
 
@@ -2078,6 +2140,18 @@
         renderLinks();
     });
 
+    bulkCloneBtn.addEventListener('click', function () {
+        var checked = state.links.filter(function (l) { return l.checked; });
+        if (!checked.length) return;
+        openLinkTransferModal('clone', checked);
+    });
+
+    bulkMoveBtn.addEventListener('click', function () {
+        var checked = state.links.filter(function (l) { return l.checked; });
+        if (!checked.length) return;
+        openLinkTransferModal('move', checked);
+    });
+
     // ── Save / Submit ─────────────────────────────────────────────────────────
     submitBtn.addEventListener('click', async function () {
         hideError();
@@ -2104,7 +2178,7 @@
                 state.monetization            === snap.monetized &&
                 priceAsEWL()                  === snap.price &&
                 state.mature                  === snap.mature &&
-                (state.repoId || null)        === snap.repoId &&
+                (state.repoIds || []).slice().sort().join('|') === snap.repoIds &&
                 currentTags                   === snap.tags &&
                 currentLinks                  === snap.links &&
                 currentThumb                  === snap.thumbnail;
@@ -2126,7 +2200,7 @@
                 description: descInput.value.trim(),
                 sourceUrl:   sourceUrlInput.value.trim(),
                 thumbnail:   state.thumbnail ? state.thumbnail.dataUrl : null,
-                repoId:      state.repoId || null,
+                repoIds:     state.repoIds,
                 isDraft:     false,
                 links:       state.links.slice().sort(function (a, b) {
                     if (a.pinned && !b.pinned) return -1;
@@ -2176,6 +2250,142 @@
         }
     });
 
+})();
+</script>
+
+<!-- ── Link Transfer Modal JS ────────────────────────────────────────────── -->
+<script>
+(function () {
+    var modal       = document.getElementById('linkTransferModal');
+    var backdrop    = document.getElementById('linkTransferBackdrop');
+    var closeBtn    = document.getElementById('linkTransferClose');
+    var titleEl     = document.getElementById('linkTransferTitle');
+    var listEl      = document.getElementById('linkTransferList');
+    var confirmBtn  = document.getElementById('linkTransferConfirm');
+
+    var _mode       = 'clone';  // 'clone' | 'move'
+    var _links      = [];       // array of link objects from state
+    var _cache      = null;     // fetched buckets cache
+
+    var DOTS_SVG = '<svg width="24" height="10" viewBox="0 0 24 10" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><circle cx="3" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0s" repeatCount="indefinite"/></circle><circle cx="12" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.2s" repeatCount="indefinite"/></circle><circle cx="21" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.4s" repeatCount="indefinite"/></circle></svg>';
+
+    function labelFor(mode, count) {
+        var noun = count === 1 ? 'Link' : count + ' Links';
+        return mode === 'move' ? 'Move ' + noun : 'Clone ' + noun;
+    }
+
+    // links: single link object OR array of link objects
+    function openModal(mode, links) {
+        _mode  = mode;
+        _links = Array.isArray(links) ? links : [links];
+        var count = _links.length;
+        titleEl.textContent  = mode === 'move' ? 'Move to bucket' : 'Clone to bucket';
+        confirmBtn.textContent = labelFor(mode, count);
+        confirmBtn.disabled = true;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        loadBuckets();
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+        listEl.innerHTML = '';
+    }
+
+    function updateConfirm() {
+        confirmBtn.disabled = !listEl.querySelector('input[type=checkbox]:checked');
+    }
+
+    function renderBuckets(buckets) {
+        var currentName = (window._nbState && window._nbState._editBucket) ? window._nbState._editBucket.name : null;
+        var filtered = buckets.filter(function (b) { return b.name !== currentName; });
+        if (!filtered.length) {
+            listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">No other buckets available.</p>';
+            return;
+        }
+        listEl.innerHTML = filtered.map(function (b) {
+            var thumb = b.thumbnail
+                ? '<img src="' + b.thumbnail + '" alt="" class="w-10 h-10 object-cover rounded-md bg-silver-100">'
+                : '<div class="w-10 h-10 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-silver-300"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zm3-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/></g></svg></div>';
+            return '<label class="flex items-center gap-3 px-4 py-2.5 hover:bg-silver-50 cursor-pointer">'
+                + '<input type="checkbox" class="lt-cb w-4 h-4 rounded accent-orchid-700 shrink-0" data-bucket-name="' + b.name.replace(/"/g, '&quot;') + '">'
+                + '<span class="shrink-0">' + thumb + '</span>'
+                + '<span class="flex flex-col min-w-0 flex-1">'
+                +   '<span class="text-sm font-medium text-woodsmoke-950 truncate">' + b.name + '</span>'
+                +   '<span class="text-xs text-woodsmoke-400">' + b.linkCount + ' link' + (b.linkCount !== 1 ? 's' : '') + '</span>'
+                + '</span>'
+                + '</label>';
+        }).join('');
+        listEl.querySelectorAll('.lt-cb').forEach(function (cb) {
+            cb.addEventListener('change', updateConfirm);
+        });
+        updateConfirm();
+    }
+
+    function loadBuckets() {
+        if (_cache) { renderBuckets(_cache); return; }
+        listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">Loading\u2026</p>';
+        fetch('/api/buckets/mine', { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) { _cache = data; renderBuckets(data); })
+            .catch(function () {
+                listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-red-400">Failed to load buckets.</p>';
+            });
+    }
+
+    confirmBtn.addEventListener('click', function () {
+        var selected = Array.from(listEl.querySelectorAll('.lt-cb:checked'))
+            .map(function (cb) { return cb.dataset.bucketName; });
+        if (!selected.length || !_links.length) return;
+
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = DOTS_SVG;
+
+        var linkIds      = _links.map(function (l) { return l.id; });
+        var linkPayloads = _links.map(function (l) { return { href: l.url, text: l.title || '', image: l.thumb || null }; });
+
+        fetch('/api/links', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ links: linkPayloads, buckets: selected })
+        })
+        .then(function (r) {
+            if (!r.ok) throw new Error('clone failed');
+            if (_mode !== 'move') return null;
+            var editBucket = window._nbState && window._nbState._editBucket;
+            if (!editBucket) return null;
+            return Promise.all(_links.map(function (l) {
+                return fetch('/api/buckets/' + encodeURIComponent(editBucket.name) + '/links', {
+                    method: 'DELETE',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ href: l.url })
+                }).then(function (r2) { if (!r2.ok) throw new Error('delete failed'); });
+            }));
+        })
+        .then(function () {
+            _cache = null;
+            if (_mode === 'move' && window._nbState) {
+                window._nbState.links = window._nbState.links.filter(function (l) { return linkIds.indexOf(l.id) === -1; });
+                if (typeof window._nbRenderLinks === 'function') window._nbRenderLinks();
+            }
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = _mode === 'move' ? 'Moved!' : 'Cloned!';
+            setTimeout(closeModal, 1200);
+        })
+        .catch(function () {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Error \u2014 try again';
+            setTimeout(function () { confirmBtn.textContent = labelFor(_mode, _links.length); }, 2000);
+        });
+    });
+
+    closeBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', closeModal);
+
+    window.openLinkTransferModal = openModal;
 })();
 </script>
 

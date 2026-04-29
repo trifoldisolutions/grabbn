@@ -10,7 +10,8 @@
     "start": "node serve.js",
     "dev": "nodemon --exec \"node --env-file=.env\" serve.js",
     "watch": "nodemon --exec \"node --env-file=.env\" --watch server --watch serve.js serve.js",
-    "make-admin": "node --env-file=.env scripts/make-admin.js"
+    "make-admin": "node --env-file=.env server/scripts/make-admin.js",
+    "seed-todos": "node --env-file=.env server/scripts/seed-todos.js"
   },
   "keywords": [],
   "author": "",

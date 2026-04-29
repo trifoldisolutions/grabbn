@@ -1,0 +1,112 @@
+
+Phase 1 — Public / Private Toggle
+Goal: Buckets are private by default. Only public buckets are findable. Share links and grabs are gated by isPublic.
+
+Schema change
+server/models/bucket.js
+
+Add isPublic: { type: Boolean, default: false }
+New endpoint
+serve.js
+
+PATCH /api/buckets/:name/visibility — toggles isPublic for the authenticated owner
+Modified endpoints
+serve.js
+
+GET /api/buckets/lookup — add isPublic: true filter to the name regex and ObjectId queries. Non-owners can only find public buckets.
+GET /api/buckets/:name/id — if the requester is not the owner and bucket is private, return 404
+server/routes/bucketShare.js
+
+GET /share/bucket/:bucketId — if bucket is private, render a "This bucket is private" page instead of content
+GET /share/bucket/:bucketId/thumbnail.jpg — same gate
+Frontend changes
+public/scripts/state/store.js
+
+Add toggleBucketVisibility(bucketName, isPublic) API call
+public/scripts/components/bucketDropdown.js (or bucketPopup.js, to confirm once we read both)
+
+Add a Publish / Unpublish toggle in the bucket options menu
+When private: hide the share link button or show it as disabled with a tooltip — "Publish this bucket to share it"
+Phase 2 — Paywall Flag + Credit System + Viewer Top-up
+Goal: Curators can mark public buckets as paywalled with a credit price. Viewers buy credits via Stripe and spend them to unlock buckets.
+
+Schema changes
+server/models/bucket.js
+
+Add isPaywalled: { type: Boolean, default: false }
+Add price: { type: Number, default: 0 } (in credits)
+server/models/user.js
+
+Add credits: { type: Number, default: 0 }
+New models
+server/models/transaction.js (new file)
+
+
+userId, type (topup | unlock | cashout | platform_fee),
+amount, relatedBucketId, stripePaymentIntentId, createdAt
+Every credit movement is recorded here — audit trail, essential for disputes.
+
+server/models/bucketAccess.js (new file)
+
+
+userId, bucketId, grantedAt
+Tracks which viewers have paid for which buckets. Checked on every share page load.
+
+New routes
+server/routes/credits.js (new file)
+
+GET /api/credits/balance — return current user's credit balance
+POST /api/credits/topup — create a Stripe Checkout session for a chosen credit package, return checkout URL
+POST /api/credits/webhook — Stripe webhook: on checkout.session.completed, credit the user's balance and log a topup transaction
+POST /api/credits/unlock/:bucketId — debit viewer's credits, write a BucketAccess record, log unlock + platform_fee transactions, credit curator's balance
+Modified routes
+server/routes/bucketShare.js
+
+Check BucketAccess for the current user before rendering links
+If paywalled and no access: render teaser (bucket name, curator, thumbnail, link count, link titles blurred) + "Unlock for X credits" CTA
+If paywalled and has access: render normally
+serve.js
+
+POST /api/buckets/:name/paywall — set isPaywalled and price (owner only, bucket must be public)
+Wire up credits.js router
+Frontend changes
+Credit balance display in the nav/header (persistent once logged in)
+"Add Credits" flow — package picker modal → Stripe Checkout redirect → return page that confirms top-up
+Paywall teaser UI on the share page — blurred link list, price badge, unlock button
+Unlock confirmation — "Spend X credits to unlock?" → instant on confirm
+Bucket settings — "Enable Paywall" toggle + price input (only shown when bucket is public)
+Phase 3 — Stripe Connect + Curator Cashout
+Goal: Curators earn credits when their paywalled buckets are unlocked. They can cash out their credit balance to their bank account.
+
+Schema changes
+server/models/user.js
+
+Add stripeAccountId: String (Stripe Express account ID)
+Add stripeAccountStatus: { type: String, enum: ['none', 'pending', 'active'] , default: 'none' }
+Platform split logic
+server/routes/credits.js — update the POST /api/credits/unlock/:bucketId handler:
+
+
+Viewer pays 200 credits
+  Platform cut (e.g. 20%):  40 credits  [logged as platform_fee transaction]
+  Curator earns:            160 credits  [logged as earn transaction]
+The ratio is a single constant in a config file — easy to adjust later.
+
+New routes
+server/routes/stripeConnect.js (new file)
+
+POST /api/connect/onboard — create a Stripe Express account, return the onboarding URL
+GET /api/connect/return — Stripe redirects here after onboarding; mark stripeAccountStatus: 'active'
+POST /api/connect/cashout — convert curator's credit balance to USD, initiate Stripe Transfer to their stripeAccountId, log cashout transaction
+POST /api/connect/webhook — handle payout failures (revert balance if transfer fails)
+Frontend changes
+Curator earnings dashboard — credit balance breakdown (earned, spent on unlocks, cashed out)
+"Connect your bank" CTA — shown when curator has earned credits but hasn't connected Stripe yet (redirects to Stripe Express onboarding)
+Cashout button — minimum threshold (e.g. 1000 credits = $10), shows pending state while Stripe processes
+What stays constant across all phases
+Concern	Decision
+Exchange rate	100 credits = $1.00 (defined once in a config constant)
+Platform cut	Defined as a single constant (ratio TBD), applied at unlock time
+Singletons bucket	Always private, paywall never applicable
+Grab	Only works on public + free buckets
+Share link	Only works when isPublic: true

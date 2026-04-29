@@ -1,5 +1,6 @@
 // server/models/Bucket.js
 import mongoose from 'mongoose';
+import { randomBytes } from 'crypto';
 
 const linkSchema = new mongoose.Schema({
   href: { type: String, required: true },
@@ -159,12 +160,19 @@ const bucketSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
-    // User-created repo this bucket belongs to (null = not assigned)
-    repoId: {
-      type:    mongoose.Schema.Types.ObjectId,
+    // User-created repos this bucket belongs to
+    repoIds: {
+      type:    [mongoose.Schema.Types.ObjectId],
       ref:     'UserRepo',
-      default: null,
+      default: [],
       index:   true,
+    },
+    // Private owning ID — visible only to the bucket owner. Used to prove bucket
+    // ownership during partner application when claiming multiple accounts.
+    bucketOwningId: {
+      type:   String,
+      unique: true,
+      sparse: true,
     },
   },
   { timestamps: true }
@@ -175,6 +183,13 @@ bucketSchema.index({ userId: 1, name: 1 }, { unique: true });
 
 // Compound index for explore feed: public buckets sorted by score
 bucketSchema.index({ isPublic: 1, exploreScore: -1 });
+
+// Auto-generate bucketOwningId on first save
+bucketSchema.pre('save', function () {
+  if (!this.bucketOwningId) {
+    this.bucketOwningId = randomBytes(16).toString('hex');
+  }
+});
 
 // Keep visibility and isPublic in sync on every save
 bucketSchema.pre('save', function () {

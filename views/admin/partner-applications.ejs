@@ -1,0 +1,84 @@
+<%
+  title     = 'Partner Applications'
+  subtitle  = 'Review and action submitted applications'
+  adminPage = 'partner-applications'
+%>
+<%- include('layout') %>
+
+<div class="p-6 space-y-5 max-w-5xl">
+
+    <!-- ── Filters ───────────────────────────────────────────────────────────── -->
+    <div class="flex items-center gap-2 flex-wrap">
+        <% ['pending','approved','rejected'].forEach(s => { %>
+        <a href="?status=<%= s %>"
+           class="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors
+                  <%= status === s ? 'bg-orchid-600 text-white' : 'bg-white border border-silver-100 text-woodsmoke-600 hover:border-orchid-300' %>">
+            <%= s.charAt(0).toUpperCase() + s.slice(1) %>
+            <% if (s === 'pending') { %><span class="ml-1 opacity-70">(<%= pendingCount %>)</span><% } %>
+        </a>
+        <% }); %>
+    </div>
+
+    <!-- ── Applications table ────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-xl overflow-hidden">
+        <% if (!applications.length) { %>
+        <div class="p-8 text-center text-sm text-woodsmoke-400">No <%= status %> applications.</div>
+        <% } else { %>
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="border-b border-silver-100">
+                    <th class="text-left px-5 py-3 text-xs font-semibold text-woodsmoke-400">Applicant</th>
+                    <th class="text-left px-4 py-3 text-xs font-semibold text-woodsmoke-400">Submitted</th>
+                    <th class="text-left px-4 py-3 text-xs font-semibold text-woodsmoke-400">Status</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-silver-50">
+                <% applications.forEach(app => { %>
+                <tr class="hover:bg-silver-50 transition-colors">
+                    <td class="px-5 py-3">
+                        <div class="font-medium text-woodsmoke-900"><%= app.userId?.username || '(no username)' %></div>
+                        <div class="text-xs text-woodsmoke-400 mt-0.5"><%= app.userId?.email || '—' %></div>
+                    </td>
+                    <td class="px-4 py-3 text-xs text-woodsmoke-500">
+                        <%= new Date(app.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %>
+                    </td>
+                    <td class="px-4 py-3">
+                        <% if (app.status === 'pending') { %>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700">Pending</span>
+                        <% } else if (app.status === 'approved') { %>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700">Approved</span>
+                        <% } else { %>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700">Rejected</span>
+                        <% } %>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <a href="/admin/partners/applications/<%= app._id %>"
+                           class="text-xs text-orchid-600 hover:underline font-medium">Review</a>
+                    </td>
+                </tr>
+                <% }); %>
+            </tbody>
+        </table>
+        <% } %>
+    </div>
+
+    <!-- ── Pagination ─────────────────────────────────────────────────────────── -->
+    <% if (pagination.pages > 1) { %>
+    <div class="flex items-center justify-between text-xs text-woodsmoke-400">
+        <span><%= pagination.total %> total</span>
+        <div class="flex items-center gap-2">
+            <% if (pagination.page > 1) { %>
+            <a href="?status=<%= status %>&page=<%= pagination.page - 1 %>" class="px-3 py-1.5 bg-white border border-silver-100 rounded-md hover:border-orchid-300 transition-colors">Previous</a>
+            <% } %>
+            <span>Page <%= pagination.page %> of <%= pagination.pages %></span>
+            <% if (pagination.page < pagination.pages) { %>
+            <a href="?status=<%= status %>&page=<%= pagination.page + 1 %>" class="px-3 py-1.5 bg-white border border-silver-100 rounded-md hover:border-orchid-300 transition-colors">Next</a>
+            <% } %>
+        </div>
+    </div>
+    <% } %>
+
+</div>
+
+<%- include('layout-end') %>

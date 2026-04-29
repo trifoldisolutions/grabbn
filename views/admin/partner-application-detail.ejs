@@ -1,0 +1,191 @@
+<%
+  title     = 'Application Review'
+  subtitle  = application.userId?.username || application.userId?.email || 'Unknown applicant'
+  adminPage = 'partner-applications'
+%>
+<%- include('layout') %>
+
+<div class="p-6 space-y-5 max-w-4xl">
+
+    <!-- ── Breadcrumb ──────────────────────────────────────────────────────── -->
+    <nav class="flex items-center gap-2 text-xs text-woodsmoke-400">
+        <a href="/admin/partners/applications" class="hover:text-orchid-600 transition-colors">Applications</a>
+        <span>/</span>
+        <span class="text-woodsmoke-700"><%= application.userId?.username || application._id %></span>
+    </nav>
+
+    <!-- ── Status banner ──────────────────────────────────────────────────── -->
+    <% if (application.status === 'approved') { %>
+    <div class="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-sm text-emerald-800">
+        Approved on <%= new Date(application.reviewedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %>
+    </div>
+    <% } else if (application.status === 'rejected') { %>
+    <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
+        Rejected on <%= new Date(application.reviewedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %>
+        <% if (application.rejectionReason) { %><br><span class="text-red-700">Reason: <%= application.rejectionReason %></span><% } %>
+    </div>
+    <% } %>
+
+    <!-- ── Applicant info ─────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-xl p-5 space-y-3">
+        <h3 class="text-xs font-semibold text-woodsmoke-500 uppercase tracking-wider">Applicant</h3>
+        <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-full bg-orchid-100 text-orchid-600 flex items-center justify-center font-bold shrink-0">
+                <%= (application.userId?.username || application.userId?.email || '?')[0].toUpperCase() %>
+            </div>
+            <div class="space-y-0.5">
+                <div class="font-semibold text-woodsmoke-900"><%= application.userId?.username || '(no username)' %></div>
+                <div class="text-sm text-woodsmoke-500"><%= application.userId?.email || '—' %></div>
+                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-woodsmoke-400 pt-1">
+                    <span>Joined <strong class="text-woodsmoke-700"><%= new Date(application.userId?.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %></strong></span>
+                    <span>Email verified: <strong class="<%= application.userId?.isEmailVerified ? 'text-emerald-600' : 'text-red-500' %>"><%= application.userId?.isEmailVerified ? 'Yes' : 'No' %></strong></span>
+                    <% if (application.userId?.country) { %><span>📍 <%= application.userId.country %></span><% } %>
+                </div>
+                <% if (application.userId?._id) { %>
+                <a href="/admin/users/<%= application.userId._id %>" class="text-xs text-orchid-600 hover:underline">View user profile →</a>
+                <% } %>
+            </div>
+        </div>
+        <div class="text-xs text-woodsmoke-400">Submitted: <%= new Date(application.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %></div>
+    </div>
+
+    <!-- ── Pitch ──────────────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-xl p-5 space-y-3">
+        <h3 class="text-xs font-semibold text-woodsmoke-500 uppercase tracking-wider">Pitch</h3>
+        <p class="text-sm text-woodsmoke-700 whitespace-pre-line leading-relaxed"><%= application.pitch || '(no pitch provided)' %></p>
+    </div>
+
+    <!-- ── Identity files ─────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-xl p-5 space-y-4">
+        <h3 class="text-xs font-semibold text-woodsmoke-500 uppercase tracking-wider">Identity Verification</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-2">
+                <div class="text-xs font-medium text-woodsmoke-600">Government-issued ID</div>
+                <% if (application.idFileRef) { %>
+                <img src="<%= application.idFileRef %>" class="max-h-64 rounded-md border border-silver-100 object-contain w-full" alt="ID document" />
+                <% } else { %>
+                <div class="text-xs text-woodsmoke-400 italic">Not provided</div>
+                <% } %>
+            </div>
+            <div class="space-y-2">
+                <div class="text-xs font-medium text-woodsmoke-600">Selfie with ID</div>
+                <% if (application.selfieFileRef) { %>
+                <img src="<%= application.selfieFileRef %>" class="max-h-64 rounded-md border border-silver-100 object-contain w-full" alt="Selfie" />
+                <% } else { %>
+                <div class="text-xs text-woodsmoke-400 italic">Not provided</div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Claimed accounts ───────────────────────────────────────────────── -->
+    <% if (application.claimedAccounts && application.claimedAccounts.length > 0) { %>
+    <div class="bg-white border border-silver-100 rounded-xl p-5 space-y-3">
+        <h3 class="text-xs font-semibold text-woodsmoke-500 uppercase tracking-wider">Claimed Linked Accounts</h3>
+        <div class="space-y-3">
+            <% application.claimedAccounts.forEach((acc, i) => { %>
+            <div class="bg-silver-50 border border-silver-100 rounded-lg p-3 text-xs space-y-1">
+                <div class="font-semibold text-woodsmoke-700">Account <%= i + 1 %></div>
+                <div class="text-woodsmoke-500">Email: <span class="text-woodsmoke-800"><%= acc.email || '—' %></span></div>
+                <div class="text-woodsmoke-500">Phone: <span class="text-woodsmoke-800"><%= acc.phone || '—' %></span></div>
+                <% if (acc.bucketOwnerIds && acc.bucketOwnerIds.filter(Boolean).length) { %>
+                <div class="text-woodsmoke-500">Bucket owner IDs:
+                    <span class="text-woodsmoke-800"><%= acc.bucketOwnerIds.filter(Boolean).join(', ') %></span>
+                </div>
+                <% } %>
+            </div>
+            <% }); %>
+        </div>
+    </div>
+    <% } %>
+
+    <!-- ── Actions ────────────────────────────────────────────────────────── -->
+    <% if (application.status === 'pending') { %>
+    <div class="bg-white border border-silver-100 rounded-xl p-5 space-y-4">
+        <h3 class="text-xs font-semibold text-woodsmoke-500 uppercase tracking-wider">Decision</h3>
+
+        <div class="flex flex-wrap gap-3">
+            <button id="approveBtn"
+                class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-md transition-colors">
+                Approve
+            </button>
+            <button id="rejectBtn"
+                class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-md transition-colors">
+                Reject
+            </button>
+        </div>
+
+        <!-- Rejection reason (shown when rejecting) -->
+        <div id="rejectForm" class="hidden space-y-3">
+            <label class="text-xs font-semibold text-woodsmoke-600">Rejection reason (optional — shown to applicant)</label>
+            <textarea id="rejectReason" rows="3" maxlength="1000"
+                class="w-full text-sm border border-silver-200 rounded-md px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent"
+                placeholder="e.g. insufficient track record"></textarea>
+            <div class="flex gap-2">
+                <button id="confirmRejectBtn"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-md transition-colors">
+                    Confirm Reject
+                </button>
+                <button id="cancelRejectBtn"
+                    class="px-4 py-2 border border-silver-200 text-sm font-semibold text-woodsmoke-700 rounded-md hover:bg-silver-50 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+    <% } %>
+
+</div>
+
+<script>
+(function () {
+    const appId = '<%- application._id %>';
+
+    const approveBtn      = document.getElementById('approveBtn');
+    const rejectBtn       = document.getElementById('rejectBtn');
+    const rejectForm      = document.getElementById('rejectForm');
+    const confirmRejectBtn = document.getElementById('confirmRejectBtn');
+    const cancelRejectBtn  = document.getElementById('cancelRejectBtn');
+    const rejectReason    = document.getElementById('rejectReason');
+
+    if (approveBtn) {
+        approveBtn.addEventListener('click', async () => {
+            if (!adminConfirm('Approve this application and grant partner status?')) return;
+            try {
+                await adminFetch(`/api/admin/partners/applications/${appId}/approve`, { method: 'PATCH' });
+                showToast('Application approved — partner status granted');
+                setTimeout(() => window.location.href = '/admin/partners/applications', 1200);
+            } catch (_) {}
+        });
+    }
+
+    if (rejectBtn) {
+        rejectBtn.addEventListener('click', () => {
+            rejectForm.classList.remove('hidden');
+            rejectBtn.classList.add('hidden');
+        });
+    }
+
+    if (cancelRejectBtn) {
+        cancelRejectBtn.addEventListener('click', () => {
+            rejectForm.classList.add('hidden');
+            rejectBtn.classList.remove('hidden');
+        });
+    }
+
+    if (confirmRejectBtn) {
+        confirmRejectBtn.addEventListener('click', async () => {
+            try {
+                await adminFetch(`/api/admin/partners/applications/${appId}/reject`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ reason: rejectReason?.value || '' })
+                });
+                showToast('Application rejected', 'info');
+                setTimeout(() => window.location.href = '/admin/partners/applications', 1200);
+            } catch (_) {}
+        });
+    }
+})();
+</script>
+
+<%- include('layout-end') %>

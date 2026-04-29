@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grabbn</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Jost', system-ui, -apple-system, sans-serif;
+      width: 280px;
+      background: #ffffff;
+      color: #191919;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 14px 11px;
+      border-bottom: 1px solid #efefef;
+    }
+
+    .header-logo {
+      color: #943792;
+      display: flex;
+      align-items: center;
+    }
+
+    .header-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #40123d;
+      letter-spacing: -0.2px;
+    }
+
+    .header-user {
+      margin-left: auto;
+      font-size: 11px;
+      color: #888888;
+      max-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── Sections ── */
+    .section { padding: 14px; }
+
+    /* ── Logged-in view ── */
+    #view-loggedin { display: none; }
+
+    .pick-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      background: #b346b3;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+
+    .pick-btn:hover { background: #943792; }
+    .pick-btn:disabled { background: #ecbaed; cursor: not-allowed; }
+
+    .logout-btn {
+      margin-top: 8px;
+      width: 100%;
+      height: 40px;
+      padding: 0;
+      background: none;
+      border: 1px solid #dcdcdc;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #6d6d6d;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .logout-btn:hover { background: #f8f8f8; }
+
+    /* ── Login / OTP forms ── */
+    #view-login, #view-otp { display: none; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #6d6d6d;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #dcdcdc;
+      border-radius: 7px;
+      font-size: 13px;
+      font-family: inherit;
+      color: #191919;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus { border-color: #b346b3; }
+
+    .form-group { margin-bottom: 11px; }
+
+    .submit-btn {
+      width: 100%;
+      height: 40px;
+      padding: 0;
+      background: #b346b3;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background 0.15s;
+    }
+
+    .submit-btn:hover { background: #943792; }
+    .submit-btn:disabled { background: #ecbaed; cursor: not-allowed; }
+
+    .error-msg {
+      font-size: 12px;
+      color: #dc2626;
+      margin-top: 7px;
+      min-height: 16px;
+    }
+
+    .otp-hint {
+      font-size: 12px;
+      color: #6d6d6d;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    /* ── Loading ── */
+    #view-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 26px 14px;
+      color: #888888;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <span class="header-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+        <g fill="none" fill-rule="evenodd">
+          <path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/>
+          <path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0V6.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/>
+        </g>
+      </svg>
+    </span>
+    <span class="header-title">Grabbn</span>
+    <span class="header-user" id="header-user"></span>
+  </div>
+
+  <div id="view-loading">Checking session…</div>
+
+  <div id="view-loggedin" class="section">
+    <button class="pick-btn" id="btn-pick">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24">
+        <g fill="none" fill-rule="evenodd">
+          <path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/>
+          <path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0V6.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/>
+        </g>
+      </svg>
+      Pick a link
+    </button>
+    <button class="logout-btn" id="btn-logout">Sign out</button>
+  </div>
+
+  <div id="view-login" class="section">
+    <div class="form-group">
+      <label for="input-email">Email</label>
+      <input type="email" id="input-email" placeholder="you@example.com" autocomplete="email" />
+    </div>
+    <div class="form-group">
+      <label for="input-password">Password</label>
+      <input type="password" id="input-password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="submit-btn" id="btn-login">Sign in</button>
+    <div class="error-msg" id="login-error"></div>
+  </div>
+
+  <div id="view-otp" class="section">
+    <p class="otp-hint" id="otp-hint">Enter the 6-digit code sent to your email.</p>
+    <div class="form-group">
+      <label for="input-otp">Verification code</label>
+      <input type="text" id="input-otp" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" />
+    </div>
+    <button class="submit-btn" id="btn-otp">Verify</button>
+    <div class="error-msg" id="otp-error"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

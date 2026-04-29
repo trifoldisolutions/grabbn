@@ -362,7 +362,7 @@
         const ownBuckets = window.__PROFILE_OWN__ || [];
 
         function getBucketsForRepo(repoId) {
-            return ownBuckets.filter(b => b.repoId && String(b.repoId) === String(repoId));
+            return ownBuckets.filter(b => b.repoIds && b.repoIds.some(id => String(id) === String(repoId)));
         }
 
         function updateTabCount() {
@@ -407,7 +407,7 @@
                 ? `<img src="${escHtml(b.displayThumb)}" class="w-full aspect-square object-cover rounded-md" loading="lazy" onerror="this.style.display='none'">`
                 : `<div class="w-full aspect-square bg-silver-100 rounded-md flex items-center justify-center text-gray-300">${IMG_PLACEHOLDER}</div>`;
             return `
-                <div class="flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer hover:shadow-md transition-shadow w-[44%] sm:w-[calc(25%-6px)] shrink-0"
+                <div class="flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer hover:shadow-md transition-shadow w-[44%] sm:w-[30%] shrink-0"
                     data-action="open-bucket" data-bucket-id="${escHtml(b._id)}">
                     <div class="p-1.5">${thumb}</div>
                     <div class="px-3 pt-1 pb-3 flex flex-col gap-0.5">
@@ -473,7 +473,7 @@
                 <div class="repo-buckets-area p-4">
                     ${buckets.length === 0
                         ? `<p class="text-xs text-gray-400 italic">No buckets assigned yet. Open a bucket and pick this repo from the Settings tab.</p>`
-                        : `<div class="flex gap-2 overflow-x-auto pb-1">${buckets.map(buildBucketCard).join('')}</div>`
+                        : `<div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">${buckets.map(buildBucketCard).join('')}</div>`
                     }
                 </div>`;
 
@@ -574,7 +574,7 @@
                 const res = await fetch(`/api/repos/${repoId}`, { method: 'DELETE', credentials: 'include' });
                 if (!res.ok) { btn.disabled = false; btn.textContent = 'Delete'; return; }
 
-                ownBuckets.forEach(b => { if (b.repoId && String(b.repoId) === String(repoId)) b.repoId = null; });
+                ownBuckets.forEach(b => { if (b.repoIds) b.repoIds = b.repoIds.filter(id => String(id) !== String(repoId)); });
                 repos = repos.filter(r => String(r._id) !== String(repoId));
                 updateTabCount();
                 renderRepos();

@@ -1,0 +1,385 @@
+<%
+  title = 'Apply — Grabbn Partner Program'
+  page  = 'partnership'
+%>
+<%- include('partials/layout') %>
+
+<div class="max-w-xl mx-auto px-6 py-8">
+
+    <!-- Already a partner -->
+    <% if (user && user.isPartner) { %>
+    <div class="space-y-3 text-center py-12">
+        <div class="w-12 h-12 rounded-full bg-orchid-100 text-orchid-600 flex items-center justify-center mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="m10 16.4l-4-4L7.4 11l2.6 2.6L16.6 7L18 8.4z"/></svg>
+        </div>
+        <h1 class="text-lg font-semibold text-woodsmoke-950">You're already a partner</h1>
+        <p class="text-sm text-woodsmoke-500">Your partner features are active. Manage them from within any bucket you own.</p>
+        <a href="/showroom" class="inline-block mt-2 text-sm text-orchid-600 hover:underline">Back to Grabbn</a>
+    </div>
+
+    <!-- Not logged in -->
+    <% } else if (!user || user.isAnonymous) { %>
+    <div class="space-y-3 text-center py-12">
+        <h1 class="text-lg font-semibold text-woodsmoke-950">Sign in to apply</h1>
+        <p class="text-sm text-woodsmoke-500">You need a verified Grabbn account to apply for the Partner Program.</p>
+        <a href="/login" class="inline-block mt-2 px-5 py-2.5 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">Sign In</a>
+    </div>
+
+    <!-- Email not verified -->
+    <% } else if (!user.isEmailVerified) { %>
+    <div class="space-y-3 text-center py-12">
+        <h1 class="text-lg font-semibold text-woodsmoke-950">Verify your email first</h1>
+        <p class="text-sm text-woodsmoke-500">You need a verified email address before you can apply.</p>
+        <a href="/settings" class="inline-block mt-2 text-sm text-orchid-600 hover:underline">Go to Settings</a>
+    </div>
+
+    <!-- Application status (pending / rejected previously) -->
+    <% } else if (applicationStatus) { %>
+        <% if (applicationStatus.status === 'pending') { %>
+        <div class="space-y-3 text-center py-12">
+            <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2m1 14h-2v-2h2zm0-4h-2V7h2z"/></svg>
+            </div>
+            <h1 class="text-lg font-semibold text-woodsmoke-950">Application under review</h1>
+            <p class="text-sm text-woodsmoke-500">
+                Submitted <%= new Date(applicationStatus.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %>.
+                We'll email you when it's been reviewed.
+            </p>
+            <a href="/partnership" class="inline-block mt-2 text-sm text-orchid-600 hover:underline">About the Partner Program</a>
+        </div>
+        <% } else if (applicationStatus.status === 'rejected') { %>
+        <div class="space-y-4 py-8">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
+                <div class="text-sm font-semibold text-red-800">Previous application not approved</div>
+                <% if (applicationStatus.rejectionReason) { %>
+                <div class="text-sm text-red-700"><%= applicationStatus.rejectionReason %></div>
+                <% } %>
+            </div>
+            <p class="text-sm text-woodsmoke-500">You may submit a new application below.</p>
+        </div>
+        <!-- fall through to show form -->
+        <%- include('partials/_partnership-form') %>
+        <% } %>
+
+    <!-- Application form -->
+    <% } else { %>
+
+    <div class="space-y-6">
+        <div>
+            <h1 class="text-xl font-bold text-woodsmoke-950">Apply to the Partner Program</h1>
+            <p class="text-sm text-woodsmoke-400 mt-1">Free to apply &bull; Manual review &bull; No fixed timeline</p>
+        </div>
+
+        <!-- Step indicator -->
+        <div class="flex items-center gap-2 text-xs text-woodsmoke-400">
+            <span id="stepLabel" class="font-semibold text-orchid-600">Step 1 of 3</span>
+        </div>
+
+        <!-- Error banner -->
+        <div id="applyError" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-4 py-3"></div>
+
+        <!-- Step 1: Account check -->
+        <div id="step1" class="space-y-4">
+            <div class="bg-silver-50 border border-silver-100 rounded-lg p-4 space-y-2">
+                <div class="text-sm font-semibold text-woodsmoke-800">Account verification</div>
+                <div class="flex items-center gap-2 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="text-emerald-500 shrink-0"><path fill="currentColor" d="m10 16.4l-4-4L7.4 11l2.6 2.6L16.6 7L18 8.4z"/></svg>
+                    <span class="text-woodsmoke-600">Email verified</span>
+                </div>
+                <div class="text-xs text-woodsmoke-400"><%= user.email %></div>
+            </div>
+            <button id="step1Next"
+                class="w-full py-2.5 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+                Continue
+            </button>
+        </div>
+
+        <!-- Step 2: Identity + Pitch -->
+        <div id="step2" class="hidden space-y-5">
+            <div class="space-y-4">
+                <div class="text-sm font-semibold text-woodsmoke-800">Identity verification</div>
+                <p class="text-xs text-woodsmoke-400 leading-relaxed">
+                    Upload a government-issued ID and a selfie holding it. These are reviewed manually by a Grabbn admin — your data stays in-house and is not shared with third parties.
+                </p>
+
+                <!-- ID upload -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-woodsmoke-600">Government-issued ID <span class="text-red-500">*</span></label>
+                    <div id="idDropzone" class="border-2 border-dashed border-silver-200 rounded-lg p-6 text-center cursor-pointer hover:border-orchid-300 transition-colors">
+                        <div id="idPlaceholder" class="space-y-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="mx-auto text-woodsmoke-300"><path fill="currentColor" d="M19 13a1 1 0 0 0-1 1v.38l-1.48-1.48a2.79 2.79 0 0 0-3.93 0l-.7.7l-2.48-2.48a2.85 2.85 0 0 0-3.93 0L4 12.6V7a1 1 0 0 1 1-1h7a1 1 0 0 0 0-2H5a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a1 1 0 0 0-1-1M5 20a1 1 0 0 1-1-1v-3.57l2.9-2.9a.79.79 0 0 1 1.09 0l3.17 3.17l.91.9L15.46 20zm13-1a1 1 0 0 1-.18.54L13.31 15l.7-.7a.77.77 0 0 1 1.1 0L18 17.21zm4.71-14.71l-3-3a1 1 0 0 0-.33-.21a1 1 0 0 0-.76 0a1 1 0 0 0-.33.21l-3 3a1 1 0 0 0 1.42 1.42L19 4.41V10a1 1 0 0 0 2 0V4.41l1.29 1.3a1 1 0 0 0 1.42 0a1 1 0 0 0 0-1.42"/></svg>
+                            <div class="text-xs text-woodsmoke-400">Click or drag to upload</div>
+                            <div class="text-xs text-woodsmoke-300">JPG, PNG — max 5 MB</div>
+                        </div>
+                        <img id="idPreview" class="hidden max-h-32 mx-auto rounded object-contain" />
+                    </div>
+                    <input type="file" id="idFile" accept="image/*" class="hidden" />
+                </div>
+
+                <!-- Selfie upload -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-woodsmoke-600">Selfie holding the ID <span class="text-red-500">*</span></label>
+                    <div id="selfieDropzone" class="border-2 border-dashed border-silver-200 rounded-lg p-6 text-center cursor-pointer hover:border-orchid-300 transition-colors">
+                        <div id="selfiePlaceholder" class="space-y-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="mx-auto text-woodsmoke-300"><path fill="currentColor" d="M9 2a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2zm-4 4a3 3 0 0 0-3 3v9a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V9a3 3 0 0 0-3-3zm7 2a5 5 0 1 1 0 10A5 5 0 0 1 12 8m0 2a3 3 0 1 0 0 6a3 3 0 0 0 0-6"/></svg>
+                            <div class="text-xs text-woodsmoke-400">Click or drag to upload</div>
+                            <div class="text-xs text-woodsmoke-300">JPG, PNG — max 5 MB</div>
+                        </div>
+                        <img id="selfiePreview" class="hidden max-h-32 mx-auto rounded object-contain" />
+                    </div>
+                    <input type="file" id="selfieFile" accept="image/*" class="hidden" />
+                </div>
+            </div>
+
+            <!-- Pitch -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-woodsmoke-600">Why do you want to be a Grabbn Partner? <span class="text-red-500">*</span></label>
+                <textarea id="pitchInput"
+                    rows="5"
+                    maxlength="4000"
+                    placeholder="Tell us about your curation work and why you'd be a great fit..."
+                    class="w-full text-sm border border-silver-200 rounded-md px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent text-woodsmoke-900 placeholder-woodsmoke-300">
+                </textarea>
+                <div class="text-right text-xs text-woodsmoke-300"><span id="pitchCount">0</span> / 4000</div>
+            </div>
+
+            <!-- Claimed accounts (optional) -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-semibold text-woodsmoke-600">Linked accounts <span class="text-woodsmoke-300">(optional)</span></label>
+                    <button id="addAccountBtn" class="text-xs text-orchid-600 hover:underline">+ Add account</button>
+                </div>
+                <p class="text-xs text-woodsmoke-400">If you operate multiple Grabbn accounts, declare them here with their email, phone, and up to 3 bucket owner IDs.</p>
+                <div id="claimedAccountsList" class="space-y-3"></div>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="step2Back" class="flex-1 py-2.5 border border-silver-200 text-sm font-semibold text-woodsmoke-700 rounded-md hover:bg-silver-50 transition-colors">
+                    Back
+                </button>
+                <button id="step2Next" class="flex-1 py-2.5 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+                    Review &amp; Submit
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Review & submit -->
+        <div id="step3" class="hidden space-y-5">
+            <div class="text-sm font-semibold text-woodsmoke-800">Review your application</div>
+
+            <div class="bg-silver-50 border border-silver-100 rounded-lg p-4 space-y-3 text-sm">
+                <div class="flex justify-between text-xs text-woodsmoke-400">
+                    <span>Account</span>
+                    <span class="text-woodsmoke-700 font-medium"><%= user.email %></span>
+                </div>
+                <div class="border-t border-silver-100 pt-3">
+                    <div class="text-xs text-woodsmoke-400 mb-1">Pitch</div>
+                    <div id="reviewPitch" class="text-sm text-woodsmoke-700 whitespace-pre-line"></div>
+                </div>
+                <div class="border-t border-silver-100 pt-3 flex gap-4">
+                    <div class="text-xs text-woodsmoke-400">ID: <span id="reviewIdStatus" class="text-woodsmoke-700">—</span></div>
+                    <div class="text-xs text-woodsmoke-400">Selfie: <span id="reviewSelfieStatus" class="text-woodsmoke-700">—</span></div>
+                </div>
+            </div>
+
+            <p class="text-xs text-woodsmoke-400 leading-relaxed">
+                By submitting, you confirm that the information above is accurate and that you agree to the Grabbn Partner Program terms and community guidelines.
+            </p>
+
+            <div class="flex gap-3">
+                <button id="step3Back" class="flex-1 py-2.5 border border-silver-200 text-sm font-semibold text-woodsmoke-700 rounded-md hover:bg-silver-50 transition-colors">
+                    Back
+                </button>
+                <button id="submitBtn"
+                    class="flex-1 py-2.5 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                    Submit Application
+                </button>
+            </div>
+        </div>
+
+        <!-- Success state -->
+        <div id="successState" class="hidden text-center py-8 space-y-3">
+            <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="m10 16.4l-4-4L7.4 11l2.6 2.6L16.6 7L18 8.4z"/></svg>
+            </div>
+            <h2 class="text-base font-semibold text-woodsmoke-950">Application submitted</h2>
+            <p class="text-sm text-woodsmoke-500">We'll review it and email you at <strong><%= user.email %></strong> as soon as possible.</p>
+            <a href="/showroom" class="inline-block mt-2 text-sm text-orchid-600 hover:underline">Back to Grabbn</a>
+        </div>
+
+    </div>
+    <% } %>
+</div>
+
+<script>
+(function () {
+    const step1El    = document.getElementById('step1');
+    const step2El    = document.getElementById('step2');
+    const step3El    = document.getElementById('step3');
+    const successEl  = document.getElementById('successState');
+    const errorBanner = document.getElementById('applyError');
+    const stepLabel  = document.getElementById('stepLabel');
+
+    if (!step1El) return; // guard: already-partner / not-logged-in states
+
+    let idBase64 = null;
+    let selfieBase64 = null;
+    const claimedAccounts = [];
+
+    function showStep(n) {
+        step1El.classList.toggle('hidden', n !== 1);
+        step2El.classList.toggle('hidden', n !== 2);
+        step3El.classList.toggle('hidden', n !== 3);
+        if (stepLabel) stepLabel.textContent = `Step ${n} of 3`;
+        errorBanner.classList.add('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showError(msg) {
+        errorBanner.textContent = msg;
+        errorBanner.classList.remove('hidden');
+    }
+
+    // File picker helpers
+    function wireFilePicker(dropzoneId, fileInputId, previewId, placeholderId, setter) {
+        const dropzone    = document.getElementById(dropzoneId);
+        const fileInput   = document.getElementById(fileInputId);
+        const preview     = document.getElementById(previewId);
+        const placeholder = document.getElementById(placeholderId);
+
+        if (!dropzone) return;
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('border-orchid-400'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-orchid-400'));
+        dropzone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropzone.classList.remove('border-orchid-400');
+            const file = e.dataTransfer.files[0];
+            if (file) processFile(file);
+        });
+        fileInput.addEventListener('change', () => { if (fileInput.files[0]) processFile(fileInput.files[0]); });
+
+        function processFile(file) {
+            if (file.size > 5 * 1024 * 1024) { showError('File too large — max 5 MB'); return; }
+            const reader = new FileReader();
+            reader.onload = e => {
+                setter(e.target.result);
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    wireFilePicker('idDropzone',     'idFile',     'idPreview',     'idPlaceholder',     v => { idBase64 = v; });
+    wireFilePicker('selfieDropzone', 'selfieFile', 'selfiePreview', 'selfiePlaceholder', v => { selfieBase64 = v; });
+
+    // Pitch counter
+    const pitchInput = document.getElementById('pitchInput');
+    const pitchCount = document.getElementById('pitchCount');
+    if (pitchInput && pitchCount) {
+        pitchInput.addEventListener('input', () => { pitchCount.textContent = pitchInput.value.length; });
+    }
+
+    // Claimed accounts
+    const addAccountBtn = document.getElementById('addAccountBtn');
+    const claimedList   = document.getElementById('claimedAccountsList');
+
+    if (addAccountBtn) {
+        addAccountBtn.addEventListener('click', () => {
+            const idx = claimedAccounts.length;
+            claimedAccounts.push({ email: '', phone: '', bucketOwnerIds: ['', '', ''] });
+
+            const el = document.createElement('div');
+            el.className = 'bg-silver-50 border border-silver-100 rounded-lg p-3 space-y-2';
+            el.dataset.idx = idx;
+            el.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-woodsmoke-600">Account ${idx + 1}</span>
+                    <button class="remove-account text-xs text-red-500 hover:underline">Remove</button>
+                </div>
+                <input data-field="email" type="email" placeholder="Email" class="w-full text-xs border border-silver-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-orchid-400" />
+                <input data-field="phone" type="tel" placeholder="Phone" class="w-full text-xs border border-silver-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-orchid-400" />
+                <div class="text-xs text-woodsmoke-400">Up to 3 bucket owner IDs from this account:</div>
+                <input data-field="bid0" type="text" placeholder="Bucket owner ID 1" class="w-full text-xs border border-silver-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-orchid-400" />
+                <input data-field="bid1" type="text" placeholder="Bucket owner ID 2" class="w-full text-xs border border-silver-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-orchid-400" />
+                <input data-field="bid2" type="text" placeholder="Bucket owner ID 3" class="w-full text-xs border border-silver-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-orchid-400" />
+            `;
+
+            el.querySelectorAll('input').forEach(inp => {
+                inp.addEventListener('input', () => {
+                    const field = inp.dataset.field;
+                    if (field === 'email') claimedAccounts[idx].email = inp.value;
+                    else if (field === 'phone') claimedAccounts[idx].phone = inp.value;
+                    else if (field.startsWith('bid')) {
+                        const i = parseInt(field.slice(3), 10);
+                        claimedAccounts[idx].bucketOwnerIds[i] = inp.value;
+                    }
+                });
+            });
+
+            el.querySelector('.remove-account').addEventListener('click', () => {
+                claimedAccounts.splice(idx, 1);
+                el.remove();
+            });
+
+            claimedList.appendChild(el);
+        });
+    }
+
+    // Step navigation
+    document.getElementById('step1Next').addEventListener('click', () => showStep(2));
+    document.getElementById('step2Back').addEventListener('click', () => showStep(1));
+    document.getElementById('step3Back').addEventListener('click', () => showStep(2));
+
+    document.getElementById('step2Next').addEventListener('click', () => {
+        const pitch = pitchInput?.value?.trim() || '';
+        if (!idBase64)       { showError('Please upload your government-issued ID'); return; }
+        if (!selfieBase64)   { showError('Please upload a selfie holding your ID'); return; }
+        if (pitch.length < 10) { showError('Pitch must be at least 10 characters'); return; }
+
+        document.getElementById('reviewPitch').textContent = pitch;
+        document.getElementById('reviewIdStatus').textContent   = 'Uploaded';
+        document.getElementById('reviewSelfieStatus').textContent = 'Uploaded';
+        showStep(3);
+    });
+
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting…';
+
+        try {
+            const pitch = pitchInput?.value?.trim() || '';
+            const accounts = claimedAccounts.filter(a => a.email || a.phone);
+
+            const res = await fetch('/api/partnership/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ pitch, idFileRef: idBase64, selfieFileRef: selfieBase64, claimedAccounts: accounts })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                showError(data.error || 'Something went wrong');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Application';
+                return;
+            }
+
+            step3El.classList.add('hidden');
+            successEl.classList.remove('hidden');
+            stepLabel.textContent = '';
+        } catch (err) {
+            showError('Network error — please try again');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Application';
+        }
+    });
+})();
+</script>
+
+<%- include('partials/layout-end') %>

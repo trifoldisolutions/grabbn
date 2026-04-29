@@ -140,6 +140,27 @@
     </div>
 </div>
 
+<!-- ── Clone to another repo modal ───────────────────────────────────────── -->
+<div id="repoCloneModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div id="repoCloneBackdrop" class="absolute inset-0 bg-woodsmoke-950/60 backdrop-blur-sm"></div>
+    <div class="relative w-full sm:max-w-sm bg-white sm:rounded-xl shadow-xl flex flex-col max-h-[85dvh]">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-silver-100 shrink-0">
+            <h2 class="text-sm font-semibold text-woodsmoke-950">Clone to another repo</h2>
+            <button id="repoCloneClose" class="w-7 h-7 flex items-center justify-center rounded-md text-woodsmoke-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.10z"/><path fill="currentColor" d="M12 10.586L6.707 5.293a1 1 0 0 0-1.414 1.414L10.586 12l-5.293 5.293a1 1 0 1 0 1.414 1.414L12 13.414l5.293 5.293a1 1 0 0 0 1.414-1.414L13.414 12l5.293-5.293a1 1 0 0 0-1.414-1.414z"/></g></svg>
+            </button>
+        </div>
+        <div id="repoCloneList" class="overflow-y-auto flex-1 py-1">
+            <!-- populated by JS -->
+        </div>
+        <div class="px-4 py-3 border-t border-silver-100 shrink-0">
+            <button id="repoCloneConfirm" disabled class="w-full h-10 bg-orchid-700 hover:bg-orchid-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-md transition-colors flex items-center justify-center gap-2">
+                Clone here
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
     // ── Share ────────────────────────────────────────────────────────────────
@@ -224,13 +245,15 @@
         const listEl     = document.getElementById('repoMoveList');
         const confirmBtn = document.getElementById('repoMoveConfirm');
         let pendingBucketId = null;
+        let pendingRepoIds  = [];
         let repoCache       = null;
 
-        function openModal(bucketId) {
+        function openModal(bucketId, repoIds) {
             pendingBucketId = bucketId;
+            pendingRepoIds  = repoIds || [];
             modal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            loadRepos(bucketId);
+            if (repoCache) { renderRepos(repoCache); } else { loadRepos(); }
         }
 
         function closeModal() {
@@ -240,19 +263,17 @@
             confirmBtn.disabled = true;
         }
 
-        function loadRepos(currentBucketId) {
-            if (repoCache) { renderRepos(repoCache, currentBucketId); return; }
+        function loadRepos() {
             listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">Loading…</p>';
             fetch('/api/repos', { credentials: 'include' })
                 .then(r => r.json())
-                .then(data => { repoCache = data; renderRepos(data, currentBucketId); })
+                .then(data => { repoCache = data; renderRepos(data); })
                 .catch(() => {
                     listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-red-400">Failed to load repos.</p>';
                 });
         }
 
-        function renderRepos(repos, currentBucketId) {
-            // Exclude the current repo this bucket is already in
+        function renderRepos(repos) {
             const currentRepoId = '<%= typeof repo !== "undefined" ? repo._id : "" %>';
             const filtered = repos.filter(r => r._id.toString() !== currentRepoId);
             if (!filtered.length) {
@@ -260,19 +281,20 @@
                 return;
             }
             listEl.innerHTML = filtered.map(r => {
+                const alreadyHere = pendingRepoIds.includes(r._id.toString());
                 const thumb = r.thumb
                     ? `<img src="${r.thumb}" alt="" class="w-10 h-10 object-cover rounded-md bg-silver-100">`
                     : `<div class="w-10 h-10 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-silver-300"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg></div>`;
-                return `<label class="flex items-center gap-3 px-4 py-2.5 hover:bg-silver-50 cursor-pointer">
-                    <input type="checkbox" class="repo-move-cb w-4 h-4 rounded accent-orchid-700 shrink-0" value="${r._id}">
+                return `<label class="flex items-center gap-3 px-4 py-2.5 ${alreadyHere ? 'opacity-50 cursor-not-allowed' : 'hover:bg-silver-50 cursor-pointer'}">
+                    <input type="checkbox" class="repo-move-cb w-4 h-4 rounded accent-orchid-700 shrink-0" value="${r._id}"${alreadyHere ? ' disabled' : ''}>
                     <span class="shrink-0">${thumb}</span>
                     <span class="flex flex-col min-w-0 flex-1">
                         <span class="text-sm font-medium text-woodsmoke-950 truncate">${r.name}</span>
-                        <span class="text-xs text-woodsmoke-400">${r.bucketCount} bucket${r.bucketCount !== 1 ? 's' : ''}</span>
+                        <span class="text-xs text-woodsmoke-400">${alreadyHere ? 'Already here' : `${r.bucketCount} bucket${r.bucketCount !== 1 ? 's' : ''}`}</span>
                     </span>
                 </label>`;
             }).join('');
-            listEl.querySelectorAll('.repo-move-cb').forEach(cb => {
+            listEl.querySelectorAll('.repo-move-cb:not(:disabled)').forEach(cb => {
                 cb.addEventListener('change', () => {
                     confirmBtn.disabled = !listEl.querySelector('.repo-move-cb:checked');
                 });
@@ -287,14 +309,12 @@
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = DOTS;
             try {
-                await Promise.all(selected.map(repoId =>
-                    fetch(`/api/buckets/${pendingBucketId}/full`, {
-                        method: 'PATCH',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ repoId }),
-                    })
-                ));
+                await fetch(`/api/buckets/${pendingBucketId}/full`, {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repoIds: selected }),
+                });
                 confirmBtn.textContent = 'Moved!';
                 setTimeout(() => {
                     document.querySelector(`[data-bucket-id="${pendingBucketId}"]`)?.remove();
@@ -314,7 +334,114 @@
             btn.addEventListener('click', e => {
                 e.stopPropagation();
                 document.querySelectorAll('.card-context-menu').forEach(m => m.classList.add('hidden'));
-                openModal(btn.dataset.bucketId);
+                const card = btn.closest('[data-bucket-id]');
+                const repoIds = JSON.parse(card.dataset.repoIds || '[]');
+                openModal(btn.dataset.bucketId, repoIds);
+            });
+        });
+    })();
+
+    // ── Clone to another repo modal ──────────────────────────────────────────
+    (function () {
+        const modal      = document.getElementById('repoCloneModal');
+        const backdrop   = document.getElementById('repoCloneBackdrop');
+        const closeBtn   = document.getElementById('repoCloneClose');
+        const listEl     = document.getElementById('repoCloneList');
+        const confirmBtn = document.getElementById('repoCloneConfirm');
+        let pendingBucketId = null;
+        let pendingRepoIds  = [];
+        let repoCache       = null;
+
+        function openModal(bucketId, repoIds) {
+            pendingBucketId = bucketId;
+            pendingRepoIds  = repoIds || [];
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            if (repoCache) { renderRepos(repoCache); } else { loadRepos(); }
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            listEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+            confirmBtn.disabled = true;
+        }
+
+        function loadRepos() {
+            listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">Loading…</p>';
+            fetch('/api/repos', { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => { repoCache = data; renderRepos(data); })
+                .catch(() => {
+                    listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-red-400">Failed to load repos.</p>';
+                });
+        }
+
+        function renderRepos(repos) {
+            const currentRepoId = '<%= typeof repo !== "undefined" ? repo._id : "" %>';
+            // For clone, also treat the current repo as "already here"
+            const allExistingIds = [...pendingRepoIds, currentRepoId].filter(Boolean);
+            const filtered = repos.filter(r => r._id.toString() !== currentRepoId);
+            if (!filtered.length) {
+                listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">No other repos available.</p>';
+                return;
+            }
+            listEl.innerHTML = filtered.map(r => {
+                const alreadyHere = allExistingIds.includes(r._id.toString());
+                const thumb = r.thumb
+                    ? `<img src="${r.thumb}" alt="" class="w-10 h-10 object-cover rounded-md bg-silver-100">`
+                    : `<div class="w-10 h-10 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-silver-300"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg></div>`;
+                return `<label class="flex items-center gap-3 px-4 py-2.5 ${alreadyHere ? 'opacity-50 cursor-not-allowed' : 'hover:bg-silver-50 cursor-pointer'}">
+                    <input type="checkbox" class="repo-clone-cb w-4 h-4 rounded accent-orchid-700 shrink-0" value="${r._id}"${alreadyHere ? ' disabled' : ''}>
+                    <span class="shrink-0">${thumb}</span>
+                    <span class="flex flex-col min-w-0 flex-1">
+                        <span class="text-sm font-medium text-woodsmoke-950 truncate">${r.name}</span>
+                        <span class="text-xs text-woodsmoke-400">${alreadyHere ? 'Already here' : `${r.bucketCount} bucket${r.bucketCount !== 1 ? 's' : ''}`}</span>
+                    </span>
+                </label>`;
+            }).join('');
+            listEl.querySelectorAll('.repo-clone-cb:not(:disabled)').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    confirmBtn.disabled = !listEl.querySelector('.repo-clone-cb:checked');
+                });
+            });
+            confirmBtn.disabled = true;
+        }
+
+        confirmBtn.addEventListener('click', async () => {
+            const selected = Array.from(listEl.querySelectorAll('.repo-clone-cb:checked')).map(cb => cb.value);
+            if (!selected.length || !pendingBucketId) return;
+            const DOTS = '<svg width="24" height="10" viewBox="0 0 24 10" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><circle cx="3" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0s" repeatCount="indefinite"/></circle><circle cx="12" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.2s" repeatCount="indefinite"/></circle><circle cx="21" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.4s" repeatCount="indefinite"/></circle></svg>';
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = DOTS;
+            try {
+                await fetch(`/api/buckets/${pendingBucketId}/full`, {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ addRepoIds: selected }),
+                });
+                confirmBtn.textContent = 'Cloned!';
+                setTimeout(() => {
+                    closeModal();
+                    confirmBtn.textContent = 'Clone here';
+                }, 1000);
+            } catch {
+                confirmBtn.textContent = 'Failed — try again';
+                setTimeout(() => { confirmBtn.textContent = 'Clone here'; confirmBtn.disabled = false; }, 2000);
+            }
+        });
+
+        closeBtn.addEventListener('click', closeModal);
+        backdrop.addEventListener('click', closeModal);
+
+        document.querySelectorAll('.card-clone-to-repo').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                document.querySelectorAll('.card-context-menu').forEach(m => m.classList.add('hidden'));
+                const card = btn.closest('[data-bucket-id]');
+                const repoIds = JSON.parse(card.dataset.repoIds || '[]');
+                openModal(btn.dataset.bucketId, repoIds);
             });
         });
     })();
@@ -340,7 +467,7 @@
                     method:      'PATCH',
                     credentials: 'include',
                     headers:     { 'Content-Type': 'application/json' },
-                    body:        JSON.stringify({ repoId: null }),
+                    body:        JSON.stringify({ removeRepoId: '<%= repo._id %>' }),
                 });
                 if (res.ok) {
                     card?.remove();

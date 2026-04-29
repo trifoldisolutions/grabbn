@@ -1,4 +1,6 @@
+import * as cheerio from 'cheerio';
 import http from 'http';
+import { randomBytes } from 'crypto';
 import { WebSocketServer } from 'ws';
 import express from 'express';
 import cors from 'cors';
@@ -27,8 +29,11 @@ import notificationsRouter from './server/routes/notifications.js';
 import bucketCommentsRouter from './server/routes/bucketComments.js';
 import dmRouter from './server/routes/dm.js';
 import blockRouter from './server/routes/block.js';
+import partnershipRouter from './server/routes/partnership.js';
+import PartnerApplication from './server/models/partnerApplication.js';
 import adminRouter     from './server/routes/admin.js';
 import adminAuthRouter from './server/routes/admin/auth.js';
+import devTodosRouter  from './server/routes/devTodos.js';
 import { adminSessionAuth, requireAdminSession } from './server/middleware/adminSessionAuth.js';
 import Notification from './server/models/notification.js';
 import Block from './server/models/block.js';
@@ -192,9 +197,17 @@ app.get('/api/popup-session', (req, res) => {
 // ---------------------------------------------------------------------------
 // Global CORS for all other routes (restricted origins in production)
 // ---------------------------------------------------------------------------
-const ALLOWED_ORIGINS = process.env.NODE_ENV === 'production'
-    ? ['https://grabbn.com', 'https://www.grabbn.com', 'https://app.grabbn.com']
-    : true;
+const PRODUCTION_ORIGINS = ['https://grabbn.com', 'https://www.grabbn.com', 'https://app.grabbn.com'];
+
+function ALLOWED_ORIGINS(origin, callback) {
+  if (!origin) return callback(null, true); // server-to-server / curl
+  if (origin.startsWith('chrome-extension://') || origin.startsWith('moz-extension://')) {
+    return callback(null, true); // browser extension
+  }
+  if (process.env.NODE_ENV !== 'production') return callback(null, true);
+  if (PRODUCTION_ORIGINS.includes(origin)) return callback(null, true);
+  callback(new Error(`CORS: origin ${origin} not allowed`));
+}
 
 app.set('trust proxy', 1); // trust first proxy (nginx/reverse proxy) so req.ip resolves correctly
 
@@ -236,6 +249,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/buckets/:id/comments', bucketCommentsRouter);
 app.use('/api/dm', dmRouter);
 app.use('/api/users', blockRouter);
+app.use('/api/partnership', partnershipRouter);
 
 // Online presence — checks wsClients for an active connection
 app.get('/api/users/:userId/online-status', anonymousAuth, async (req, res) => {
@@ -260,6 +274,8 @@ app.get('/api/users/:userId/online-status', anonymousAuth, async (req, res) => {
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'dev_ressources')));
+app.use('/api/dev/todos', devTodosRouter);
 
 // ── Image proxy ─────────────────────────────────────────────────────────────
 // Fetches external link thumbnail URLs server-side so that CDN hotlink
@@ -343,7 +359,7 @@ async function connectMongo() {
  *     or the file is larger than MAX_LINK_IMG_BYTES (avoids bloating Mongo docs).
  */
 const MAX_LINK_IMG_BYTES = 800 * 1024; // 800 KB raw → ~1.1 MB as base64
-const ALLOWED_LINK_IMG_MIME = new Set(['image/jpeg','image/png','image/webp','image/gif','image/avif']);
+const ALLOWED_LINK_IMG_MIME = new Set(['image/jpeg','image/jpg','image/png','image/webp','image/gif','image/avif','image/svg+xml']);
 
 async function fetchImageAsBase64(url) {
     if (!url) return null;
@@ -351,7 +367,7 @@ async function fetchImageAsBase64(url) {
     try {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 8000);
-        const upstream = await fetch(url, {
+        const upstream = await fetch(normalizedUrl, {
             signal: controller.signal,
             headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Grabbn/1.0)' },
             redirect: 'follow',
@@ -430,6 +446,389 @@ function metaDailyAddBonus(userId, fetches) {
     return { limit: META_DAILY_LIMIT + entry.bonus, used: entry.count };
 }
 
+// Domains whose product metadata requires JS rendering to retrieve correctly.
+const JS_RENDER_DOMAINS = new Set([
+    'amazon.com', 'www.amazon.com', 'a.co',
+    'shein.com', 'www.shein.com', 'us.shein.com',
+    'temu.com', 'www.temu.com',
+    'aliexpress.com', 'www.aliexpress.com',
+    'ebay.com', 'www.ebay.com',
+    'etsy.com', 'www.etsy.com',
+]);
+
+function needsRender(rawUrl) {
+    try { return JS_RENDER_DOMAINS.has(new URL(rawUrl).hostname); } catch { return false; }
+}
+
+// Some sites redirect unauthenticated HEAD requests to a login/interstitial page.
+// For those domains we keep the original product URL and let the renderer handle it.
+const PRESERVE_ORIGINAL_RENDER_URL_DOMAINS = new Set([
+    'temu.com', 'www.temu.com',
+    'shein.com', 'www.shein.com', 'us.shein.com',
+]);
+
+function shouldPreserveOriginalRenderUrl(rawUrl) {
+    try {
+        return PRESERVE_ORIGINAL_RENDER_URL_DOMAINS.has(new URL(rawUrl).hostname);
+    } catch {
+        return false;
+    }
+}
+
+// Follow redirects to get the final URL (resolves short URLs like a.co before scraping).
+async function resolveUrl(url) {
+    if (shouldPreserveOriginalRenderUrl(url)) return url;
+    try {
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 8000);
+        const res = await fetch(url, {
+            method: 'HEAD',
+            redirect: 'follow',
+            signal: ctrl.signal,
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
+        });
+        return res.url || url;
+    } catch {
+        return url;
+    }
+}
+
+function normalizeMetaUrl(rawUrl) {
+    try {
+        const url = new URL(rawUrl);
+        const hostname = url.hostname.toLowerCase();
+
+        if (hostname === 'temu.com' || hostname === 'www.temu.com') {
+            const clean = new URL(url.origin + url.pathname);
+            ['spec_id', 'spec_ids', 'spec_gallery_id'].forEach(function (key) {
+                const value = url.searchParams.get(key);
+                if (value) clean.searchParams.set(key, value);
+            });
+            return clean.toString();
+        }
+
+        return url.toString();
+    } catch {
+        return rawUrl;
+    }
+}
+
+// Fetch fully rendered HTML via ScraperAPI, then extract OG tags.
+async function fetchViaScraperAPI(url) {
+    const key = process.env.SCRAPERAPI_KEY;
+    if (!key) return null;
+    const resolved = await resolveUrl(url);
+    console.log('[meta] ScraperAPI resolved URL:', resolved);
+    const apiUrl = `http://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(resolved)}&render=true&country_code=us`;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 45000);
+    try {
+        const res = await fetch(apiUrl, { signal: ctrl.signal });
+        if (!res.ok) return null;
+        return await res.text();
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+// Returns true if an image URL looks like a site logo/marketing asset rather than a product image.
+function isJunkImage(imageUrl) {
+    if (!imageUrl) return true;
+    const lower = imageUrl.toLowerCase();
+    return (
+        lower.includes('/logo') ||
+        lower.includes('/logos') ||
+        lower.includes('/marketing/') ||
+        lower.includes('/brand/') ||
+        lower.includes('/favicon') ||
+        lower.includes('/icon')
+    );
+}
+
+async function fetchMicrolink(url) {
+    const mlUrl = new URL('https://api.microlink.io');
+    mlUrl.searchParams.set('url', url);
+    if (process.env.MICROLINK_API_KEY) mlUrl.searchParams.set('apiKey', process.env.MICROLINK_API_KEY);
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 12000);
+    const res = await fetch(mlUrl.toString(), { signal: ctrl.signal });
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    return data ?? null;
+}
+
+async function normalizeMetaImage(imageUrl) {
+    if (!imageUrl) return null;
+    return await fetchImageAsBase64(imageUrl) || imageUrl;
+}
+
+function absolutizeUrl(rawUrl, baseUrl) {
+    if (!rawUrl || typeof rawUrl !== 'string') return null;
+    const trimmed = rawUrl.trim();
+    if (!trimmed) return null;
+    try {
+        return new URL(trimmed, baseUrl).toString();
+    } catch {
+        return null;
+    }
+}
+
+function looksLikeImageUrl(value) {
+    if (typeof value !== 'string') return false;
+    const lower = value.toLowerCase();
+    return (
+        lower.startsWith('data:image/') ||
+        /\.(avif|gif|jpe?g|png|svg|webp)(?:[?#].*)?$/.test(lower) ||
+        lower.includes('/images/') ||
+        lower.includes('/image/') ||
+        lower.includes('image=') ||
+        lower.includes('images-') ||
+        lower.includes('media-amazon.com/images/')
+    );
+}
+
+function collectImageCandidates(value, out) {
+    if (!value) return;
+    if (typeof value === 'string') {
+        if (looksLikeImageUrl(value)) out.push(value);
+        return;
+    }
+    if (Array.isArray(value)) {
+        value.forEach(function (item) { collectImageCandidates(item, out); });
+        return;
+    }
+    if (typeof value === 'object') {
+        ['image', 'thumbnailUrl', 'contentUrl', 'url'].forEach(function (key) {
+            if (key in value) collectImageCandidates(value[key], out);
+        });
+    }
+}
+
+function parseJsonObject(text) {
+    try {
+        return JSON.parse(text);
+    } catch {
+        return null;
+    }
+}
+
+function pickFirstValidImage(candidates, baseUrl) {
+    for (const candidate of candidates) {
+        const absolute = absolutizeUrl(candidate, baseUrl);
+        if (absolute && !isJunkImage(absolute)) return absolute;
+    }
+    return null;
+}
+
+function extractDynamicImageMap(raw, baseUrl) {
+    if (!raw) return null;
+    const parsed = parseJsonObject(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    const urls = Object.keys(parsed);
+    return pickFirstValidImage(urls, baseUrl);
+}
+
+function hostnameFromUrl(rawUrl) {
+    try {
+        return new URL(rawUrl).hostname.toLowerCase();
+    } catch {
+        return '';
+    }
+}
+
+function domainMatches(hostname, domains) {
+    return domains.some(function (domain) {
+        return hostname === domain || hostname.endsWith('.' + domain);
+    });
+}
+
+const MARKETPLACE_ADAPTERS = [
+    {
+        name: 'amazon',
+        domains: ['amazon.com', 'a.co'],
+        titleSelectors: ['#productTitle'],
+        imageSelectors: [
+            ['#landingImage', 'data-old-hires'],
+            ['#landingImage', 'src'],
+            ['#imgTagWrapperId img', 'data-old-hires'],
+            ['#imgTagWrapperId img', 'src'],
+            ['#main-image-container img', 'src'],
+        ],
+        dynamicImageAttrs: [
+            ['#landingImage', 'data-a-dynamic-image'],
+            ['#imgTagWrapperId img', 'data-a-dynamic-image'],
+        ],
+    },
+    {
+        name: 'etsy',
+        domains: ['etsy.com'],
+        titleSelectors: ['h1[data-buy-box-listing-title="true"]', 'h1.wt-text-body-03'],
+        imageSelectors: [
+            ['img[data-index="0"]', 'src'],
+            ['img[data-index="0"]', 'srcset'],
+            ['img[data-carousel-image]', 'src'],
+            ['img[data-carousel-image]', 'srcset'],
+        ],
+    },
+    {
+        name: 'ebay',
+        domains: ['ebay.com'],
+        titleSelectors: ['#x-title-label-lbl + h1', 'h1.x-item-title__mainTitle', 'h1'],
+        imageSelectors: [
+            ['#icImg', 'src'],
+            ['#icImg', 'data-src'],
+            ['.ux-image-carousel-item img', 'src'],
+            ['.ux-image-carousel-item img', 'data-zoom-src'],
+        ],
+    },
+    {
+        name: 'temu',
+        domains: ['temu.com'],
+        titleSelectors: ['h1', '[data-testid="product-title"]'],
+        imageSelectors: [
+            ['img', 'src'],
+            ['img', 'data-src'],
+            ['img', 'srcset'],
+        ],
+    },
+    {
+        name: 'aliexpress',
+        domains: ['aliexpress.com'],
+        titleSelectors: ['h1[data-pl="product-title"]', 'h1'],
+        imageSelectors: [
+            ['img.magnifier-image', 'src'],
+            ['img.magnifier-image', 'srcset'],
+            ['img', 'src'],
+            ['img', 'srcset'],
+        ],
+    },
+    {
+        name: 'shein',
+        domains: ['shein.com'],
+        titleSelectors: ['h1', '[data-testid="product-intro-title"]'],
+        imageSelectors: [
+            ['img', 'src'],
+            ['img', 'data-src'],
+            ['img', 'srcset'],
+        ],
+    },
+];
+
+function firstNonEmptyText($, selectors) {
+    for (const selector of selectors || []) {
+        const value = $(selector).first().text().trim();
+        if (value) return value;
+    }
+    return null;
+}
+
+function parseSrcsetCandidate(raw) {
+    if (!raw || typeof raw !== 'string') return null;
+    const first = raw.split(',').map(function (part) { return part.trim().split(/\s+/)[0]; }).find(Boolean);
+    return first || null;
+}
+
+function collectSelectorImages($, selectors, out) {
+    for (const [selector, attr] of selectors || []) {
+        const raw = $(selector).first().attr(attr);
+        if (!raw) continue;
+        const value = attr === 'srcset' ? parseSrcsetCandidate(raw) : raw;
+        if (value) out.push(value);
+    }
+}
+
+function collectDynamicImages($, selectors, pageUrl, out) {
+    for (const [selector, attr] of selectors || []) {
+        const raw = $(selector).first().attr(attr);
+        const image = extractDynamicImageMap(raw, pageUrl);
+        if (image) out.push(image);
+    }
+}
+
+function findMarketplaceAdapter(pageUrl) {
+    const hostname = hostnameFromUrl(pageUrl);
+    return MARKETPLACE_ADAPTERS.find(function (adapter) {
+        return domainMatches(hostname, adapter.domains);
+    }) || null;
+}
+
+function collectJsonLdData($) {
+    const parsed = [];
+    $('script[type="application/ld+json"]').each(function () {
+        const raw = $(this).contents().text().trim();
+        if (!raw) return;
+        const value = parseJsonObject(raw);
+        if (value) parsed.push(value);
+    });
+    return parsed;
+}
+
+function collectNames(value, out) {
+    if (!value) return;
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed) out.push(trimmed);
+        return;
+    }
+    if (Array.isArray(value)) {
+        value.forEach(function (item) { collectNames(item, out); });
+        return;
+    }
+    if (typeof value === 'object') {
+        if (typeof value.name === 'string' && value.name.trim()) out.push(value.name.trim());
+        if (value['@graph']) collectNames(value['@graph'], out);
+    }
+}
+
+function extractGenericMeta($) {
+    const m = (prop, attr = 'property') =>
+        $(`meta[${attr}="${prop}"]`).attr('content') || null;
+    return {
+        titleCandidates: [
+            m('og:title'),
+            m('twitter:title', 'name'),
+            $('meta[name="title"]').attr('content'),
+            $('h1').first().text().trim(),
+            $('title').first().text().trim(),
+        ].filter(Boolean),
+        imageCandidates: [
+            m('og:image'),
+            m('og:image:url'),
+            m('twitter:image', 'name'),
+            m('twitter:image:src', 'name'),
+            $('meta[itemprop="image"]').attr('content'),
+            $('link[rel="image_src"]').attr('href'),
+        ].filter(Boolean),
+    };
+}
+
+function extractOG(html, pageUrl) {
+    const $ = cheerio.load(html);
+    const generic = extractGenericMeta($);
+    const adapter = findMarketplaceAdapter(pageUrl);
+    const titleCandidates = generic.titleCandidates.slice();
+    const imageCandidates = generic.imageCandidates.slice();
+    const jsonLdBlocks = collectJsonLdData($);
+
+    if (adapter) {
+        const adapterTitle = firstNonEmptyText($, adapter.titleSelectors);
+        if (adapterTitle) titleCandidates.unshift(adapterTitle);
+        collectSelectorImages($, adapter.imageSelectors, imageCandidates);
+        collectDynamicImages($, adapter.dynamicImageAttrs, pageUrl, imageCandidates);
+    }
+
+    const jsonLdNames = [];
+    jsonLdBlocks.forEach(function (parsed) {
+        collectNames(parsed, jsonLdNames);
+        collectImageCandidates(parsed, imageCandidates);
+    });
+
+    const title = titleCandidates.find(Boolean) || jsonLdNames.find(Boolean) || null;
+    const image = pickFirstValidImage(imageCandidates, pageUrl);
+
+    return { title, image };
+}
+
 // Scrape OG/meta tags from a URL — returns { title, image } for link auto-fill.
 app.get('/api/meta', requireAuth, async (req, res) => {
     const { url } = req.query;
@@ -437,6 +836,53 @@ app.get('/api/meta', requireAuth, async (req, res) => {
     if (!metaMinuteCheck(String(req.user._id))) return res.status(429).json({ error: 'rate_minute' });
     const daily = metaDailyCheck(String(req.user._id));
     if (!daily.ok) return res.status(429).json({ error: 'rate_daily', used: daily.used, limit: META_DAILY_LIMIT });
+
+    const usage = { used: daily.used, limit: daily.limit };
+    const normalizedUrl = normalizeMetaUrl(url);
+
+    // JS-rendered domains: try ScraperAPI (rendered HTML) first, Microlink as fallback.
+    if (needsRender(normalizedUrl)) {
+        const resolvedUrl = await resolveUrl(normalizedUrl);
+        console.log('[meta] normalized URL:', normalizedUrl);
+        console.log('[meta] needsRender — resolved:', resolvedUrl);
+        try {
+            const html = await fetchViaScraperAPI(resolvedUrl);
+            console.log('[meta] ScraperAPI html length:', html ? html.length : 'null');
+            if (html) {
+                const { title, image } = extractOG(html, resolvedUrl);
+                const normalizedImage = await normalizeMetaImage(image);
+                console.log('[meta] extractOG ->', { title, image: normalizedImage || image });
+                if (title && normalizedImage) return res.json({ title, image: normalizedImage, usage });
+                try {
+                    const data = await fetchMicrolink(resolvedUrl);
+                    const mlImage = isJunkImage(data?.image?.url) ? null : data?.image?.url;
+                    console.log('[meta] Microlink supplement ->', { title: data?.title, image: mlImage });
+                    return res.json({
+                        title: title || data?.title || null,
+                        image: normalizedImage || await normalizeMetaImage(mlImage) || null,
+                        usage
+                    });
+                } catch (e) { console.error('[meta] Microlink error:', e.message); }
+                return res.json({ title, image: normalizedImage, usage });
+            }
+        } catch (e) { console.error('[meta] ScraperAPI threw:', e.message); }
+        // ScraperAPI unavailable or failed — use Microlink only
+        try {
+            console.log('[meta] falling back to Microlink-only for', resolvedUrl);
+            const data = await fetchMicrolink(resolvedUrl);
+            const mlImage = isJunkImage(data?.image?.url) ? null : data?.image?.url;
+            console.log('[meta] Microlink result ->', { title: data?.title, image: mlImage });
+            return res.json({
+                title: data?.title || null,
+                image: await normalizeMetaImage(mlImage) || null,
+                usage
+            });
+        } catch (e) {
+            console.error('[meta] Microlink fallback error:', e.message);
+            return res.json({ title: null, image: null, usage });
+        }
+    }
+
     try {
         const controller = new AbortController();
         setTimeout(() => controller.abort(), 10000);
@@ -448,29 +894,26 @@ app.get('/api/meta', requireAuth, async (req, res) => {
             },
             redirect: 'follow',
         });
-        if (!upstream.ok) return res.json({ title: null, image: null });
+        if (!upstream.ok) return res.json({ title: null, image: null, usage });
         const html = await upstream.text();
+        const { title, image } = extractOG(html, normalizedUrl);
+        const normalizedImage = await normalizeMetaImage(image);
 
-        const metaContent = (prop, attr = 'property') => {
-            const a = html.match(new RegExp(`<meta[^>]+${attr}=["']${prop}["'][^>]+content=["']([^"']+)["']`, 'i'))?.[1];
-            const b = html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+${attr}=["']${prop}["']`, 'i'))?.[1];
-            return a || b || null;
-        };
+        if (title && normalizedImage) return res.json({ title, image: normalizedImage, usage });
 
-        const title = metaContent('og:title')
-            || metaContent('twitter:title', 'name')
-            || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim()
-            || null;
+        // Fallback to Microlink when regex scrape is incomplete.
+        try {
+            const data = await fetchMicrolink(normalizedUrl);
+            return res.json({
+                title: title || data?.title || null,
+                image: normalizedImage || await normalizeMetaImage(data?.image?.url) || null,
+                usage,
+            });
+        } catch { /* fall through */ }
 
-        const image = metaContent('og:image')
-            || metaContent('og:image:url')
-            || metaContent('twitter:image', 'name')
-            || metaContent('twitter:image:src', 'name')
-            || null;
-
-        res.json({ title, image, usage: { used: daily.used, limit: daily.limit } });
+        res.json({ title, image: normalizedImage, usage });
     } catch {
-        res.json({ title: null, image: null });
+        res.json({ title: null, image: null, usage });
     }
 });
 
@@ -605,7 +1048,7 @@ async function fanOutNewBucketPublished(curatorId, curatorUsername, bucketId, bu
 // Create a new bucket
 app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, draft, repoId } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, draft, repoIds } = req.body;
 
         if (!name || typeof name !== 'string') {
             return res.status(400).json({ error: 'Bucket name is required' });
@@ -646,11 +1089,12 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
         // Auto-set thumbnail from first link image if no explicit thumbnail provided
         const effectiveThumb = resolvedThumb || resolvedLinks.find(l => l.image)?.image || '';
 
-        // Validate repoId belongs to this user
-        let resolvedRepoId = null;
-        if (repoId) {
-            const repo = await UserRepo.findOne({ _id: repoId, userId: req.user._id });
-            if (repo) resolvedRepoId = repo._id;
+        // Validate repoIds belong to this user
+        let resolvedRepoIds = [];
+        if (Array.isArray(repoIds) && repoIds.length > 0) {
+            const validIds = repoIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+            const repos = await UserRepo.find({ _id: { $in: validIds }, userId: req.user._id }).select('_id');
+            resolvedRepoIds = repos.map(r => r._id);
         }
 
         const vis = ['public', 'unlisted', 'private'].includes(visibility) ? visibility : 'private';
@@ -668,7 +1112,7 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             thumbnail:   effectiveThumb,
             links:       resolvedLinks,
             isDraft:     !!draft,
-            repoId:      resolvedRepoId,
+            repoIds:     resolvedRepoIds,
         });
 
         if (vis === 'public' && !bucket.isDraft) {
@@ -714,7 +1158,7 @@ app.put('/api/buckets/:oldName', requireAuth, requireVerification, async (req, r
 // Full bucket update (used by profile edit modal)
 app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, isDraft, repoId } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, isDraft, repoIds, removeRepoId, addRepoIds } = req.body;
 
         // Fetch current state to detect meaningful changes before building the update
         const current = await Bucket.findOne({ _id: req.params.id, userId: req.user._id });
@@ -725,13 +1169,24 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         if (description !== undefined) update.description = String(description || '').slice(0, 256);
         if (tags        !== undefined) update.hashtags    = Array.isArray(tags) ? tags.slice(0, 8) : [];
         if (mature      !== undefined) update.mature      = !!mature;
-        if (repoId !== undefined) {
-            if (!repoId) {
-                update.repoId = null;
+        if (repoIds !== undefined) {
+            if (!Array.isArray(repoIds) || repoIds.length === 0) {
+                update.repoIds = [];
             } else {
-                const repo = await UserRepo.findOne({ _id: repoId, userId: req.user._id });
-                update.repoId = repo ? repo._id : null;
+                const validIds = repoIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+                const repos = await UserRepo.find({ _id: { $in: validIds }, userId: req.user._id }).select('_id');
+                update.repoIds = repos.map(r => r._id);
             }
+        }
+        if (removeRepoId && mongoose.Types.ObjectId.isValid(removeRepoId)) {
+            update.repoIds = (current.repoIds || []).filter(id => String(id) !== String(removeRepoId));
+        }
+        if (Array.isArray(addRepoIds) && addRepoIds.length > 0) {
+            const validIds = addRepoIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+            const repos = await UserRepo.find({ _id: { $in: validIds }, userId: req.user._id }).select('_id');
+            const newIds = repos.map(r => String(r._id));
+            const existingIds = (current.repoIds || []).map(id => String(id));
+            update.repoIds = [...new Set([...existingIds, ...newIds])];
         }
         if (visibility !== undefined) {
             const vis = ['public', 'unlisted', 'private'].includes(visibility) ? visibility : 'private';
@@ -837,14 +1292,16 @@ app.get('/api/repos', requireAuth, async (req, res) => {
         const [repos, counts, thumbs] = await Promise.all([
             UserRepo.find({ userId: req.user._id }).sort({ name: 1 }).lean(),
             Bucket.aggregate([
-                { $match: { userId: req.user._id, repoId: { $ne: null } } },
-                { $group: { _id: '$repoId', count: { $sum: 1 } } },
+                { $match: { userId: req.user._id, repoIds: { $exists: true, $ne: [] } } },
+                { $unwind: '$repoIds' },
+                { $group: { _id: '$repoIds', count: { $sum: 1 } } },
             ]),
             // First non-empty thumbnail per repo (oldest bucket first)
             Bucket.aggregate([
-                { $match: { userId: req.user._id, repoId: { $ne: null }, thumbnail: { $nin: [null, ''] } } },
+                { $match: { userId: req.user._id, repoIds: { $exists: true, $ne: [] }, thumbnail: { $nin: [null, ''] } } },
                 { $sort: { createdAt: 1 } },
-                { $group: { _id: '$repoId', thumb: { $first: '$thumbnail' } } },
+                { $unwind: '$repoIds' },
+                { $group: { _id: '$repoIds', thumb: { $first: '$thumbnail' } } },
             ]),
         ]);
         const countMap = Object.fromEntries(counts.map(c => [c._id.toString(), c.count]));
@@ -913,7 +1370,7 @@ app.delete('/api/repos/:id', requireAuth, async (req, res) => {
     try {
         const repo = await UserRepo.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
         if (!repo) return res.status(404).json({ error: 'Repo not found' });
-        await Bucket.updateMany({ userId: req.user._id, repoId: req.params.id }, { $unset: { repoId: 1 } });
+        await Bucket.updateMany({ userId: req.user._id, repoIds: repo._id }, { $pull: { repoIds: repo._id } });
         res.json({ ok: true });
     } catch (err) {
         console.error('Error deleting repo:', err);
@@ -2630,17 +3087,18 @@ app.post('/api/repositories/:domain/:tag/not-interested', anonymousAuth, async (
 // App routes — server-rendered with EJS
 // ---------------------------------------------------------------------------
 const appPages = [
-    { path: '/showroom',       view: 'v2/showroom',        title: 'Show Room',       page: 'home'          },
-    { path: '/explore',        view: 'v2/explore',         title: 'Explore',         page: 'explore'       },
-    { path: '/transactions',   view: 'v2/transactions',    title: 'Transactions',    page: 'transactions'  },
-    { path: '/settings',       view: 'v2/settings',        title: 'Settings',        page: 'settings'      },
-    { path: '/docs',           view: 'v2/docs',            title: 'Docs',            page: 'docs'          },
-    { path: '/faq',            view: 'v2/faq',             title: 'FAQ',             page: 'faq'           },
-    { path: '/contact',        view: 'v2/contact',         title: 'Contact',         page: 'contact'       },
-    { path: '/login',          view: 'v2/login',           title: 'Log In',          page: 'login'         },
-    { path: '/signup',         view: 'v2/signup',          title: 'Sign Up',         page: 'signup'        },
-    { path: '/reset-password', view: 'v2/reset-password',  title: 'Reset Password',  page: 'reset-password'},
-    { path: '/topup',          view: 'v2/topup',           title: 'Top Up Credits',  page: 'topup'         },
+    { path: '/showroom',       view: 'showroom',        title: 'Show Room',       page: 'home'          },
+    { path: '/explore',        view: 'explore',         title: 'Explore',         page: 'explore'       },
+    { path: '/transactions',   view: 'transactions',    title: 'Transactions',    page: 'transactions'  },
+    { path: '/settings',       view: 'settings',        title: 'Settings',        page: 'settings'      },
+    { path: '/docs',           view: 'docs',            title: 'Docs',            page: 'docs'          },
+    { path: '/faq',            view: 'faq',             title: 'FAQ',             page: 'faq'           },
+    { path: '/contact',        view: 'contact',         title: 'Contact',         page: 'contact'       },
+    { path: '/login',          view: 'login',           title: 'Log In',          page: 'login'         },
+    { path: '/signup',         view: 'signup',          title: 'Sign Up',         page: 'signup'        },
+    { path: '/reset-password', view: 'reset-password',  title: 'Reset Password',  page: 'reset-password'},
+    { path: '/topup',          view: 'topup',           title: 'Top Up Credits',  page: 'topup'         },
+    { path: '/partnership',    view: 'partnership',     title: 'Partner Program', page: 'partnership'   },
 ];
 
 for (const { path: routePath, view, title, page } of appPages) {
@@ -2648,6 +3106,27 @@ for (const { path: routePath, view, title, page } of appPages) {
         res.render(view, { title, page, user: req.user ?? null });
     });
 }
+
+// Partnership apply page — custom handler to pass application status to template
+app.get('/partnership/apply', anonymousAuth, requireNonAdmin, async (req, res) => {
+    const u = req.user;
+    let applicationStatus = null;
+    if (u && !u.isAnonymous && u.isEmailVerified && !u.isPartner) {
+        try {
+            applicationStatus = await PartnerApplication
+                .findOne({ userId: u._id })
+                .sort({ submittedAt: -1 })
+                .select('status submittedAt rejectionReason')
+                .lean();
+        } catch { /* non-fatal */ }
+    }
+    res.render('partnership-apply', {
+        title: 'Apply — Partner Program',
+        page:  'partnership',
+        user:  u ?? null,
+        applicationStatus: applicationStatus ?? null
+    });
+});
 
 // ---------------------------------------------------------------------------
 // Admin panel — server-rendered EJS pages at /admin/*
@@ -2700,6 +3179,57 @@ app.get('/admin/users/:userId', adminPage(), async (req, res) => {
         res.render('admin/user-detail', { admin: req.user, viewUser });
     } catch (err) {
         console.error('[admin/users/:id page]', err);
+        res.status(500).send('Server error');
+    }
+});
+
+// /admin/partners/applications — application queue list
+app.get('/admin/partners/applications', adminPage('superadmin'), async (req, res) => {
+    try {
+        const status       = ['pending', 'approved', 'rejected'].includes(req.query.status) ? req.query.status : 'pending';
+        const page         = Math.max(1, parseInt(req.query.page) || 1);
+        const limit        = 30;
+        const skip         = (page - 1) * limit;
+
+        const [applications, total, pendingCount] = await Promise.all([
+            PartnerApplication.find({ status })
+                .populate('userId', 'email username isEmailVerified createdAt country')
+                .sort({ submittedAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            PartnerApplication.countDocuments({ status }),
+            PartnerApplication.countDocuments({ status: 'pending' })
+        ]);
+
+        res.render('admin/partner-applications', {
+            admin: req.user,
+            applications,
+            status,
+            pendingCount,
+            pagination: { total, page, pages: Math.ceil(total / limit) }
+        });
+    } catch (err) {
+        console.error('[admin/partners/applications page]', err);
+        res.status(500).send('Server error');
+    }
+});
+
+// /admin/partners/applications/:appId — single application review
+app.get('/admin/partners/applications/:appId', adminPage('superadmin'), async (req, res) => {
+    try {
+        const { appId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(appId)) return res.status(404).render('admin/not-found');
+
+        const application = await PartnerApplication.findById(appId)
+            .populate('userId', 'email username isEmailVerified createdAt country isPartner')
+            .lean();
+
+        if (!application) return res.status(404).render('admin/not-found');
+
+        res.render('admin/partner-application-detail', { admin: req.user, application });
+    } catch (err) {
+        console.error('[admin/partners/applications/:id page]', err);
         res.status(500).send('Server error');
     }
 });
@@ -3085,7 +3615,7 @@ app.get('/search', anonymousAuth, async (req, res) => {
 
         const formattedTags = tagResults.map(t => ({ tag: t._id, count: t.count }));
 
-        res.render('v2/search', {
+        res.render('search', {
             title:          `"${q}" — Search`,
             page:           'explore',
             user:           req.user ?? null,
@@ -3104,7 +3634,7 @@ app.get('/search', anonymousAuth, async (req, res) => {
 
     } catch (err) {
         console.error('Search error:', err);
-        res.render('v2/search', {
+        res.render('search', {
             title:           `"${q}" — Search`,
             page:            'explore',
             user:            req.user ?? null,
@@ -3139,7 +3669,7 @@ app.get('/@:username', (req, res) => {
 app.get('/u/:username', anonymousAuth, async (req, res) => {
     // Who is being viewed
     const profileUser = await User.findOne({ username: req.params.username, isAnonymous: false }).lean();
-    if (!profileUser) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null }).catch(() => res.status(404).send('User not found'));
+    if (!profileUser) return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null }).catch(() => res.status(404).send('User not found'));
 
     // Is the logged-in user the owner of this profile?
     const viewer  = req.user ?? null;
@@ -3148,7 +3678,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
     // Block check: if profileUser has blocked the viewer, treat as 404
     if (!isOwner && viewer && !viewer.isAnonymous) {
         const blocked = await Block.exists({ blockerId: profileUser._id, blockedId: viewer._id });
-        if (blocked) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: viewer });
+        if (blocked) return res.status(404).render('404', { title: 'Not Found', page: '', user: viewer });
     }
 
     const addDisplayThumb = (b) => ({
@@ -3164,7 +3694,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
 
     const [allBuckets, subscriberCount, followingCount, rawGrabbed, userRepos] = await Promise.all([
         Bucket.find(bucketFilter)
-            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum repoId createdAt updatedAt')
+            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
             .sort({ order: 1, createdAt: -1 })
             .lean(),
         Subscription.countDocuments({ followeeId: profileUser._id }),
@@ -3183,7 +3713,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
     const totalGrabs     = ownBuckets.reduce((sum, b) => sum + (b.grabbedBy?.length ?? 0), 0);
     const memberSince    = new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-    res.render('v2/profile', {
+    res.render('profile', {
         title:       `@${profileUser.username}`,
         page:        'profile',
         user:        viewer,          // logged-in user → used by topbar/sidebar
@@ -3206,22 +3736,22 @@ app.get('/o/:repoId', anonymousAuth, async (req, res) => {
     try {
         const { repoId } = req.params;
         if (!mongoose.Types.ObjectId.isValid(repoId)) {
-            return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+            return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null });
         }
 
         const repo = await UserRepo.findById(repoId).lean();
-        if (!repo) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+        if (!repo) return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null });
 
         const viewer  = req.user ?? null;
         const owner   = await User.findById(repo.userId).select('username avatar anonymousId').lean();
-        if (!owner) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: viewer });
+        if (!owner) return res.status(404).render('404', { title: 'Not Found', page: '', user: viewer });
 
         const isOwner = !!(viewer && !viewer.isAnonymous && viewer._id.toString() === repo.userId.toString());
 
         // Visitors see public + unlisted buckets (unlisted = accessible via link/repo, not discoverable); owner sees all
         const bucketFilter = isOwner
-            ? { repoId: repo._id }
-            : { repoId: repo._id, ...FILTER_ACCESSIBLE };
+            ? { repoIds: repo._id }
+            : { repoIds: repo._id, ...FILTER_ACCESSIBLE };
 
         const rawBuckets = await Bucket.find(bucketFilter)
             .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum createdAt updatedAt')
@@ -3237,7 +3767,7 @@ app.get('/o/:repoId', anonymousAuth, async (req, res) => {
         const createdAt = new Date(repo.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         const pageUrl   = `${req.protocol}://${req.get('host')}/o/${repoId}`;
 
-        res.render('v2/repo', {
+        res.render('repo', {
             title:          repo.name,
             page:           'repo',
             user:           viewer,
@@ -3253,14 +3783,14 @@ app.get('/o/:repoId', anonymousAuth, async (req, res) => {
         });
     } catch (err) {
         console.error('Error rendering repo page:', err);
-        res.status(500).render('v2/404', { title: 'Error', page: '', user: req.user ?? null });
+        res.status(500).render('404', { title: 'Error', page: '', user: req.user ?? null });
     }
 });
 
 app.get('/o/:topic/:tag', anonymousAuth, (req, res) => {
     const topic = req.params.topic || '';
     const tag   = req.params.tag   || '';
-    res.render('v2/repository', { title: `#${tag} in ${topic}`, page: 'repository', user: req.user ?? null, domain: topic, tag });
+    res.render('repository', { title: `#${tag} in ${topic}`, page: 'repository', user: req.user ?? null, domain: topic, tag });
 });
 
 // Report page — /v2/report/:bucketId
@@ -3268,12 +3798,12 @@ app.get('/report/:bucketId', anonymousAuth, async (req, res) => {
     try {
         const { bucketId } = req.params;
         const bucket = await Bucket.findById(bucketId).lean();
-        if (!bucket) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+        if (!bucket) return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null });
 
         const vis = bucketVisibility(bucket);
         const isOwner = !!(req.user && !req.user.isAnonymous && bucket.userId.toString() === req.user._id.toString());
         if (vis === 'private' && !isOwner) {
-            return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+            return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null });
         }
 
         const curator = await User.findById(bucket.userId).select('username avatar anonymousId').lean();
@@ -3281,7 +3811,7 @@ app.get('/report/:bucketId', anonymousAuth, async (req, res) => {
         const curatorAvatar = curator?.avatar   || null;
         const thumbnailUrl  = bucket.thumbnail  || bucket.links?.find(l => l.image)?.image || null;
 
-        res.render('v2/report', {
+        res.render('report', {
             title: 'Report · ' + bucket.name,
             page: '',
             user: req.user ?? null,
@@ -3379,7 +3909,7 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
     try {
         const { bucketId } = req.params;
         const bucket = await Bucket.findById(bucketId).lean();
-        if (!bucket) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+        if (!bucket) return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null });
 
         const curator = await User.findById(bucket.userId).select('username avatar anonymousId').lean();
         const curatorName        = curator?.username    || 'Anonymous';
@@ -3392,13 +3922,13 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
         const vis = bucketVisibility(bucket);
         const isOwner = !!(req.user && !req.user.isAnonymous && bucket.userId.toString() === req.user._id.toString());
         if (vis === 'private' && !isOwner) {
-            return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+            return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null });
         }
 
         // Block check: if bucket's curator has blocked the viewer, treat as 404
         if (!isOwner && req.user && !req.user.isAnonymous) {
             const blocked = await Block.exists({ blockerId: bucket.userId, blockedId: req.user._id });
-            if (blocked) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user ?? null });
+            if (blocked) return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null });
         }
 
         const hasAccess = isOwner
@@ -3460,7 +3990,7 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
         const hasThumbnail = !!(bucket.thumbnail || bucket.links?.some(l => l.image));
         const ogImage = hasThumbnail ? `${shareBaseUrl}/b/${bucketId}/thumbnail.jpg` : null;
 
-        res.render('v2/bucket', {
+        res.render('bucket', {
             title: bucket.name,
             page: 'explore',
             user: req.user ?? null,
@@ -3482,6 +4012,7 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
             ratingAvg,
             commentCount,
             isUnlisted: vis === 'unlisted',
+            bucketOwningId: isOwner ? (bucket.bucketOwningId || null) : null,
             ogTitle: `${bucket.name} - Shared Link Collection`,
             ogDescription: '',
             ogUrl: bucketUrl,
@@ -3497,31 +4028,31 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
 const MSG_DEFAULTS = { activeConversationId: null, conversation: null, otherUser: null };
 
 app.get('/messages', anonymousAuth, requireAuth, requireVerification, (req, res) => {
-    res.render('v2/messages', { title: 'Messages', page: 'messages', user: req.user, ...MSG_DEFAULTS });
+    res.render('messages', { title: 'Messages', page: 'messages', user: req.user, ...MSG_DEFAULTS });
 });
 
 app.get('/messages/:conversationId', anonymousAuth, requireAuth, requireVerification, async (req, res) => {
     try {
         const { conversationId } = req.params;
         if (!mongoose.Types.ObjectId.isValid(conversationId)) {
-            return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user });
+            return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user });
         }
 
         const conversation = await Conversation.findById(conversationId).lean();
-        if (!conversation) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user });
+        if (!conversation) return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user });
 
         const isParticipant = conversation.participants.some(p => p.toString() === req.user._id.toString());
-        if (!isParticipant) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user });
+        if (!isParticipant) return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user });
 
         const otherId = conversation.participants.find(p => p.toString() !== req.user._id.toString());
         if (otherId) {
             const blocked = await Block.exists({ blockerId: otherId, blockedId: req.user._id });
-            if (blocked) return res.status(404).render('v2/404', { title: 'Not Found', page: '', user: req.user });
+            if (blocked) return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user });
         }
 
         const otherUser = otherId ? await User.findById(otherId).select('username avatar anonymousId').lean() : null;
 
-        res.render('v2/messages', {
+        res.render('messages', {
             title:                `Chat with @${otherUser?.username || 'User'}`,
             page:                 'messages',
             user:                 req.user,
@@ -3536,12 +4067,27 @@ app.get('/messages/:conversationId', anonymousAuth, requireAuth, requireVerifica
 });
 
 // Start the server
+async function backfillBucketOwningIds() {
+    const buckets = await Bucket.find({ bucketOwningId: { $exists: false } }, '_id').lean();
+    if (!buckets.length) return;
+    const ops = buckets.map(b => ({
+        updateOne: {
+            filter: { _id: b._id },
+            update: { $set: { bucketOwningId: randomBytes(16).toString('hex') } },
+        },
+    }));
+    const result = await mongoose.connection.collection('buckets').bulkWrite(ops, { ordered: false });
+    console.log(`[migration] backfilled bucketOwningId on ${result.modifiedCount} buckets`);
+}
+
 connectMongo()
     .then(() => {
+        backfillBucketOwningIds().catch(err => console.error('[migration] backfillBucketOwningIds failed:', err));
         server.listen(PORT, () => {
             console.log(`Server running at http://localhost:${PORT}`);
             console.log(`Scraping endpoint: http://localhost:${PORT}/scrape?url=YOUR_URL`);
             console.log(`Frontend available at http://localhost:${PORT}`);
+            console.log(`Dev To-Do: http://localhost:${PORT}/todo.html`);
         });
 
         // Run the repository build immediately, then every hour
