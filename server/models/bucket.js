@@ -111,8 +111,13 @@ const bucketSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
-    // Direct views only (not explore-driven) — used in exploreScore to avoid circular feedback
+    // Direct views only (not explore- or showroom-driven) — used in exploreScore to avoid circular feedback
     directViewCount: {
+      type: Number,
+      default: 0
+    },
+    // Views arriving via the showroom feed (?src=showroom) — excluded from directViewCount
+    showroomViewCount: {
       type: Number,
       default: 0
     },

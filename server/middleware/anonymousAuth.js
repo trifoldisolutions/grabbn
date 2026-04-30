@@ -27,6 +27,7 @@ function lookupRegion(req) {
  * Creates or retrieves anonymous user based on session token
  */
 export async function anonymousAuth(req, res, next) {
+  if (req.user) return next();
   try {
     // Check for existing session token in cookie or header
     const sessionToken =

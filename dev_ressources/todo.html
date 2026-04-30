@@ -20,10 +20,10 @@
     <!-- Add form -->
     <form id="add-form" class="flex flex-col gap-2 mb-6">
       <div class="flex gap-2">
-        <input id="task-input" type="text" placeholder="Add a new task..." autocomplete="off"
+        <input id="task-input" type="text" placeholder="Search or add a task..." autocomplete="off"
           class="flex-1 bg-silver-950 border border-woodsmoke-800 rounded-lg px-4 py-2.5 text-base text-woodsmoke-100 placeholder-woodsmoke-500 outline-none focus:border-orchid-600 transition-colors" />
-        <button type="submit"
-          class="bg-orchid-600 hover:bg-orchid-500 text-white text-base font-semibold px-5 py-2.5 rounded-lg transition-colors whitespace-nowrap">
+        <button id="btn-add-task" type="submit" disabled
+          class="bg-orchid-600 text-white text-base font-semibold px-5 py-2.5 rounded-lg transition-colors whitespace-nowrap opacity-40 cursor-not-allowed">
           Add task
         </button>
       </div>
@@ -40,7 +40,13 @@
         <button data-filter="pending" class="filter-btn text-sm px-3 py-1 rounded-md border border-woodsmoke-800 text-woodsmoke-500 hover:border-orchid-600 hover:text-orchid-400 transition-colors">Pending</button>
         <button data-filter="done"    class="filter-btn text-sm px-3 py-1 rounded-md border border-woodsmoke-800 text-woodsmoke-500 hover:border-orchid-600 hover:text-orchid-400 transition-colors">Completed</button>
       </div>
-      <p id="stats" class="text-sm text-woodsmoke-500"></p>
+      <div class="flex items-center gap-3">
+        <p id="stats" class="text-sm text-woodsmoke-500"></p>
+        <button id="btn-open-trash" class="hidden items-center gap-1.5 text-sm text-woodsmoke-100 hover:text-white transition-colors">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          <span id="trash-count"></span>
+        </button>
+      </div>
     </div>
 
     <!-- Tag filter cloud -->
@@ -49,16 +55,23 @@
     <!-- Task list -->
     <div id="task-list" class="flex flex-col gap-2"></div>
 
-    <!-- Trash section -->
-    <div id="trash-section" class="mt-10 hidden">
-      <div class="flex items-center gap-2 mb-3">
-        <svg class="w-4 h-4 text-woodsmoke-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-        <h2 class="text-sm font-semibold text-woodsmoke-500 uppercase tracking-wider">Trash</h2>
-        <span id="trash-count" class="text-xs text-woodsmoke-600"></span>
-      </div>
-      <div id="trash-list" class="flex flex-col gap-2"></div>
-    </div>
+  </div>
 
+  <!-- Trash modal -->
+  <div id="trash-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="trash-backdrop"></div>
+    <div class="relative w-full max-w-2xl max-h-[80vh] flex flex-col bg-woodsmoke-950 border border-woodsmoke-800 rounded-2xl shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-woodsmoke-800 shrink-0">
+        <div class="flex items-center gap-2">
+          <svg class="w-4 h-4 text-woodsmoke-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          <h2 class="text-sm font-semibold text-woodsmoke-300">Trash</h2>
+        </div>
+        <button id="btn-close-trash" class="w-7 h-7 flex items-center justify-center rounded-md text-woodsmoke-500 hover:bg-woodsmoke-800 hover:text-woodsmoke-100 transition-colors">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="trash-list" class="overflow-y-auto flex flex-col gap-2 p-4"></div>
+    </div>
   </div>
 
   <template id="task-tpl">
@@ -111,13 +124,13 @@
   </template>
 
   <template id="trash-tpl">
-    <div class="trash-row flex items-start gap-3 bg-silver-950 border border-woodsmoke-800 rounded-xl p-3 opacity-60">
+    <div class="trash-row flex items-start gap-3 bg-silver-950 border border-woodsmoke-800 rounded-xl p-3">
       <div class="trash-body flex-1 min-w-0">
         <div class="flex items-baseline gap-2">
-          <p class="trash-name text-[1.1rem] font-bold leading-snug line-through text-woodsmoke-500 wrap-break-word"></p>
-          <span class="trash-short-id text-xs font-mono text-woodsmoke-700 shrink-0"></span>
+          <p class="trash-name text-[1.1rem] font-bold leading-snug text-woodsmoke-100 wrap-break-word"></p>
+          <span class="trash-short-id text-xs font-mono text-woodsmoke-600 shrink-0"></span>
         </div>
-        <p class="trash-desc text-sm text-woodsmoke-500 leading-relaxed mt-1 wrap-break-word whitespace-pre-wrap"></p>
+        <p class="trash-desc text-sm text-woodsmoke-200 leading-relaxed mt-1 wrap-break-word whitespace-pre-wrap"></p>
         <div class="trash-tags flex flex-wrap gap-1 mt-1.5"></div>
       </div>
       <div class="flex gap-1 shrink-0">
@@ -139,6 +152,7 @@
     let trashed    = [];
     let filter     = 'all';
     let activeTags = new Set();
+    let searchQuery = '';
 
     const TAG_COLORS = {
       'admin-panel':  { bg: 'bg-orchid-950',   text: 'text-orchid-300',   outline: '#943792' },
@@ -198,8 +212,8 @@
 
     async function fetchTasks() {
       const [activeRes, trashRes] = await Promise.all([fetch(API), fetch(`${API}/trash`)]);
-      tasks   = await activeRes.json();
-      trashed = await trashRes.json();
+      tasks   = activeRes.ok  ? await activeRes.json()  : [];
+      trashed = trashRes.ok   ? await trashRes.json()   : [];
       renderTagCloud();
       render();
       renderTrash();
@@ -268,14 +282,15 @@
     }
 
     function renderTrash() {
-      const section = document.getElementById('trash-section');
-      const list    = document.getElementById('trash-list');
-      const count   = document.getElementById('trash-count');
+      const btn  = document.getElementById('btn-open-trash');
+      const list = document.getElementById('trash-list');
+      const count = document.getElementById('trash-count');
       list.innerHTML = '';
 
-      if (!trashed.length) { section.classList.add('hidden'); return; }
-      section.classList.remove('hidden');
-      count.textContent = `${trashed.length} item${trashed.length !== 1 ? 's' : ''}`;
+      if (!trashed.length) { btn.classList.remove('flex'); btn.classList.add('hidden'); return; }
+      btn.classList.remove('hidden');
+      btn.classList.add('flex');
+      count.textContent = `${trashed.length} deleted`;
 
       const tpl = document.getElementById('trash-tpl');
       for (const t of trashed) {
@@ -287,17 +302,30 @@
         if (t.description) { descEl.textContent = t.description; } else { descEl.remove(); }
         const tagsEl = row.querySelector('.trash-tags');
         (t.tags ?? []).forEach(tag => tagsEl.appendChild(buildTagPill(tag, false)));
-        row.querySelector('.btn-restore').addEventListener('click',      () => restoreTask(t._id));
-        row.querySelector('.btn-perm-delete').addEventListener('click',  () => permanentDelete(t._id));
+        row.querySelector('.btn-restore').addEventListener('click',     () => restoreTask(t._id));
+        row.querySelector('.btn-perm-delete').addEventListener('click', () => permanentDelete(t._id));
         list.appendChild(node);
       }
     }
 
+    function openTrashModal()  { document.getElementById('trash-modal').classList.replace('hidden', 'flex'); }
+    function closeTrashModal() { document.getElementById('trash-modal').classList.replace('flex', 'hidden'); }
+
+    document.getElementById('btn-open-trash').addEventListener('click', openTrashModal);
+    document.getElementById('btn-close-trash').addEventListener('click', closeTrashModal);
+    document.getElementById('trash-backdrop').addEventListener('click', closeTrashModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTrashModal(); });
+
     function visibleTasks() {
+      const q = searchQuery.trim().toLowerCase().replace(/^#/, '');
       return tasks.filter(t => {
         const statusOk = filter === 'all' ? true : filter === 'done' ? !!t.completedAt : !t.completedAt;
         const tagOk    = activeTags.size === 0 || [...activeTags].every(tag => (t.tags ?? []).includes(tag));
-        return statusOk && tagOk;
+        const searchOk = !q
+          || t.name.toLowerCase().includes(q)
+          || (t.description ?? '').toLowerCase().includes(q)
+          || t._id.slice(-6).toLowerCase().includes(q);
+        return statusOk && tagOk && searchOk;
       });
     }
 
@@ -393,6 +421,18 @@
       }
     }
 
+    // Search + add-btn toggle
+    const btnAdd = document.getElementById('btn-add-task');
+    document.getElementById('task-input').addEventListener('input', e => {
+      searchQuery = e.target.value;
+      const hasValue = e.target.value.trim().length > 0;
+      btnAdd.disabled = !hasValue;
+      btnAdd.classList.toggle('opacity-40', !hasValue);
+      btnAdd.classList.toggle('cursor-not-allowed', !hasValue);
+      btnAdd.classList.toggle('hover:bg-orchid-500', hasValue);
+      render();
+    });
+
     // Add form
     document.getElementById('add-form').addEventListener('submit', e => {
       e.preventDefault();
@@ -404,6 +444,7 @@
       nameInput.value = '';
       descInput.value = '';
       tagsInput.value = '';
+      searchQuery = '';
     });
 
     // Status filters

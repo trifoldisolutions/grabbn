@@ -154,7 +154,7 @@
 
         card.innerHTML = `
             <div class="relative p-2">
-                <a href="/b/${escAttr(b._id)}" class="block aspect-square overflow-hidden rounded-sm bg-silver-100">
+                <a href="/b/${escAttr(b._id)}?src=explore" class="block aspect-square overflow-hidden rounded-sm bg-silver-100">
                     ${thumbContent}
                 </a>
                 <div class="absolute bottom-4 right-4 flex items-center gap-1">
@@ -168,7 +168,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-1 px-3 pt-2.5 pb-0 min-w-0">
-                <p class="font-semibold truncate flex-1 text-woodsmoke-950">${escHtml(b.name)}</p>
+                <a href="/b/${escAttr(b._id)}?src=explore" class="font-semibold truncate flex-1 text-woodsmoke-950 hover:underline min-w-0">${escHtml(b.name)}</a>
                 <div class="relative shrink-0">
                     <button class="menu-btn w-6 h-6 rounded-full flex items-center justify-center text-gray-400 hover:text-woodsmoke-950 hover:bg-gray-100 transition-colors" data-bucket-id="${escAttr(b._id)}">
                         ${MORE_ICON}

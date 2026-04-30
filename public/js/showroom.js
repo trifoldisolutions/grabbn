@@ -72,7 +72,7 @@
 
     function createCard(b) {
         const card = document.createElement('a');
-        card.href      = `/b/${b._id}`;
+        card.href      = `/b/${b._id}?src=showroom`;
         card.className = 'flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer';
 
         // Thumbnail / placeholder

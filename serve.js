@@ -339,13 +339,16 @@ app.get('/', (req, res) => {
 
 // Mongo connection
 async function connectMongo() {
-    const uri = process.env.MONGODB_URI;
+    const isProd = process.env.NODE_ENV === 'production';
+    const uri = isProd
+        ? (process.env.ATLAS_URL || process.env.MONGODB_URI)
+        : process.env.MONGODB_URI;
     const dbName = process.env.MONGODB_DB || 'grabbn';
     if (!uri) {
         throw new Error('MONGODB_URI is not set in .env');
     }
     await mongoose.connect(uri, { dbName });
-    console.log(`MongoDB connected to database: ${dbName}`);
+    console.log(`MongoDB connected [${isProd ? 'production' : 'development'}]: ${dbName}`);
 }
 
 // ====================
@@ -1882,8 +1885,11 @@ app.delete('/api/buckets/grab/:sourceBucketId', requireAuth, requireVerification
 // deduplicating permanently by userId (logged-in) or IP (anon).
 // isOwner check must be done by the caller before invoking this.
 async function trackBucketView(bucketId, userId, ip, source) {
-    const isExplore = source === 'explore';
-    const inc = isExplore ? { viewCount: 1 } : { viewCount: 1, directViewCount: 1 };
+    const inc = source === 'explore'
+        ? { viewCount: 1 }
+        : source === 'showroom'
+            ? { viewCount: 1, showroomViewCount: 1 }
+            : { viewCount: 1, directViewCount: 1 };
     if (userId) {
         const exists = await BucketView.exists({ bucketId, userId });
         if (!exists) {
@@ -3667,67 +3673,68 @@ app.get('/@:username', (req, res) => {
 
 // Profile page — /v2/u/:username  (public — anyone can view)
 app.get('/u/:username', anonymousAuth, async (req, res) => {
-    // Who is being viewed
-    const profileUser = await User.findOne({ username: req.params.username, isAnonymous: false }).lean();
-    if (!profileUser) return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null }).catch(() => res.status(404).send('User not found'));
+    try {
+        const profileUser = await User.findOne({ username: req.params.username, isAnonymous: false }).lean();
+        if (!profileUser) return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null });
 
-    // Is the logged-in user the owner of this profile?
-    const viewer  = req.user ?? null;
-    const isOwner = !!(viewer && !viewer.isAnonymous && viewer._id.toString() === profileUser._id.toString());
+        const viewer  = req.user ?? null;
+        const isOwner = !!(viewer && !viewer.isAnonymous && viewer._id.toString() === profileUser._id.toString());
 
-    // Block check: if profileUser has blocked the viewer, treat as 404
-    if (!isOwner && viewer && !viewer.isAnonymous) {
-        const blocked = await Block.exists({ blockerId: profileUser._id, blockedId: viewer._id });
-        if (blocked) return res.status(404).render('404', { title: 'Not Found', page: '', user: viewer });
+        if (!isOwner && viewer && !viewer.isAnonymous) {
+            const blocked = await Block.exists({ blockerId: profileUser._id, blockedId: viewer._id });
+            if (blocked) return res.status(404).render('404', { title: 'Not Found', page: '', user: viewer });
+        }
+
+        const addDisplayThumb = (b) => ({
+            ...b,
+            _id: b._id.toString(),
+            displayThumb: b.thumbnail || b.links?.find(l => l.image)?.image || null,
+        });
+
+        const bucketFilter = isOwner
+            ? { userId: profileUser._id }
+            : { userId: profileUser._id, ...FILTER_PUBLIC };
+
+        const [allBuckets, subscriberCount, followingCount, rawGrabbed, userRepos] = await Promise.all([
+            Bucket.find(bucketFilter)
+                .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
+                .sort({ order: 1, createdAt: -1 })
+                .lean(),
+            Subscription.countDocuments({ followeeId: profileUser._id }),
+            Subscription.countDocuments({ followerId: profileUser._id }),
+            Bucket.find({ 'grabbedBy.userId': profileUser._id })
+                .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags ratingCount ratingSum createdAt updatedAt')
+                .populate('userId', 'username')
+                .sort({ createdAt: -1 })
+                .lean(),
+            UserRepo.find({ userId: profileUser._id }).sort({ name: 1 }).lean(),
+        ]);
+
+        const ownBuckets     = allBuckets.map(addDisplayThumb);
+        const grabbedBuckets = rawGrabbed.map(addDisplayThumb);
+        const totalViews     = ownBuckets.reduce((sum, b) => sum + (b.viewCount       ?? 0), 0);
+        const totalGrabs     = ownBuckets.reduce((sum, b) => sum + (b.grabbedBy?.length ?? 0), 0);
+        const memberSince    = new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+        res.render('profile', {
+            title:       `@${profileUser.username}`,
+            page:        'profile',
+            user:        viewer,
+            profileUser,
+            isOwner,
+            ownBuckets,
+            grabbedBuckets,
+            userRepos,
+            totalViews,
+            totalGrabs,
+            subscriberCount,
+            followingCount,
+            memberSince,
+        });
+    } catch (err) {
+        console.error('Profile page error:', err);
+        res.status(500).render('404', { title: 'Error', page: '', user: req.user ?? null });
     }
-
-    const addDisplayThumb = (b) => ({
-        ...b,
-        _id: b._id.toString(),
-        displayThumb: b.thumbnail || b.links?.find(l => l.image)?.image || null,
-    });
-
-    // Owners see all their buckets; visitors only see public ones (not unlisted)
-    const bucketFilter = isOwner
-        ? { userId: profileUser._id }
-        : { userId: profileUser._id, ...FILTER_PUBLIC };
-
-    const [allBuckets, subscriberCount, followingCount, rawGrabbed, userRepos] = await Promise.all([
-        Bucket.find(bucketFilter)
-            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
-            .sort({ order: 1, createdAt: -1 })
-            .lean(),
-        Subscription.countDocuments({ followeeId: profileUser._id }),
-        Subscription.countDocuments({ followerId: profileUser._id }),
-        Bucket.find({ 'grabbedBy.userId': profileUser._id })
-            .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags ratingCount ratingSum createdAt updatedAt')
-            .populate('userId', 'username')
-            .sort({ createdAt: -1 })
-            .lean(),
-        UserRepo.find({ userId: profileUser._id }).sort({ name: 1 }).lean(),
-    ]);
-
-    const ownBuckets     = allBuckets.map(addDisplayThumb);
-    const grabbedBuckets = rawGrabbed.map(addDisplayThumb);
-    const totalViews     = ownBuckets.reduce((sum, b) => sum + (b.viewCount       ?? 0), 0);
-    const totalGrabs     = ownBuckets.reduce((sum, b) => sum + (b.grabbedBy?.length ?? 0), 0);
-    const memberSince    = new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-    res.render('profile', {
-        title:       `@${profileUser.username}`,
-        page:        'profile',
-        user:        viewer,          // logged-in user → used by topbar/sidebar
-        profileUser,                  // the user whose profile this is
-        isOwner,
-        ownBuckets,
-        grabbedBuckets,
-        userRepos,
-        totalViews,
-        totalGrabs,
-        subscriberCount,
-        followingCount,
-        memberSince,
-    });
 });
 
 // Dynamic repository page — domain + tag come from the path
@@ -3964,7 +3971,7 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
         // Track view (fire-and-forget, skip owner)
         if (!isOwner) {
             const userId = (req.user && !req.user.isAnonymous) ? req.user._id : null;
-            const viewSource = req.query.src === 'explore' ? 'explore' : 'direct';
+            const viewSource = req.query.src === 'explore' ? 'explore' : req.query.src === 'showroom' ? 'showroom' : 'direct';
             trackBucketView(bucketId, userId, req.ip, viewSource).catch(() => {});
         }
 
