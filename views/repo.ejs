@@ -252,13 +252,13 @@
             pendingBucketId = bucketId;
             pendingRepoIds  = repoIds || [];
             modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+            window.lockScroll ? window.lockScroll() : (document.body.style.overflow = 'hidden');
             if (repoCache) { renderRepos(repoCache); } else { loadRepos(); }
         }
 
         function closeModal() {
             modal.classList.add('hidden');
-            document.body.style.overflow = '';
+            window.unlockScroll ? window.unlockScroll() : (document.body.style.overflow = '');
             listEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
             confirmBtn.disabled = true;
         }
@@ -356,13 +356,13 @@
             pendingBucketId = bucketId;
             pendingRepoIds  = repoIds || [];
             modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+            window.lockScroll ? window.lockScroll() : (document.body.style.overflow = 'hidden');
             if (repoCache) { renderRepos(repoCache); } else { loadRepos(); }
         }
 
         function closeModal() {
             modal.classList.add('hidden');
-            document.body.style.overflow = '';
+            window.unlockScroll ? window.unlockScroll() : (document.body.style.overflow = '');
             listEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
             confirmBtn.disabled = true;
         }

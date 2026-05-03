@@ -260,11 +260,13 @@
         if (editConfirmBtn) { editConfirmBtn.disabled = false; editConfirmBtn.textContent = 'Save Changes'; }
         if (editErrorEl) { editErrorEl.textContent = ''; editErrorEl.classList.add('hidden'); }
         editModal?.classList.remove('hidden');
+        if (window.lockScroll) window.lockScroll();
         setTimeout(() => { editInput?.select(); }, 50);
     }
 
     function closeEditModal() {
         editModal?.classList.add('hidden');
+        if (window.unlockScroll) window.unlockScroll();
         _editingBucket = null;
     }
 
@@ -833,6 +835,8 @@
             card.style.cursor = 'pointer';
             card.addEventListener('click', e => {
                 if (e.target.closest('.card-share-btn')) return;
+                if (e.target.closest('.card-menu-btn')) return;
+                if (e.target.closest('.card-context-menu')) return;
                 if (e.target.closest('a[href]')) return;
                 if (id === 'panelBuckets' && isOwner && window.openBucketModal) {
                     const bucket = window.__PROFILE_OWN__?.find(b => b._id === card.dataset.bucketId);

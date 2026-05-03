@@ -10,6 +10,7 @@ const linkSchema = new mongoose.Schema({
   image: { type: String, default: null },
   clickCount: { type: Number, default: 0 },
   isPinned: { type: Boolean, default: false },
+  isArchived: { type: Boolean, default: false },
   addedAt: { type: Date, default: Date.now }
 }, { _id: false });
 

@@ -11,6 +11,13 @@ body.grabbn-pick-mode * {
   background-color: rgba(179, 70, 179, 0.08) !important;
 }
 
+.grabbn-link-selected {
+  outline: 2px solid #b346b3 !important;
+  outline-offset: 2px !important;
+  border-radius: 3px !important;
+  background-color: rgba(179, 70, 179, 0.14) !important;
+}
+
 /* ── Hint banner ─────────────────────────────────────────────────────────── */
 #grabbn-hint {
   position: fixed;
@@ -94,6 +101,20 @@ body.grabbn-pick-mode * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  border-bottom: 1px solid #efefef;
+}
+
+#grabbn-meta-note {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #8a5a11;
+  background: #fff7e6;
+  padding: 0 14px;
+}
+
+#grabbn-meta-note:not(:empty) {
+  padding-top: 8px;
+  padding-bottom: 8px;
   border-bottom: 1px solid #efefef;
 }
 
@@ -265,3 +286,131 @@ body.grabbn-pick-mode * {
 }
 
 #grabbn-done-btn:hover { background: #943792; }
+
+/* ── Selection panel ─────────────────────────────────────────────────────── */
+#grabbn-sel-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2147483647;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 8px 40px rgba(64, 18, 61, 0.22);
+  width: 300px;
+  max-height: 380px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Jost', system-ui, sans-serif;
+}
+
+#grabbn-sel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px 10px;
+  border-bottom: 1px solid #efefef;
+  flex-shrink: 0;
+}
+
+#grabbn-sel-logo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #943792;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+#grabbn-sel-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b346b3;
+  background: #fdf6fd;
+  padding: 2px 9px;
+  border-radius: 10px;
+}
+
+#grabbn-sel-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.grabbn-sel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+
+.grabbn-sel-row:hover { background: #fdf6fd; }
+
+.grabbn-sel-cb {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  accent-color: #b346b3;
+  cursor: pointer;
+}
+
+.grabbn-sel-row-text {
+  flex: 1;
+  font-size: 12px;
+  color: #333333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#grabbn-sel-footer {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid #efefef;
+  flex-shrink: 0;
+}
+
+#grabbn-sel-cancel {
+  flex: 1;
+  height: 36px;
+  background: none;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #525252;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+
+#grabbn-sel-cancel:hover { background: #f8f8f8; }
+
+#grabbn-sel-save {
+  flex: 2;
+  height: 36px;
+  background: #b346b3;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+#grabbn-sel-save:hover { background: #943792; }
+
+#grabbn-sel-error {
+  font-size: 11px;
+  color: #dc2626;
+  text-align: center;
+  padding: 4px 14px 2px;
+}

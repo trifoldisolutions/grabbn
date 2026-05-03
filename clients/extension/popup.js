@@ -12,6 +12,14 @@ function showView(name) {
   views[name].style.display = name === 'loggedin' || name === 'login' || name === 'otp' ? 'block' : 'flex';
 }
 
+async function savePendingOtp(email) {
+  await chrome.storage.session.set({ pendingOtpEmail: email });
+}
+
+async function clearPendingOtp() {
+  await chrome.storage.session.remove('pendingOtpEmail');
+}
+
 function setError(id, msg) {
   document.getElementById(id).textContent = msg;
 }
@@ -20,12 +28,21 @@ function setError(id, msg) {
 // Boot — check auth state
 // ---------------------------------------------------------------------------
 
-chrome.runtime.sendMessage({ type: 'CHECK_AUTH' }, (res) => {
+chrome.runtime.sendMessage({ type: 'CHECK_AUTH' }, async (res) => {
   if (res?.authenticated && res.user) {
+    await clearPendingOtp();
     document.getElementById('header-user').textContent = res.user.username || res.user.email || '';
     showView('loggedin');
   } else {
-    showView('login');
+    // Restore OTP view if user left to check their email
+    const { pendingOtpEmail } = await chrome.storage.session.get('pendingOtpEmail');
+    if (pendingOtpEmail) {
+      pendingEmail = pendingOtpEmail;
+      document.getElementById('otp-hint').textContent = `Enter the 6-digit code sent to ${pendingEmail}.`;
+      showView('otp');
+    } else {
+      showView('login');
+    }
   }
 });
 
@@ -52,6 +69,7 @@ document.getElementById('btn-login').addEventListener('click', async () => {
   if (!res.ok) { setError('login-error', res.error); return; }
 
   pendingEmail = res.email || email;
+  await savePendingOtp(pendingEmail);
   document.getElementById('otp-hint').textContent = `Enter the 6-digit code sent to ${pendingEmail}.`;
   showView('otp');
 });
@@ -82,6 +100,7 @@ document.getElementById('btn-otp').addEventListener('click', async () => {
 
   if (!res.ok) { setError('otp-error', res.error); return; }
 
+  await clearPendingOtp();
   document.getElementById('header-user').textContent = res.user?.username || res.user?.email || '';
   showView('loggedin');
 });

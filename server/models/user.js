@@ -108,6 +108,10 @@ const userSchema = new mongoose.Schema(
       enum: ['user', 'moderator', 'superadmin'],
       default: 'user'
     },
+    // Daily meta-fetch quota (persisted so server restarts don't reset counts)
+    metaFetchDate:  { type: String, default: null },  // YYYY-MM-DD UTC
+    metaFetchCount: { type: Number, default: 0 },
+    metaFetchBonus: { type: Number, default: 0 },
     // Rate-limiting for comment posts (1 comment per minute per user)
     lastCommentAt: { type: Date, default: null },
     // Region inferred from IP on first visit (ISO 3166-1 alpha-2 country + subdivision code)

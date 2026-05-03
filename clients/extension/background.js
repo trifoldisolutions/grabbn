@@ -11,8 +11,13 @@ async function fetchImageBase64(url) {
     const buf = await res.arrayBuffer();
     if (buf.byteLength > MAX_IMAGE_BYTES) return '';
     const mime = (res.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
-    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-    return `data:${mime};base64,${b64}`;
+    // Chunk to avoid "Maximum call stack" from spreading large Uint8Arrays
+    const bytes = new Uint8Array(buf);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    }
+    return `data:${mime};base64,${btoa(binary)}`;
   } catch {
     return '';
   }
@@ -166,9 +171,21 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       case 'GET_META': {
         try {
           const res = await apiRequest(`/api/meta?url=${encodeURIComponent(msg.url)}`);
-          if (!res.ok) { sendResponse({ ok: false }); return; }
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            sendResponse({ ok: false, error: errData.error || '', used: errData.used, limit: errData.limit });
+            return;
+          }
           const data = await res.json();
-          sendResponse({ ok: true, title: data.title || '', image: data.image || '' });
+          sendResponse({
+            ok: true,
+            title: data.title || '',
+            image: data.image || '',
+            images: data.images || [],
+            provider: data.provider || '',
+            imageStatus: data.imageStatus || '',
+            imageReason: data.imageReason || '',
+          });
         } catch {
           sendResponse({ ok: false });
         }
@@ -187,9 +204,50 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         break;
       }
 
+      case 'SAVE_LINKS': {
+        // Bulk save: msg.links = [{ href, text, image, images }], msg.bucketNames = [...]
+        try {
+          const processedLinks = [];
+          for (const link of msg.links || []) {
+            let image = link.image?.startsWith('data:') ? link.image : '';
+            if (!image && link.images?.length) {
+              for (const url of link.images) {
+                image = await fetchImageBase64(url);
+                if (image) break;
+              }
+            }
+            if (!image && link.image) image = await fetchImageBase64(link.image);
+            processedLinks.push({ href: link.href, text: link.text || '', image });
+          }
+          const res = await apiRequest('/api/links', {
+            method: 'POST',
+            body: JSON.stringify({ links: processedLinks, buckets: msg.bucketNames }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            sendResponse({ ok: false, error: err.error || 'Failed to save' });
+            return;
+          }
+          sendResponse({ ok: true });
+        } catch (err) {
+          sendResponse({ ok: false, error: err.message });
+        }
+        break;
+      }
+
       case 'SAVE_LINK': {
         try {
-          const image = await fetchImageBase64(msg.image);
+          // GET_META already resolved the image to base64 where possible.
+          // If msg.image is base64 use it directly; otherwise try server candidates
+          // then the DOM fallback URL as last resort.
+          let image = msg.image?.startsWith('data:') ? msg.image : '';
+          if (!image && msg.images?.length) {
+            for (const url of msg.images) {
+              image = await fetchImageBase64(url);
+              if (image) break;
+            }
+          }
+          if (!image && msg.image) image = await fetchImageBase64(msg.image);
           const res = await apiRequest('/api/links', {
             method: 'POST',
             body: JSON.stringify({

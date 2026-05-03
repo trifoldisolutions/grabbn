@@ -53,7 +53,8 @@
                 <!-- Badges -->
                 <div class="flex items-center flex-wrap gap-2">
                     <span class="inline-flex items-center bg-orchid-50 text-orchid-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-orchid-200">
-                        <%= bucket.links.length %> link<%= bucket.links.length !== 1 ? 's' : '' %>
+                        <% var _activeCount = bucket.links.filter(function(l){ return !l.isArchived; }).length; %>
+                        <%= _activeCount %> link<%= _activeCount !== 1 ? 's' : '' %>
                     </span>
                     <% if (bucket.isPaywalled) { %>
                     <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-200">
@@ -258,13 +259,15 @@
 
 <div id="bvLinksScroll" class="overflow-y-auto scrollbar-hide pb-16 md:pb-0 px-3">
 <%
-    const sortedLinks = bucket.links.slice().sort(function(a, b) {
+    const allSorted    = bucket.links.slice().sort(function(a, b) {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         return (b.clickCount || 0) - (a.clickCount || 0);
     });
-    const freeLinks   = bucket.isPaywalled ? sortedLinks.filter(function(l){ return l.isFree; })  : sortedLinks;
-    const lockedLinks = bucket.isPaywalled ? sortedLinks.filter(function(l){ return !l.isFree; }) : [];
+    // Archived links are never shown in the main grid
+    const sortedLinks  = allSorted.filter(function(l){ return !l.isArchived; });
+    const freeLinks    = bucket.isPaywalled ? sortedLinks.filter(function(l){ return l.isFree; }) : sortedLinks;
+    const lockedLinks  = bucket.isPaywalled ? sortedLinks.filter(function(l){ return !l.isFree; }) : [];
     const visibleLinks = hasAccess ? sortedLinks : freeLinks;
     const showLocked   = bucket.isPaywalled && !hasAccess && lockedLinks.length > 0;
 
@@ -274,7 +277,7 @@
     var clickRank = {};
     _ranked.forEach(function(l, i){ clickRank[l.href] = i + 1; });
 %>
-            <% if (bucket.links.length === 0) { %>
+            <% if (sortedLinks.length === 0) { %>
             <div class="py-12 text-center text-woodsmoke-400 text-sm italic">No links in this collection.</div>
             <% } else { %>
 
@@ -619,13 +622,13 @@
         function openModal(linkData) {
             pendingLink = linkData;
             modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+            window.lockScroll ? window.lockScroll() : (document.body.style.overflow = 'hidden');
             loadBuckets();
         }
 
         function closeModal() {
             modal.classList.add('hidden');
-            document.body.style.overflow = '';
+            window.unlockScroll ? window.unlockScroll() : (document.body.style.overflow = '');
             listEl.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = false; });
             updateConfirmState();
         }
@@ -734,13 +737,13 @@
         function openModal(linkData) {
             pendingLink = linkData;
             modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+            window.lockScroll ? window.lockScroll() : (document.body.style.overflow = 'hidden');
             loadBuckets();
         }
 
         function closeModal() {
             modal.classList.add('hidden');
-            document.body.style.overflow = '';
+            window.unlockScroll ? window.unlockScroll() : (document.body.style.overflow = '');
             listEl.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = false; });
             updateConfirmState();
         }

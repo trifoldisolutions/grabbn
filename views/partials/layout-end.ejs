@@ -101,7 +101,7 @@
                             placeholder="https://..."
                             class="flex-1 min-w-0 text-sm bg-transparent outline-none text-woodsmoke-700 placeholder-woodsmoke-400"
                         />
-                        <button id="copySourceUrlBtn" title="Copy URL" class="shrink-0 w-8 h-8 flex items-center justify-center rounded text-woodsmoke-400 hover:text-orchid-600 transition-colors">
+                        <button id="copySourceUrlBtn" title="Copy URL" disabled class="shrink-0 w-8 h-8 flex items-center justify-center rounded text-woodsmoke-300 hover:text-orchid-600 transition-colors disabled:pointer-events-none">
                             <!-- mingcute:copy-fill -->
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
                         </button>
@@ -317,9 +317,17 @@
                             <button id="newRepoCancelBtn" type="button" class="w-9 h-9 flex items-center justify-center rounded-md border border-silver-200 text-woodsmoke-500 hover:border-orchid-400 hover:text-orchid-600 transition-colors shrink-0">✕</button>
                         </div>
                         <p id="newRepoError" class="hidden text-xs text-red-500"></p>
-                        <!-- Repo checklist -->
-                        <div id="repoCheckList" class="flex flex-col rounded-md border border-silver-200 divide-y divide-silver-50 overflow-y-auto max-h-40">
-                            <p id="repoNoReposMsg" class="px-3 py-3 text-sm text-woodsmoke-400 text-center italic">No repos yet</p>
+                        <!-- Repo dropdown -->
+                        <div id="repoDropdownWrap" class="relative">
+                            <button id="repoDropdownTrigger" type="button"
+                                class="w-full flex items-center gap-2.5 h-10 px-3 rounded-md border border-silver-200 bg-white hover:border-orchid-300 transition-colors text-left">
+                                <span id="repoDropdownThumb" class="shrink-0 w-6 h-6 rounded flex items-center justify-center bg-orchid-50 text-orchid-500"></span>
+                                <span id="repoDropdownLabel" class="flex-1 min-w-0 text-sm text-woodsmoke-400 truncate">No repo selected</span>
+                                <svg id="repoDropdownChevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="shrink-0 text-woodsmoke-400 transition-transform"><path fill="currentColor" d="M12 14.975q-.2 0-.375-.062T11.3 14.7l-4.6-4.6q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l3.9 3.9l3.9-3.9q.275-.275.7-.275t.7.275t.275.7t-.275.7l-4.6 4.6q-.15.15-.325.213t-.375.062"/></svg>
+                            </button>
+                            <div id="repoDropdownPanel" class="hidden absolute top-full left-0 right-0 mt-1 z-30 bg-white rounded-md border border-silver-200 shadow-lg overflow-y-auto max-h-52">
+                                <p id="repoNoReposMsg" class="px-3 py-3 text-sm text-woodsmoke-400 text-center italic">No repos yet</p>
+                            </div>
                         </div>
                     </div>
 
@@ -524,6 +532,106 @@
 
 
 <script>
+// ── Scroll lock (shared by all modals) ───────────────────────────────────────
+(function () {
+    var _lockCount = 0;
+    var _scrollY   = 0;
+    var _lockedEls = [];
+
+    function rememberStyles(el, props) {
+        var snapshot = { el: el, styles: {} };
+        props.forEach(function (prop) {
+            snapshot.styles[prop] = el.style[prop];
+        });
+        _lockedEls.push(snapshot);
+    }
+
+    function applyStyles(el, styles) {
+        Object.keys(styles).forEach(function (key) {
+            el.style[key] = styles[key];
+        });
+    }
+
+    function isScrollable(el) {
+        if (!el || el === document.body || el === document.documentElement) return false;
+        var style = window.getComputedStyle(el);
+        return /(auto|scroll|overlay)/.test(style.overflowY) && el.scrollHeight > el.clientHeight;
+    }
+
+    function visibleModalFor(target) {
+        if (!target || !target.closest) return null;
+        return target.closest('[aria-modal="true"]:not(.hidden), [role="dialog"]:not(.hidden)');
+    }
+
+    function shouldAllowWheelWithinModal(modal, target, deltaY) {
+        var node = target;
+        while (node && node !== modal) {
+            if (isScrollable(node)) {
+                if (!deltaY) return true;
+                var atTop = node.scrollTop <= 0;
+                var atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
+                if ((deltaY < 0 && !atTop) || (deltaY > 0 && !atBottom)) return true;
+            }
+            node = node.parentElement;
+        }
+        return false;
+    }
+
+    function handleWheelWhileLocked(e) {
+        if (_lockCount < 1) return;
+        var modal = visibleModalFor(e.target);
+        if (modal && shouldAllowWheelWithinModal(modal, e.target, e.deltaY || 0)) return;
+        e.preventDefault();
+    }
+
+    window.lockScroll = function () {
+        if (++_lockCount !== 1) return;
+        _scrollY = window.scrollY || window.pageYOffset;
+        _lockedEls = [];
+
+        var html = document.documentElement;
+        var b = document.body;
+        rememberStyles(html, ['overflow', 'overscrollBehavior']);
+        rememberStyles(b, ['position', 'top', 'left', 'right', 'overflowY', 'overscrollBehavior']);
+
+        applyStyles(html, {
+            overflow: 'hidden',
+            overscrollBehavior: 'none'
+        });
+        applyStyles(b, {
+            position: 'fixed',
+            top: '-' + _scrollY + 'px',
+            left: '0',
+            right: '0',
+            overflowY: 'scroll',
+            overscrollBehavior: 'none'
+        });
+
+        Array.prototype.forEach.call(document.querySelectorAll('main'), function (el) {
+            if (!isScrollable(el)) return;
+            rememberStyles(el, ['overflow', 'overscrollBehavior']);
+            applyStyles(el, {
+                overflow: 'hidden',
+                overscrollBehavior: 'none'
+            });
+        });
+
+        document.addEventListener('wheel', handleWheelWhileLocked, { passive: false, capture: true });
+    };
+    window.unlockScroll = function () {
+        if (--_lockCount > 0) return;
+        _lockCount = 0;
+        document.removeEventListener('wheel', handleWheelWhileLocked, { capture: true });
+        _lockedEls.forEach(function (entry) {
+            applyStyles(entry.el, entry.styles);
+        });
+        _lockedEls = [];
+        window.scrollTo(0, _scrollY);
+    };
+})();
+</script>
+
+<script>
 (function () {
     var user = window.__GRABBN_USER__;
 
@@ -553,7 +661,8 @@
         repoIds:      [], // array of ObjectId strings for selected UserRepos
         _linkThumbTargetId: null,
         _editBucket:        null,  // { _id, name } when editing an existing bucket
-        _originalSnapshot:  null   // snapshot of form state at modal open; used to detect no-op saves
+        _originalSnapshot:  null,  // snapshot of form state at modal open; used to detect no-op saves
+        archivedLinks:      []     // links hidden from viewers; shown in collapsed section for curator
     };
     window._nbState = state;
 
@@ -657,6 +766,7 @@
 
         function openTopupModal() {
             topupModal.classList.remove('hidden');
+            window.lockScroll();
             topupBalance.textContent = '— JWL';
             topupConfirmBtn.disabled = true;
             topupSummary.classList.add('hidden');
@@ -669,7 +779,7 @@
                 .catch(function () {});
         }
 
-        function closeTopupModal() { topupModal.classList.add('hidden'); }
+        function closeTopupModal() { topupModal.classList.add('hidden'); window.unlockScroll(); }
 
         increaseLimitLink.addEventListener('click', function (e) { e.preventDefault(); openTopupModal(); });
         topupBackdrop.addEventListener('click', closeTopupModal);
@@ -739,16 +849,22 @@
     var matureToggle            = document.getElementById('matureToggle');
     var isPartner = !!(user && user.isPartner);
 
-    // ── Repo checklist ───────────────────────────────────────────────────────
-    var newRepoPlusBtn    = document.getElementById('newRepoPlusBtn');
-    var newRepoInline     = document.getElementById('newRepoInline');
-    var newRepoNameInput  = document.getElementById('newRepoNameInput');
-    var newRepoConfirmBtn = document.getElementById('newRepoConfirmBtn');
-    var newRepoCancelBtn  = document.getElementById('newRepoCancelBtn');
-    var newRepoError      = document.getElementById('newRepoError');
-    var repoCheckList     = document.getElementById('repoCheckList');
-    var repoNoReposMsg    = document.getElementById('repoNoReposMsg');
-    var _cachedRepos      = [];
+    // ── Repo dropdown ─────────────────────────────────────────────────────────
+    var newRepoPlusBtn       = document.getElementById('newRepoPlusBtn');
+    var newRepoInline        = document.getElementById('newRepoInline');
+    var newRepoNameInput     = document.getElementById('newRepoNameInput');
+    var newRepoConfirmBtn    = document.getElementById('newRepoConfirmBtn');
+    var newRepoCancelBtn     = document.getElementById('newRepoCancelBtn');
+    var newRepoError         = document.getElementById('newRepoError');
+    var repoDropdownWrap     = document.getElementById('repoDropdownWrap');
+    var repoDropdownTrigger  = document.getElementById('repoDropdownTrigger');
+    var repoDropdownPanel    = document.getElementById('repoDropdownPanel');
+    var repoDropdownLabel    = document.getElementById('repoDropdownLabel');
+    var repoDropdownThumb    = document.getElementById('repoDropdownThumb');
+    var repoDropdownChevron  = document.getElementById('repoDropdownChevron');
+    var repoNoReposMsg       = document.getElementById('repoNoReposMsg');
+    var _cachedRepos         = [];
+    var _LAST_REPO_KEY       = 'grabbn_last_repo_id';
 
     var REPO_FOLDER_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h3.93a3 3 0 0 1 2.121.879l.707.707A1 1 0 0 0 13.465 5H19a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" opacity=".3"/><path fill="currentColor" fill-rule="evenodd" d="M6 5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-5.535a3 3 0 0 1-2.12-.879l-.708-.707A1 1 0 0 0 8.929 5zm-3 1a3 3 0 0 1 3-3h2.929a3 3 0 0 1 2.12.879l.708.707A1 1 0 0 0 12.465 5H18a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" clip-rule="evenodd"/></g></svg>';
 
@@ -756,56 +872,120 @@
         return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    function populateRepoList(repos, selectedIds) {
-        var sel = new Set((selectedIds || []).map(String));
-        Array.from(repoCheckList.querySelectorAll('.repo-check-item')).forEach(function(el) { el.remove(); });
+    function _repoThumbHtml(r, size) {
+        var s = size || 'w-6 h-6';
+        return r.thumb
+            ? '<span class="' + s + ' rounded shrink-0 overflow-hidden"><img src="' + _repoEscHtml(r.thumb) + '" class="w-full h-full object-cover"></span>'
+            : '<span class="' + s + ' rounded shrink-0 flex items-center justify-center bg-orchid-50 text-orchid-500">' + REPO_FOLDER_ICON + '</span>';
+    }
+
+    function setRepoTrigger(repo) {
+        if (!repo) {
+            repoDropdownThumb.innerHTML = REPO_FOLDER_ICON;
+            repoDropdownThumb.className = 'shrink-0 w-6 h-6 rounded flex items-center justify-center bg-silver-100 text-silver-400';
+            repoDropdownLabel.textContent = 'No repo selected';
+            repoDropdownLabel.classList.add('text-woodsmoke-400');
+            repoDropdownLabel.classList.remove('text-woodsmoke-900');
+        } else {
+            repoDropdownThumb.innerHTML = repo.thumb
+                ? '<img src="' + _repoEscHtml(repo.thumb) + '" class="w-full h-full object-cover">'
+                : REPO_FOLDER_ICON;
+            repoDropdownThumb.className = repo.thumb
+                ? 'shrink-0 w-6 h-6 rounded overflow-hidden'
+                : 'shrink-0 w-6 h-6 rounded flex items-center justify-center bg-orchid-50 text-orchid-500';
+            repoDropdownLabel.textContent = repo.name;
+            repoDropdownLabel.classList.remove('text-woodsmoke-400');
+            repoDropdownLabel.classList.add('text-woodsmoke-900');
+        }
+    }
+
+    function selectRepo(repoId) {
+        state.repoIds = repoId ? [repoId] : [];
+        if (repoId) {
+            try { localStorage.setItem(_LAST_REPO_KEY, repoId); } catch(e) {}
+        }
+        var repo = repoId ? _cachedRepos.find(function(r) { return String(r._id) === repoId; }) : null;
+        setRepoTrigger(repo);
+        // update highlight in panel
+        repoDropdownPanel.querySelectorAll('.repo-dd-item').forEach(function(el) {
+            var active = el.dataset.repoId === repoId;
+            el.classList.toggle('bg-orchid-50', active);
+            el.querySelector('.repo-dd-check').classList.toggle('hidden', !active);
+        });
+        closeRepoDropdown();
+    }
+
+    function populateRepoList(repos, selectedId) {
+        Array.from(repoDropdownPanel.querySelectorAll('.repo-dd-item')).forEach(function(el) { el.remove(); });
         if (repos.length === 0) {
             repoNoReposMsg.classList.remove('hidden');
             return;
         }
         repoNoReposMsg.classList.add('hidden');
+        // "None" option
+        var noneRow = document.createElement('div');
+        noneRow.className = 'repo-dd-item flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-silver-50 transition-colors' + (!selectedId ? ' bg-orchid-50' : '');
+        noneRow.dataset.repoId = '';
+        noneRow.innerHTML =
+            '<span class="w-6 h-6 rounded shrink-0 flex items-center justify-center bg-silver-100 text-silver-400">' + REPO_FOLDER_ICON + '</span>' +
+            '<span class="flex-1 min-w-0 text-sm text-woodsmoke-400 truncate">None</span>' +
+            '<svg class="repo-dd-check shrink-0 text-orchid-600' + (!selectedId ? '' : ' hidden') + '" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+        noneRow.addEventListener('click', function() { selectRepo(''); });
+        repoDropdownPanel.appendChild(noneRow);
+
         repos.forEach(function(r) {
             var count = r.bucketCount != null ? r.bucketCount : 0;
-            var thumbHtml = r.thumb
-                ? '<img src="' + r.thumb + '" class="w-full h-full object-cover" />'
-                : REPO_FOLDER_ICON;
-            var thumbClass = r.thumb
-                ? 'w-7 h-7 rounded shrink-0 overflow-hidden'
-                : 'w-7 h-7 rounded shrink-0 flex items-center justify-center bg-orchid-50 text-orchid-500';
-            var row = document.createElement('label');
-            row.className = 'repo-check-item flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-silver-50 transition-colors';
+            var isSelected = String(r._id) === selectedId;
+            var row = document.createElement('div');
+            row.className = 'repo-dd-item flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-silver-50 transition-colors' + (isSelected ? ' bg-orchid-50' : '');
+            row.dataset.repoId = String(r._id);
             row.innerHTML =
-                '<input type="checkbox" class="repo-cb shrink-0 w-4 h-4 rounded accent-orchid-700 cursor-pointer"' +
-                ' data-repo-id="' + _repoEscHtml(String(r._id)) + '"' + (sel.has(String(r._id)) ? ' checked' : '') + ' />' +
-                '<span class="' + thumbClass + '">' + thumbHtml + '</span>' +
+                _repoThumbHtml(r) +
                 '<span class="flex flex-col items-start min-w-0 flex-1">' +
                     '<span class="text-sm font-medium text-woodsmoke-900 truncate w-full leading-tight">' + _repoEscHtml(r.name) + '</span>' +
-                    '<span class="text-xs text-woodsmoke-400 leading-tight mt-0.5">' + count + ' ' + (count === 1 ? 'bucket' : 'buckets') + '</span>' +
-                '</span>';
-            repoCheckList.appendChild(row);
+                    '<span class="text-xs text-woodsmoke-400 leading-tight">' + count + ' ' + (count === 1 ? 'bucket' : 'buckets') + '</span>' +
+                '</span>' +
+                '<svg class="repo-dd-check shrink-0 text-orchid-600' + (isSelected ? '' : ' hidden') + '" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+            row.addEventListener('click', function() { selectRepo(String(r._id)); });
+            repoDropdownPanel.appendChild(row);
         });
     }
 
-    async function loadRepos(selectedIds) {
-        if (_cachedRepos.length) populateRepoList(_cachedRepos, selectedIds);
+    function openRepoDropdown() {
+        repoDropdownPanel.classList.remove('hidden');
+        repoDropdownChevron.style.transform = 'rotate(180deg)';
+    }
+
+    function closeRepoDropdown() {
+        repoDropdownPanel.classList.add('hidden');
+        repoDropdownChevron.style.transform = '';
+    }
+
+    repoDropdownTrigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        repoDropdownPanel.classList.contains('hidden') ? openRepoDropdown() : closeRepoDropdown();
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!repoDropdownWrap.contains(e.target)) closeRepoDropdown();
+    });
+
+    async function loadRepos(selectedId) {
+        var id = selectedId || (state.repoIds[0] || null);
+        if (_cachedRepos.length) {
+            populateRepoList(_cachedRepos, id);
+            var repo = id ? _cachedRepos.find(function(r) { return String(r._id) === id; }) : null;
+            setRepoTrigger(repo);
+        }
         try {
             var res = await fetch('/api/repos', { credentials: 'include' });
             if (!res.ok) return;
             _cachedRepos = await res.json();
-            populateRepoList(_cachedRepos, selectedIds || []);
+            populateRepoList(_cachedRepos, id);
+            var repo = id ? _cachedRepos.find(function(r) { return String(r._id) === id; }) : null;
+            setRepoTrigger(repo);
         } catch (e) { /* ignore silently */ }
     }
-
-    repoCheckList.addEventListener('change', function(e) {
-        var cb = e.target.closest('.repo-cb');
-        if (!cb) return;
-        var repoId = cb.dataset.repoId;
-        if (cb.checked) {
-            if (state.repoIds.indexOf(repoId) === -1) state.repoIds.push(repoId);
-        } else {
-            state.repoIds = state.repoIds.filter(function(id) { return id !== repoId; });
-        }
-    });
 
     newRepoPlusBtn.addEventListener('click', function() {
         newRepoInline.classList.remove('hidden');
@@ -844,8 +1024,8 @@
             data.bucketCount = 0;
             _cachedRepos.push(data);
             _cachedRepos.sort(function(a, b) { return a.name.localeCompare(b.name); });
-            state.repoIds.push(String(data._id));
-            populateRepoList(_cachedRepos, state.repoIds);
+            populateRepoList(_cachedRepos, String(data._id));
+            selectRepo(String(data._id));
             newRepoInline.classList.add('hidden');
             newRepoError.classList.add('hidden');
         } catch (e) {
@@ -945,6 +1125,7 @@
         state._editBucket        = null;
         state._editBucketIsDraft = false;
         state._originalSnapshot  = null;
+        state.archivedLinks      = [];
     }
 
     function updateCharCount() {
@@ -1168,13 +1349,17 @@
         clearDraft();
         resetState();
         resetUI();
-        loadRepos(null);
+        var _lastRepoId = null;
+        try { _lastRepoId = localStorage.getItem(_LAST_REPO_KEY) || null; } catch(e) {}
+        if (_lastRepoId) state.repoIds = [_lastRepoId];
+        loadRepos(_lastRepoId);
         deleteBtn.disabled = true;               // not available in create mode
         if (modalStats)           modalStats.classList.add('hidden');
         if (modalOwningId)        modalOwningId.classList.add('hidden');
         if (modalViewerLink)      modalViewerLink.classList.add('hidden');
         if (modalViewerLinkPlain) modalViewerLinkPlain.classList.add('hidden');
         modal.classList.remove('hidden');
+        window.lockScroll();
         resetMobileTabs();
         if (!isMobileLayout()) newLinkUrl.focus();
         // Clean up any stale drafts from previous sessions so the profile stays tidy
@@ -1209,6 +1394,7 @@
         }
         clearDraft();
         modal.classList.add('hidden');
+        window.unlockScroll();
     }
 
     // Exposed globally so the profile page (and any other page) can open a bucket for editing
@@ -1216,9 +1402,11 @@
         // Populate state from existing bucket data
         state._editBucket        = { _id: bucket._id, name: bucket.name };
         state._editBucketIsDraft = !!bucket.isDraft;
-        state.links        = (bucket.links || []).map(function (l) {
-            return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: false, clickCount: l.clickCount || 0, pinned: l.isPinned || false };
+        var allLinks = (bucket.links || []).map(function (l) {
+            return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: false, clickCount: l.clickCount || 0, pinned: l.isPinned || false, archived: !!l.isArchived };
         });
+        state.links         = allLinks.filter(function (l) { return !l.archived; });
+        state.archivedLinks = allLinks.filter(function (l) { return l.archived; });
         state.tags         = bucket.hashtags || [];
         state.monetization = !!bucket.isPaywalled;
         state.mature       = !!bucket.mature;
@@ -1230,7 +1418,7 @@
 
         // Reset the UI using the populated state
         resetUI();
-        loadRepos(state.repoIds);
+        loadRepos(state.repoIds[0] || null);
 
         // resetUI hardcodes toggles — fix them to match the bucket's actual settings
         setVisSegment(bucketVisibility);
@@ -1252,6 +1440,7 @@
         descInput.value = bucket.description || '';
         descCharCount.textContent = (bucket.description || '').length + ' / 256';
         sourceUrlInput.value = bucket.sourceUrl || '';
+        updateCopySourceBtn();
 
         // Show thumbnail if present
         if (state.thumbnail) {
@@ -1318,6 +1507,7 @@
         deleteBtn.dataset.confirm = '';
 
         modal.classList.remove('hidden');
+        window.lockScroll();
         resetMobileTabs();
     };
 
@@ -1455,6 +1645,14 @@
     });
 
     // ── Source URL ────────────────────────────────────────────────────────────
+    function updateCopySourceBtn() {
+        var empty = !sourceUrlInput.value.trim();
+        copySourceBtn.disabled = empty;
+        copySourceBtn.classList.toggle('text-woodsmoke-300', empty);
+        copySourceBtn.classList.toggle('text-woodsmoke-400', !empty);
+    }
+    sourceUrlInput.addEventListener('input', updateCopySourceBtn);
+
     copySourceBtn.addEventListener('click', function () {
         var v = sourceUrlInput.value.trim();
         if (!v) return;
@@ -1463,6 +1661,7 @@
 
     deleteSourceBtn.addEventListener('click', function () {
         sourceUrlInput.value = '';
+        updateCopySourceBtn();
         sourceUrlInput.focus();
     });
 
@@ -1627,7 +1826,7 @@
                     return l.buckets && l.buckets.indexOf(bucketName) !== -1;
                 });
 
-                var existing = new Set(state.links.map(function (l) { return l.url; }));
+                var existing = new Set(state.links.concat(state.archivedLinks).map(function (l) { return l.url; }));
                 var added = 0;
                 var detectedSourceUrl = null;
                 bucketLinks.forEach(function (l) {
@@ -1642,6 +1841,7 @@
 
                 if (detectedSourceUrl && sourceUrlInput && !sourceUrlInput.value.trim()) {
                     sourceUrlInput.value = detectedSourceUrl;
+                    updateCopySourceBtn();
                 }
 
                 renderLinks();
@@ -1853,12 +2053,14 @@
                 '<div class="link-context-menu hidden absolute right-0 top-full mt-1 bg-white rounded-md shadow-lg border border-silver-100 py-1 z-50 w-44">' +
                     '<button class="link-set-thumb w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Set thumbnail</button>' +
                     '<button class="link-remove-thumb w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Remove thumbnail</button>' +
+                    '<button class="link-set-source-url w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Set as source url</button>' +
                     '<button class="link-use-as-bucket-thumb w-full px-3 py-2 text-sm font-medium text-left transition-colors ' +
                         (link.thumb ? 'text-woodsmoke-700 hover:bg-silver-50' : 'text-woodsmoke-300 cursor-not-allowed') +
                     '"' + (!link.thumb ? ' disabled' : '') + '>Set as bucket thumbnail</button>' +
                     '<div class="my-1 border-t border-silver-100"></div>' +
                     '<button class="link-clone w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Clone Link</button>' +
                     '<button class="link-move w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-700 hover:bg-silver-50 transition-colors">Move Link</button>' +
+                    '<button class="link-archive w-full px-3 py-2 text-sm font-medium text-left text-woodsmoke-500 hover:bg-silver-50 transition-colors">Archive</button>' +
                     '<div class="my-1 border-t border-silver-100"></div>' +
                     '<button class="link-delete w-full px-3 py-2 text-sm font-medium text-left text-red-500 hover:bg-red-50 transition-colors">Delete link</button>' +
                 '</div>' +
@@ -1924,6 +2126,13 @@
             thumbActionBtns.classList.remove('hidden');
         });
 
+        row.querySelector('.link-set-source-url').addEventListener('click', function () {
+            contextMenu.classList.add('hidden');
+            sourceUrlInput.value = link.url;
+            updateCopySourceBtn();
+            sourceUrlInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+
         // Open lightbox when clicking the thumbnail image
         var thumbImg = row.querySelector('.link-thumb-box img');
         if (thumbImg) {
@@ -1947,6 +2156,14 @@
         row.querySelector('.link-delete').addEventListener('click', function () {
             contextMenu.classList.add('hidden');
             state.links = state.links.filter(function (l) { return l.id !== link.id; });
+            renderLinks();
+        });
+
+        row.querySelector('.link-archive').addEventListener('click', function () {
+            contextMenu.classList.add('hidden');
+            link.archived = true;
+            state.links         = state.links.filter(function (l) { return l.id !== link.id; });
+            state.archivedLinks = state.archivedLinks.concat([link]);
             renderLinks();
         });
 
@@ -2005,6 +2222,55 @@
         sorted.forEach(function (link) {
             linksList.appendChild(buildLinkRow(link, rankMap[link.id]));
         });
+
+        // Archived section
+        var existingArchivedSection = linksList.querySelector('.nb-archived-section');
+        if (existingArchivedSection) existingArchivedSection.remove();
+        if (state.archivedLinks.length > 0) {
+            var section = document.createElement('div');
+            section.className = 'nb-archived-section mt-2';
+            section.innerHTML =
+                '<button class="nb-archived-toggle w-full flex items-center gap-2 px-2 py-1.5 text-xs font-semibold text-woodsmoke-400 hover:text-woodsmoke-600 transition-colors">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" class="nb-archived-chevron transition-transform"><path fill="currentColor" d="M12 14.975q-.2 0-.375-.062T11.3 14.7l-4.6-4.6q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l3.9 3.9l3.9-3.9q.275-.275.7-.275t.7.275t.275.7t-.275.7l-4.6 4.6q-.15.15-.325.213t-.375.062"/></svg>' +
+                    'Archived (' + state.archivedLinks.length + ')' +
+                '</button>' +
+                '<div class="nb-archived-list hidden flex flex-col gap-2 pt-1"></div>';
+
+            var toggleBtn  = section.querySelector('.nb-archived-toggle');
+            var listEl     = section.querySelector('.nb-archived-list');
+            var chevron    = section.querySelector('.nb-archived-chevron');
+
+            state.archivedLinks.forEach(function (link) {
+                var item = document.createElement('div');
+                item.className = 'flex items-center gap-3 p-3 rounded-lg border border-silver-100 bg-silver-50/60';
+                item.innerHTML =
+                    '<div class="shrink-0 w-10 h-10 rounded-md overflow-hidden bg-silver-200 flex items-center justify-center text-silver-400">' +
+                        (link.thumb ? '<img src="' + link.thumb + '" class="w-full h-full object-cover">' : ICON_PIC_FILL) +
+                    '</div>' +
+                    '<div class="flex-1 min-w-0">' +
+                        '<p class="text-sm font-medium text-woodsmoke-400 truncate">' + escapeHtml(link.title || 'Untitled') + '</p>' +
+                        '<p class="text-xs text-woodsmoke-300 truncate">' + escapeHtml(link.url) + '</p>' +
+                    '</div>' +
+                    '<button class="nb-unarchive-btn shrink-0 h-7 px-3 flex items-center justify-center text-xs font-medium rounded-md border border-silver-200 text-woodsmoke-500 hover:bg-orchid-50 hover:border-orchid-200 hover:text-orchid-700 transition-colors">Unarchive</button>';
+
+                item.querySelector('.nb-unarchive-btn').addEventListener('click', function () {
+                    link.archived = false;
+                    state.archivedLinks = state.archivedLinks.filter(function (l) { return l.id !== link.id; });
+                    state.links.push(link);
+                    renderLinks();
+                });
+
+                listEl.appendChild(item);
+            });
+
+            toggleBtn.addEventListener('click', function () {
+                var hidden = listEl.classList.toggle('hidden');
+                chevron.style.transform = hidden ? '' : 'rotate(180deg)';
+            });
+
+            linksList.appendChild(section);
+        }
+
         updateBulkBar();
         applySearch(); // re-apply any active filter after re-render
     }
@@ -2019,6 +2285,9 @@
         linksSearchInput.focus();
     });
 
+    // Metadata is fetched only when the user clicks Add.
+
+
     // Add link
     async function tryAddLink() {
         var title = newLinkTitle.value.trim();
@@ -2026,30 +2295,25 @@
         if (!url) { newLinkUrl.focus(); return; }
 
         var thumb = null;
-
-        if (!title) {
-            addLinkBtn.disabled = true;
-            addLinkBtn.innerHTML = LOADER_SVG;
-            try {
-                var metaRes = await fetch('/api/meta?url=' + encodeURIComponent(url));
-                var meta = await metaRes.json();
-                if (metaRes.status === 429) {
-                    if (meta.error === 'rate_daily') {
-                        metaUsageLabel.textContent = meta.used + ' / ' + meta.limit + ' fetches today — limit reached';
-                    } else {
-                        alert('Too many requests. Please wait a moment.');
-                    }
-                } else if (metaRes.ok) {
-                    if (meta.title) title = meta.title;
-                    if (meta.image) thumb = meta.image;
-                    if (meta.usage) {
-                        metaUsageLabel.textContent = meta.usage.used + ' / ' + meta.usage.limit + ' fetches today';
-                    }
+        addLinkBtn.disabled = true;
+        addLinkBtn.innerHTML = LOADER_SVG;
+        try {
+            var metaRes = await fetch('/api/meta?url=' + encodeURIComponent(url));
+            var meta = await metaRes.json();
+            if (metaRes.status === 429) {
+                if (meta.error === 'rate_daily') {
+                    metaUsageLabel.textContent = meta.used + ' / ' + meta.limit + ' fetches today - limit reached';
+                } else {
+                    alert('Too many requests. Please wait a moment.');
                 }
-            } catch {}
-            addLinkBtn.textContent = 'Add';
-            updateAddBtn();
-        }
+            } else if (metaRes.ok) {
+                if (!title && meta.title) title = meta.title;
+                if (meta.image) thumb = meta.image;
+                if (meta.usage) metaUsageLabel.textContent = meta.usage.used + ' / ' + meta.usage.limit + ' fetches today';
+            }
+        } catch {}
+        addLinkBtn.textContent = 'Add';
+        updateAddBtn();
 
         state.links.push({ id: uid(), title: title || url, url: url, thumb: thumb, monetized: false, checked: false, clickCount: 0, pinned: false });
         newLinkTitle.value = '';
@@ -2206,7 +2470,8 @@
                     if (a.pinned && !b.pinned) return -1;
                     if (!a.pinned && b.pinned) return 1;
                     return (b.clickCount || 0) - (a.clickCount || 0);
-                }).map(function (l) { return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: l.pinned }; })
+                }).map(function (l) { return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: l.pinned, archived: false }; })
+                .concat(state.archivedLinks.map(function (l) { return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: false, archived: true }; }))
             };
 
             var isEdit  = !!state._editBucket;
@@ -2283,13 +2548,13 @@
         confirmBtn.textContent = labelFor(mode, count);
         confirmBtn.disabled = true;
         modal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
+        window.lockScroll();
         loadBuckets();
     }
 
     function closeModal() {
         modal.classList.add('hidden');
-        document.body.style.overflow = '';
+        window.unlockScroll();
         listEl.innerHTML = '';
     }
 
@@ -2392,7 +2657,7 @@
 <!-- ── Global image lightbox (shared by bucket modal & other in-page modals) ── -->
 <div id="globalImgLightbox" class="hidden fixed inset-0 z-[200] flex items-center justify-center cursor-zoom-out" aria-modal="true" role="dialog">
     <div class="absolute inset-0 bg-woodsmoke-950/85 backdrop-blur-sm"></div>
-    <img id="globalImgLightboxImg" src="" alt="" class="relative w-[98vw] h-[96vh] rounded-lg shadow-2xl object-contain select-none">
+    <img id="globalImgLightboxImg" src="" alt="" class="relative max-w-[98vw] max-h-[96vh] rounded-lg shadow-2xl object-contain select-none">
     <button id="globalImgLightboxClose" class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="m12 13.414 4.243 4.243a1 1 0 0 0 1.414-1.414L13.414 12l4.243-4.243a1 1 0 0 0-1.414-1.414L12 10.586 7.757 6.343a1 1 0 0 0-1.414 1.414L10.586 12l-4.243 4.243a1 1 0 1 0 1.414 1.414z"/></svg>
     </button>
@@ -2413,7 +2678,8 @@
         lbImg.src = '';
     }
 
-    lb.addEventListener('click', function (e) { if (e.target !== lbImg) close(); });
+    lb.addEventListener('click', close);
+    lbImg.addEventListener('click', function (e) { e.stopPropagation(); });
     lbClose.addEventListener('click', close);
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && !lb.classList.contains('hidden')) close();
