@@ -22,6 +22,7 @@ import { buildRepositories } from './server/jobs/buildRepositories.js';
 import { buildExploreScores } from './server/jobs/buildExploreScores.js';
 import { FILTER_PUBLIC } from './server/utils/filters.js';
 import { validateLinks } from './server/utils/urlSafety.js';
+import { fetchAndStoreImage, deleteR2Images } from './server/utils/r2.js';
 import bucketShareRouter from './server/routes/bucketShare.js';
 import authRouter from './server/routes/auth.js';
 import creditsRouter, { handleWebhook } from './server/routes/credits.js';
@@ -233,9 +234,11 @@ app.use(anonymousAuth);
 // starts with http/https is proxied so CDN hotlink blocks / Varnish errors on
 // external sites never reach the end user.
 app.use((req, res, next) => {
+    const r2Base = process.env.R2_PUBLIC_URL || '';
     res.locals.imgSrc = (url) => {
         if (!url) return '';
         if (url.startsWith('data:') || url.startsWith('/')) return url;
+        if (r2Base && url.startsWith(r2Base)) return url; // own CDN — serve directly
         return '/api/img-proxy?url=' + encodeURIComponent(url);
     };
     next();
@@ -462,17 +465,19 @@ async function metaDailyCheck(userId) {
     // If the update matched, the doc was reset — now atomically increment
     // Otherwise the doc already has today's date; just increment
     const updated = await User.findOneAndUpdate(
-        { _id: userId, metaFetchDate: today, $expr: { $lt: ['$metaFetchCount', { $add: [META_DAILY_LIMIT, '$metaFetchBonus'] }] } },
+        { _id: userId, metaFetchDate: today, $expr: { $lt: ['$metaFetchCount', { $add: [{ $ifNull: ['$metaFetchLimit', META_DAILY_LIMIT] }, '$metaFetchBonus'] }] } },
         { $inc: { metaFetchCount: 1 } },
-        { new: true, projection: { metaFetchCount: 1, metaFetchBonus: 1 } }
+        { new: true, projection: { metaFetchCount: 1, metaFetchBonus: 1, metaFetchLimit: 1 } }
     );
     if (!updated) {
-        const cur = await User.findById(userId, { metaFetchCount: 1, metaFetchBonus: 1 });
+        const cur = await User.findById(userId, { metaFetchCount: 1, metaFetchBonus: 1, metaFetchLimit: 1 });
         const used  = cur?.metaFetchCount ?? 0;
-        const limit = META_DAILY_LIMIT + (cur?.metaFetchBonus ?? 0);
+        const base  = cur?.metaFetchLimit ?? META_DAILY_LIMIT;
+        const limit = base + (cur?.metaFetchBonus ?? 0);
         return { ok: false, used, limit };
     }
-    const limit = META_DAILY_LIMIT + updated.metaFetchBonus;
+    const base  = updated.metaFetchLimit ?? META_DAILY_LIMIT;
+    const limit = base + updated.metaFetchBonus;
     return { ok: true, used: updated.metaFetchCount, limit };
 }
 
@@ -485,9 +490,10 @@ async function metaDailyAddBonus(userId, fetches) {
     const updated = await User.findOneAndUpdate(
         { _id: userId },
         { $inc: { metaFetchBonus: fetches } },
-        { new: true, projection: { metaFetchCount: 1, metaFetchBonus: 1 } }
+        { new: true, projection: { metaFetchCount: 1, metaFetchBonus: 1, metaFetchLimit: 1 } }
     );
-    return { limit: META_DAILY_LIMIT + updated.metaFetchBonus, used: updated.metaFetchCount };
+    const base = updated.metaFetchLimit ?? META_DAILY_LIMIT;
+    return { limit: base + updated.metaFetchBonus, used: updated.metaFetchCount };
 }
 
 // Domains whose product metadata requires JS rendering to retrieve correctly.
@@ -763,7 +769,7 @@ function isJunkImage(imageUrl) {
 
 async function normalizeMetaImage(imageUrl, { referer } = {}) {
     if (!imageUrl) return null;
-    return await fetchImageAsBase64(imageUrl, { referer }) || imageUrl;
+    return await fetchAndStoreImage(imageUrl, { referer, folder: 'buckets/links' }) || imageUrl;
 }
 
 function absolutizeUrl(rawUrl, baseUrl) {
@@ -1106,7 +1112,7 @@ function uniqueImages(candidates, baseUrl, limit = 24) {
 async function resolveBestImage(candidates, { referer, minBytes = 0 } = {}) {
     const tried = uniqueImages(candidates, referer || undefined, 24);
     for (const candidate of tried) {
-        let normalized = await fetchImageAsBase64(candidate, { referer, minBytes });
+        let normalized = await fetchAndStoreImage(candidate, { referer, minBytes, folder: 'buckets/links' });
         if (!normalized) normalized = await fetchImageViaScraperAPIProxy(candidate);
         if (normalized) return { image: normalized, candidates: tried };
     }
@@ -1279,7 +1285,7 @@ app.get('/api/meta', requireAuth, async (req, res) => {
     if (!url) return res.status(400).json({ error: 'url required' });
     if (!metaMinuteCheck(String(req.user._id))) return res.status(429).json({ error: 'rate_minute' });
     const daily = await metaDailyCheck(String(req.user._id));
-    if (!daily.ok) return res.status(429).json({ error: 'rate_daily', used: daily.used, limit: META_DAILY_LIMIT });
+    if (!daily.ok) return res.status(429).json({ error: 'rate_daily', used: daily.used, limit: daily.limit });
 
     const usage = { used: daily.used, limit: daily.limit };
     const normalizedUrl = normalizeMetaUrl(url);
@@ -1387,9 +1393,10 @@ app.get('/api/img-proxy', requireAuth, async (req, res) => {
 // Purchase extra daily meta fetches with JWL credits (2 JWL each).
 app.get('/api/meta/usage', requireAuth, async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
-    const doc   = await User.findById(req.user._id, { metaFetchDate: 1, metaFetchCount: 1, metaFetchBonus: 1 });
+    const doc   = await User.findById(req.user._id, { metaFetchDate: 1, metaFetchCount: 1, metaFetchBonus: 1, metaFetchLimit: 1 });
     const used  = (doc?.metaFetchDate === today ? (doc.metaFetchCount ?? 0) : 0);
-    const limit = META_DAILY_LIMIT + (doc?.metaFetchDate === today ? (doc.metaFetchBonus ?? 0) : 0);
+    const base  = doc?.metaFetchLimit ?? META_DAILY_LIMIT;
+    const limit = base + (doc?.metaFetchDate === today ? (doc.metaFetchBonus ?? 0) : 0);
     res.json({ used, limit });
 });
 
@@ -1423,9 +1430,10 @@ app.get('/api/user', requireAuth, requireVerification, (req, res) => {
 app.get('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     try {
         const buckets = await Bucket.find({ userId: req.user._id })
-            .sort({ order: 1, createdAt: 1 });
+            .select('name')
+            .sort({ order: 1, createdAt: 1 })
+            .lean();
 
-        // Return bucket names only (for dropdown)
         const bucketNames = buckets.map(b => b.name);
         res.json(bucketNames);
     } catch (error) {
@@ -1547,10 +1555,10 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             text:     l.title || '',
             isFree:   !l.monetized,
             isPinned: !!l.pinned,
-            image:    await fetchImageAsBase64(l.thumb || null) ?? l.thumb ?? null,
+            image:    await fetchAndStoreImage(l.thumb || null, { folder: 'buckets/links' }) ?? l.thumb ?? null,
         }))) : [];
 
-        const resolvedThumb = await fetchImageAsBase64(thumbnail || null) || '';
+        const resolvedThumb = await fetchAndStoreImage(thumbnail || null, { folder: 'buckets/thumbnails' }) || '';
 
         // Auto-set thumbnail from first link image if no explicit thumbnail provided
         const effectiveThumb = resolvedThumb || resolvedLinks.find(l => l.image)?.image || '';
@@ -1662,7 +1670,7 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         if (monetized   !== undefined) update.isPaywalled = !!monetized;
         if (price       !== undefined) update.price       = Number(price) || 0;
         if (sourceUrl   !== undefined) update.sourceUrl   = sourceUrl || '';
-        if (thumbnail   !== undefined) update.thumbnail   = await fetchImageAsBase64(thumbnail || null) || '';
+        if (thumbnail   !== undefined) update.thumbnail   = await fetchAndStoreImage(thumbnail || null, { folder: 'buckets/thumbnails' }) || '';
         if (links       !== undefined) {
             if (links.length > 256) return res.status(400).json({ error: 'A bucket cannot have more than 256 links' });
             if (links.length > 0) {
@@ -1677,7 +1685,7 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
                 isPinned:   !!l.pinned,
                 isArchived: !!l.archived,
                 // Fall back to the original URL if base64 conversion fails — never wipe a thumbnail
-                image:      await fetchImageAsBase64(l.thumb || null) ?? l.thumb ?? null,
+                image:      await fetchAndStoreImage(l.thumb || null, { folder: 'buckets/links' }) ?? l.thumb ?? null,
             })));
         }
 
@@ -1871,7 +1879,10 @@ app.get('/api/buckets/:name/id', requireAuth, requireVerification, async (req, r
 // Delete all draft buckets for the current user (called when opening a fresh new-bucket modal)
 app.delete('/api/buckets/drafts', requireAuth, async (req, res) => {
     try {
+        const drafts = await Bucket.find({ userId: req.user._id, isDraft: true }).select('thumbnail links.image');
         await Bucket.deleteMany({ userId: req.user._id, isDraft: true });
+        const imageUrls = drafts.flatMap(b => [b.thumbnail, ...b.links.map(l => l.image)]).filter(Boolean);
+        await deleteR2Images(imageUrls);
         res.json({ ok: true });
     } catch (error) {
         console.error('Error deleting drafts:', error);
@@ -1888,10 +1899,15 @@ app.delete('/api/buckets/:name', requireAuth, requireVerification, async (req, r
             return res.status(403).json({ error: 'Cannot delete Singletons' });
         }
 
-        await Bucket.findOneAndDelete({
+        const bucket = await Bucket.findOneAndDelete({
             userId: req.user._id,
             name
         });
+
+        if (bucket) {
+            const imageUrls = [bucket.thumbnail, ...bucket.links.map(l => l.image)].filter(Boolean);
+            await deleteR2Images(imageUrls);
+        }
 
         res.json({ success: true });
     } catch (error) {
@@ -1926,6 +1942,7 @@ app.delete('/api/buckets/:name/links', requireAuth, requireVerification, async (
 
         // Remove the link with matching href
         const initialLength = bucket.links.length;
+        const removedLink = bucket.links.find(link => link.href === href);
         bucket.links = bucket.links.filter(link => link.href !== href);
 
         if (bucket.links.length === initialLength) {
@@ -1934,6 +1951,8 @@ app.delete('/api/buckets/:name/links', requireAuth, requireVerification, async (
 
         // Save the updated bucket
         await bucket.save();
+
+        if (removedLink?.image) await deleteR2Images([removedLink.image]);
 
         res.json({
             success: true,
@@ -1985,9 +2004,10 @@ app.put('/api/buckets/:name/thumbnail', requireAuth, requireVerification, async 
         const { name } = req.params;
         const { thumbnail } = req.body;
 
+        const storedThumbnail = await fetchAndStoreImage(thumbnail || null, { folder: 'buckets/thumbnails' }) || '';
         const bucket = await Bucket.findOneAndUpdate(
             { userId: req.user._id, name },
-            { thumbnail },
+            { thumbnail: storedThumbnail },
             { new: true, timestamps: false }
         );
 
@@ -2534,36 +2554,54 @@ app.post('/api/buckets/:id/report', requireAuth, requireVerification, async (req
     }
 });
 
+// Return paginated link data for a single owned bucket (used by the edit modal)
+app.get('/api/buckets/:id/links', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const skip  = Math.max(0, parseInt(req.query.skip)  || 0);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 8));
+        const [result] = await Bucket.aggregate([
+            { $match: { _id: new mongoose.Types.ObjectId(req.params.id), userId: req.user._id } },
+            { $project: { total: { $size: '$links' }, links: { $slice: ['$links', skip, limit] } } },
+        ]);
+        if (!result) return res.status(404).json({ error: 'Not found' });
+        const links = result.links || [];
+        res.json({ links, total: result.total || 0, hasMore: skip + links.length < result.total });
+    } catch (err) {
+        console.error('Error fetching bucket links:', err);
+        res.status(500).json({ error: 'Failed to fetch links' });
+    }
+});
+
 // Get all links for current user
 app.get('/api/links', requireAuth, requireVerification, async (req, res) => {
     try {
-        const buckets = await Bucket.find({ userId: req.user._id });
+        const buckets = await Bucket.find({ userId: req.user._id })
+            .select('name sourceUrl links.href links.text links.image links.duration links.isFree links.clickCount links.isPinned')
+            .lean();
 
-        // Flatten all links from all buckets
         const linksMap = new Map();
-
         buckets.forEach(bucket => {
-            bucket.links.forEach(link => {
+            (bucket.links || []).forEach(link => {
                 const key = link.href;
                 if (!linksMap.has(key)) {
                     linksMap.set(key, {
                         href: link.href,
                         text: link.text,
-                        duration: link.duration,
                         image: link.image || null,
+                        duration: link.duration,
                         isFree: link.isFree || false,
+                        clickCount: link.clickCount || 0,
+                        isPinned: link.isPinned || false,
                         sourceUrl: bucket.sourceUrl || '',
-                        buckets: [bucket.name]
+                        buckets: [bucket.name],
                     });
                 } else {
-                    // Link exists in multiple buckets
                     linksMap.get(key).buckets.push(bucket.name);
                 }
             });
         });
 
-        const links = Array.from(linksMap.values());
-        res.json(links);
+        res.json(Array.from(linksMap.values()));
     } catch (error) {
         console.error('Error fetching links:', error);
         res.status(500).json({ error: 'Failed to fetch links' });
@@ -2620,7 +2658,7 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
                         href:     link.href,
                         text:     link.text || '',
                         duration: link.duration || '',
-                        image:    await fetchImageAsBase64(link.image || null) ?? link.image ?? null,
+                        image:    await fetchAndStoreImage(link.image || null, { folder: 'buckets/links' }) ?? (link.image?.startsWith('http') ? link.image : null),
                     }))
             );
             if (newLinks.length > 0) {
@@ -2657,7 +2695,10 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
 // Clear all links (delete all buckets)
 app.delete('/api/links', requireAuth, requireVerification, async (req, res) => {
     try {
+        const buckets = await Bucket.find({ userId: req.user._id }).select('thumbnail links.image');
         await Bucket.deleteMany({ userId: req.user._id });
+        const imageUrls = buckets.flatMap(b => [b.thumbnail, ...b.links.map(l => l.image)]).filter(Boolean);
+        await deleteR2Images(imageUrls);
         res.json({ success: true });
     } catch (error) {
         console.error('Error clearing links:', error);
@@ -4152,7 +4193,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
         const addDisplayThumb = (b) => ({
             ...b,
             _id: b._id.toString(),
-            displayThumb: b.thumbnail || b.links?.find(l => l.image)?.image || null,
+            displayThumb: b.thumbnail || null,
         });
 
         const bucketFilter = isOwner
@@ -4161,13 +4202,13 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
 
         const [allBuckets, subscriberCount, followingCount, rawGrabbed, userRepos] = await Promise.all([
             Bucket.find(bucketFilter)
-                .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
+                .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
                 .sort({ order: 1, createdAt: -1 })
                 .lean(),
             Subscription.countDocuments({ followeeId: profileUser._id }),
             Subscription.countDocuments({ followerId: profileUser._id }),
             Bucket.find({ 'grabbedBy.userId': profileUser._id })
-                .select('name description thumbnail visibility isPublic isPaywalled price links viewCount shareCount grabbedBy sourceUrl hashtags ratingCount ratingSum createdAt updatedAt')
+                .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags ratingCount ratingSum createdAt updatedAt')
                 .populate('userId', 'username')
                 .sort({ createdAt: -1 })
                 .lean(),
@@ -4305,11 +4346,15 @@ app.get('/b/:bucketId/thumbnail.jpg', async (req, res) => {
         if (!bucket) return res.status(404).send('Not found');
         const rawImage = bucket.thumbnail || bucket.links?.find(l => l.image)?.image || null;
         if (!rawImage) return res.status(404).send('Not found');
+        // Legacy base64 data URL
         const mimeMatch = rawImage.match(/^data:(image\/\w+);base64,/);
-        const base64Data = mimeMatch ? rawImage.slice(mimeMatch[0].length) : rawImage;
-        res.set('Content-Type', mimeMatch ? mimeMatch[1] : 'image/jpeg');
-        res.set('Cache-Control', 'public, max-age=31536000');
-        res.send(Buffer.from(base64Data, 'base64'));
+        if (mimeMatch) {
+            res.set('Content-Type', mimeMatch[1]);
+            res.set('Cache-Control', 'public, max-age=31536000');
+            return res.send(Buffer.from(rawImage.slice(mimeMatch[0].length), 'base64'));
+        }
+        // R2 or external URL — redirect the client directly to it
+        res.redirect(302, rawImage);
     } catch {
         res.status(500).send('Error');
     }

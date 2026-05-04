@@ -421,7 +421,8 @@ if (window.__grabbnInjected) {
     if (!raw) return '';
     const value = String(raw).trim();
     if (!value) return '';
-    if (value.startsWith('data:') || value.startsWith('blob:')) return value;
+    if (value.startsWith('data:')) return value;
+    if (value.startsWith('blob:')) return ''; // browser-only, useless to the server
     try { return new URL(value, location.href).href; }
     catch { return ''; }
   }

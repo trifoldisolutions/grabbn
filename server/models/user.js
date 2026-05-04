@@ -112,6 +112,7 @@ const userSchema = new mongoose.Schema(
     metaFetchDate:  { type: String, default: null },  // YYYY-MM-DD UTC
     metaFetchCount: { type: Number, default: 0 },
     metaFetchBonus: { type: Number, default: 0 },
+    metaFetchLimit: { type: Number, default: null },  // per-user override; null = use META_DAILY_LIMIT
     // Rate-limiting for comment posts (1 comment per minute per user)
     lastCommentAt: { type: Date, default: null },
     // Region inferred from IP on first visit (ISO 3166-1 alpha-2 country + subdivision code)
