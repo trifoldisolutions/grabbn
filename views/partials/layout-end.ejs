@@ -1137,6 +1137,8 @@
         state._linksFullyLoaded  = false;
         state._clicksAccum       = 0;
         state._allSelected       = false;
+        state._initialLinkCount  = 0;
+        state._linkCountDelta    = 0;
         if (state._linksScrollHandler) {
             linksList.removeEventListener('scroll', state._linksScrollHandler);
             state._linksScrollHandler = null;
@@ -1395,11 +1397,16 @@
                 sourceUrl:   sourceUrlInput.value.trim(),
                 thumbnail:   state.thumbnail ? state.thumbnail.dataUrl : null,
                 repoIds:     state.repoIds,
-                isDraft:     true,
-                links:       state.links.map(function (l) {
-                    return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: l.pinned };
-                })
+                isDraft:     true
             };
+            // Never overwrite a draft's stored links with a partial in-memory list.
+            if (state._linksFullyLoaded) {
+                draftPayload.links = state.links.map(function (l) {
+                    return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: l.pinned, archived: false };
+                }).concat(state.archivedLinks.map(function (l) {
+                    return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: false, archived: true };
+                }));
+            }
             fetch('/api/buckets/' + state._editBucket._id + '/full', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -1424,6 +1431,8 @@
         // Links are fetched lazily below to keep the profile page payload lean
         state.links         = [];
         state.archivedLinks = [];
+        state._initialLinkCount = Array.isArray(bucket.links) ? bucket.links.length : 0;
+        state._linkCountDelta   = 0;
         state.tags         = bucket.hashtags || [];
         state.monetization = !!bucket.isPaywalled;
         state.mature       = !!bucket.mature;
@@ -1866,6 +1875,7 @@
                         state.links.push({ id: uid(), title: l.text || l.title || href, url: href, thumb: l.image || l.thumb || null, monetized: false, checked: false, clickCount: l.clickCount || 0, pinned: l.isPinned || false });
                         existing.add(href);
                         added++;
+                        state._linkCountDelta += 1;
                     }
                     if (!detectedSourceUrl && l.sourceUrl) detectedSourceUrl = l.sourceUrl;
                 });
@@ -2191,6 +2201,7 @@
         row.querySelector('.link-delete').addEventListener('click', function () {
             contextMenu.classList.add('hidden');
             state.links = state.links.filter(function (l) { return l.id !== link.id; });
+            state._linkCountDelta -= 1;
             renderLinks();
         });
 
@@ -2413,6 +2424,7 @@
         updateAddBtn();
 
         state.links.push({ id: uid(), title: title || url, url: url, thumb: thumb, monetized: false, checked: false, clickCount: 0, pinned: false });
+        state._linkCountDelta += 1;
         newLinkTitle.value = '';
         newLinkUrl.value   = '';
         newLinkTitle.focus();
@@ -2492,12 +2504,15 @@
             state.archivedLinks = [];
             state._linksFullyLoaded = true;
             state._allSelected = false;
+            state._linkCountDelta = -state._initialLinkCount;
             if (state._linksScrollHandler) {
                 linksList.removeEventListener('scroll', state._linksScrollHandler);
                 state._linksScrollHandler = null;
             }
         } else {
+            var removedCount = state.links.filter(function (l) { return l.checked; }).length;
             state.links = state.links.filter(function (l) { return !l.checked; });
+            state._linkCountDelta -= removedCount;
         }
         renderLinks();
     });
@@ -2547,6 +2562,13 @@
                 }
             }
             setLoading(false);
+        }
+
+        var currentLinkCount = state.links.length + state.archivedLinks.length;
+        var expectedLinkCount = state._initialLinkCount + state._linkCountDelta;
+        if (state._editBucket && currentLinkCount !== expectedLinkCount) {
+            showError('The editor did not finish reconciling this bucket\'s links. Please reopen the modal and try again so we do not overwrite links.');
+            return;
         }
 
         // When editing an existing (non-draft) bucket, skip the round-trip if nothing changed
@@ -2757,6 +2779,7 @@
             _cache = null;
             if (_mode === 'move' && window._nbState) {
                 window._nbState.links = window._nbState.links.filter(function (l) { return linkIds.indexOf(l.id) === -1; });
+                window._nbState._linkCountDelta -= linkIds.length;
                 if (typeof window._nbRenderLinks === 'function') window._nbRenderLinks();
             }
             confirmBtn.disabled = false;
