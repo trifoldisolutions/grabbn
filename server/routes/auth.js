@@ -341,6 +341,7 @@ router.post('/verify-otp', async (req, res) => {
 
         res.json({
             success: true,
+            anonymousId: user.anonymousId,
             user: {
                 id: user._id,
                 email: user.email,
