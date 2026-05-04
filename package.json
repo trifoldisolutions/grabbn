@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "tw": "npx @tailwindcss/cli -i ./public/tailwind/input.css -o ./public/tailwind/output.css --watch",
     "build": "echo build ok",
-    "start": "node --env-file=.env serve.js",
+    "start": "node serve.js",
     "dev": "nodemon --exec \"node --env-file=.env\" serve.js",
     "watch": "nodemon --exec \"node --env-file=.env\" --watch server --watch serve.js serve.js",
     "make-admin": "node --env-file=.env server/scripts/make-admin.js",
