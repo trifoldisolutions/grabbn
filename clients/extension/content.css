@@ -4,6 +4,23 @@ body.grabbn-pick-mode * {
   cursor: crosshair !important;
 }
 
+/* Restore normal cursors inside the extension's own UI */
+#grabbn-sel-panel,
+#grabbn-sel-panel *,
+#grabbn-overlay,
+#grabbn-overlay *,
+#grabbn-hint {
+  cursor: default !important;
+}
+
+#grabbn-sel-panel button,
+#grabbn-sel-panel input[type="checkbox"],
+#grabbn-overlay button,
+#grabbn-overlay input[type="checkbox"],
+#grabbn-overlay label {
+  cursor: pointer !important;
+}
+
 .grabbn-link-hover {
   outline: 2px solid #b346b3 !important;
   outline-offset: 2px !important;

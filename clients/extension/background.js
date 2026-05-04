@@ -1,5 +1,12 @@
-const BASE_URL = 'https://app.grabbn.com';
-const API_REQUEST_TIMEOUT_MS = 10000;
+const BASE_URL_CANDIDATES = [
+  'https://app.grabbn.com',
+  'https://grabbn.com',
+  'https://www.grabbn.com',
+  'http://localhost:3000',
+];
+const ACTIVE_BASE_URL_KEY = 'activeBaseUrl';
+const API_REQUEST_TIMEOUT_MS = 7000;
+const AUTH_REQUEST_TIMEOUT_MS = 12000;
 const MAX_IMAGE_BYTES = 800 * 1024;
 
 // Fetch an external image URL and return a base64 data URI.
@@ -40,17 +47,36 @@ async function clearAnonymousId() {
   await chrome.storage.local.remove('anonymousId');
 }
 
+async function getActiveBaseUrl() {
+  const { [ACTIVE_BASE_URL_KEY]: activeBaseUrl } = await chrome.storage.local.get(ACTIVE_BASE_URL_KEY);
+  return activeBaseUrl || null;
+}
+
+async function setActiveBaseUrl(url) {
+  await chrome.storage.local.set({ [ACTIVE_BASE_URL_KEY]: url });
+}
+
+async function getBaseUrls() {
+  const activeBaseUrl = await getActiveBaseUrl();
+  if (!activeBaseUrl) return [...BASE_URL_CANDIDATES];
+  return [activeBaseUrl, ...BASE_URL_CANDIDATES.filter(url => url !== activeBaseUrl)];
+}
+
 async function syncAnonymousIdFromCookie() {
-  try {
-    const cookie = await chrome.cookies.get({ url: BASE_URL, name: 'anonymousId' });
-    const cookieValue = cookie?.value || null;
-    if (cookieValue) {
+  const baseUrls = await getBaseUrls();
+  for (const baseUrl of baseUrls) {
+    try {
+      const cookie = await chrome.cookies.get({ url: baseUrl, name: 'anonymousId' });
+      const cookieValue = cookie?.value || null;
+      if (!cookieValue) continue;
       await setAnonymousId(cookieValue);
+      await setActiveBaseUrl(baseUrl);
+      return cookieValue;
+    } catch {
+      // Try the next host.
     }
-    return cookieValue;
-  } catch {
-    return null;
   }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,26 +111,89 @@ async function clearAuthCache() {
 // API helpers
 // ---------------------------------------------------------------------------
 
+function normalizeRequestError(err, fallbackMessage = 'Request failed. Please try again.') {
+  if (!err) return fallbackMessage;
+
+  if (err.name === 'AbortError') {
+    return 'Request timed out. Please try again.';
+  }
+
+  if (err.message) {
+    if (err.message.includes('Failed to fetch')) {
+      return 'Network error reaching Grabbn. Please try again.';
+    }
+    return err.message;
+  }
+
+  return fallbackMessage;
+}
+
+function isInvalidApiHostResponse(path, res) {
+  if (!path.startsWith('/api/')) return false;
+
+  const contentType = (res.headers.get('content-type') || '').toLowerCase();
+  const isJson = contentType.includes('application/json');
+
+  if (res.status === 404 || res.status === 405) {
+    return !isJson;
+  }
+
+  if (!res.ok && contentType && !isJson && (contentType.includes('text/plain') || contentType.includes('text/html'))) {
+    return true;
+  }
+
+  return false;
+}
+
 async function apiRequest(path, options = {}) {
   const anonymousId = await getAnonymousId();
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
-  if (anonymousId) headers['X-Anonymous-Id'] = anonymousId;
+  const baseUrls = await getBaseUrls();
+  let lastError = null;
 
-  const controller = new AbortController();
-  const timeoutMs = options.timeoutMs ?? API_REQUEST_TIMEOUT_MS;
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  const { timeoutMs: _timeoutMs, signal: callerSignal, ...fetchOptions } = options;
+  for (const baseUrl of baseUrls) {
+    const headers = { 'Content-Type': 'application/json', ...options.headers };
+    if (anonymousId) headers['X-Anonymous-Id'] = anonymousId;
 
-  try {
-    return await fetch(`${BASE_URL}${path}`, {
-      credentials: 'include',
-      ...fetchOptions,
-      headers,
-      signal: callerSignal || controller.signal,
-    });
-  } finally {
-    clearTimeout(timeoutId);
+    const controller = new AbortController();
+    const timeoutMs = options.timeoutMs ?? API_REQUEST_TIMEOUT_MS;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const { timeoutMs: _timeoutMs, signal: callerSignal, ...fetchOptions } = options;
+
+    try {
+      const res = await fetch(`${baseUrl}${path}`, {
+        credentials: 'include',
+        ...fetchOptions,
+        headers,
+        signal: callerSignal || controller.signal,
+      });
+
+      if (isInvalidApiHostResponse(path, res)) {
+        lastError = new Error(`Host ${baseUrl} does not expose the expected API for ${path} (HTTP ${res.status}).`);
+        console.warn('[apiRequest] skipping non-API host response', {
+          baseUrl,
+          path,
+          status: res.status,
+          contentType: res.headers.get('content-type') || '',
+        });
+        continue;
+      }
+
+      await setActiveBaseUrl(baseUrl);
+      return res;
+    } catch (err) {
+      lastError = err;
+      console.warn('[apiRequest] host failed', {
+        baseUrl,
+        path,
+        name: err?.name,
+        message: err?.message,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
+
+  throw lastError || new Error('Unable to reach Grabbn.');
 }
 
 // ---------------------------------------------------------------------------
@@ -154,6 +243,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             const res = await apiRequest('/api/auth/login', {
               method: 'POST',
               body: JSON.stringify({ email: msg.email, password: msg.password }),
+              timeoutMs: AUTH_REQUEST_TIMEOUT_MS,
             });
             let data;
             try {
@@ -169,10 +259,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             }
             sendResponse({ ok: true, requiresOtp: data.requiresOtp, email: data.email });
           } catch (err) {
-            console.error('[LOGIN] fetch error:', err);
+            console.error('[LOGIN] fetch error:', {
+              name: err?.name,
+              message: err?.message,
+              stack: err?.stack,
+            });
             sendResponse({
               ok: false,
-              error: err?.name === 'AbortError' ? 'Request timed out. Please try again.' : err.message,
+              error: normalizeRequestError(err, 'Login failed. Please try again.'),
             });
           }
           break;
@@ -183,6 +277,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             const res = await apiRequest('/api/auth/verify-otp', {
               method: 'POST',
               body: JSON.stringify({ email: msg.email, code: msg.code }),
+              timeoutMs: AUTH_REQUEST_TIMEOUT_MS,
             });
             const data = await res.json();
             if (!res.ok || !data.success) {
@@ -192,6 +287,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
             if (data.anonymousId) {
               await setAnonymousId(data.anonymousId);
+            } else {
+              await syncAnonymousIdFromCookie();
             }
             const authStatus = { authenticated: true, user: data.user };
             await setCachedAuthStatus(authStatus);
@@ -199,7 +296,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           } catch (err) {
             sendResponse({
               ok: false,
-              error: err?.name === 'AbortError' ? 'Request timed out. Please try again.' : err.message,
+              error: normalizeRequestError(err, 'Verification failed. Please try again.'),
             });
           }
           break;
@@ -246,8 +343,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
               imageStatus: data.imageStatus || '',
               imageReason: data.imageReason || '',
             });
-          } catch {
-            sendResponse({ ok: false });
+          } catch (err) {
+            sendResponse({ ok: false, error: normalizeRequestError(err) });
           }
           break;
         }
@@ -262,7 +359,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             const buckets = await res.json();
             sendResponse({ ok: true, buckets });
           } catch (err) {
-            sendResponse({ ok: false, error: err.message });
+            sendResponse({ ok: false, error: normalizeRequestError(err) });
           }
           break;
         }
@@ -298,7 +395,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             }
             sendResponse({ ok: true });
           } catch (err) {
-            sendResponse({ ok: false, error: err.message });
+            sendResponse({ ok: false, error: normalizeRequestError(err) });
           }
           break;
         }
@@ -329,7 +426,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             }
             sendResponse({ ok: true });
           } catch (err) {
-            sendResponse({ ok: false, error: err.message });
+            sendResponse({ ok: false, error: normalizeRequestError(err) });
           }
           break;
         }
@@ -342,7 +439,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse({
         ok: false,
         authenticated: false,
-        error: err?.name === 'AbortError' ? 'Request timed out. Please try again.' : (err?.message || 'Unexpected error'),
+        error: normalizeRequestError(err, 'Unexpected error'),
       });
     }
   })();

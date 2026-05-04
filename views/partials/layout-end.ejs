@@ -2240,7 +2240,7 @@
         linksList.appendChild(loader);
 
         try {
-            var res = await fetch('/api/buckets/' + bucketId + '/links?skip=' + state._linksSkip + '&limit=8', { credentials: 'include' });
+            var res = await fetch('/api/buckets/' + bucketId + '/links?skip=' + state._linksSkip + '&limit=256', { credentials: 'include' });
             document.getElementById('grabbn-links-page-loader')?.remove();
             if (!res.ok) throw new Error('fetch failed');
             var data = await res.json();
@@ -2270,6 +2270,14 @@
             if (modalStatClicks) modalStatClicks.textContent = state._clicksAccum.toLocaleString() + (state._linksFullyLoaded ? '' : '+');
 
             renderLinks();
+            // If the list isn't scrollable yet, auto-fetch the next page
+            if (!state._linksFullyLoaded) {
+                setTimeout(function () {
+                    if (!state._linksLoading && linksList.scrollHeight <= linksList.clientHeight) {
+                        fetchBucketLinksPage(state._editBucket._id);
+                    }
+                }, 0);
+            }
         } catch (e) {
             document.getElementById('grabbn-links-page-loader')?.remove();
         } finally {
@@ -2526,6 +2534,19 @@
             showError('Please enter a bucket name.');
             nameInput.focus();
             return;
+        }
+
+        // Ensure all links are loaded before saving — partial loads would overwrite server data
+        if (state._editBucket && !state._linksFullyLoaded) {
+            setLoading(true);
+            while (!state._linksFullyLoaded) {
+                if (!state._linksLoading) {
+                    await fetchBucketLinksPage(state._editBucket._id);
+                } else {
+                    await new Promise(function (r) { setTimeout(r, 50); });
+                }
+            }
+            setLoading(false);
         }
 
         // When editing an existing (non-draft) bucket, skip the round-trip if nothing changed

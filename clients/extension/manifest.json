@@ -8,6 +8,7 @@
     "http://localhost:3000/*",
     "https://grabbn.com/*",
     "https://app.grabbn.com/*",
+    "https://www.grabbn.com/*",
     "*://*/*"
   ],
   "background": {

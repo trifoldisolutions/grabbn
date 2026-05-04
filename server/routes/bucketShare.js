@@ -22,16 +22,20 @@ router.get('/bucket/:bucketId/thumbnail.jpg', async (req, res) => {
             return res.status(404).send('Thumbnail not found');
         }
 
-        // Parse base64 data
+        // New: R2 URL — redirect directly to CDN
+        if (rawImage.startsWith('http')) {
+            return res.redirect(302, rawImage);
+        }
+
+        // Legacy: base64 data URI stored in MongoDB — decode and serve
         const mimeMatch = rawImage.match(/^data:(image\/\w+);base64,/);
         const base64Data = mimeMatch
             ? rawImage.slice(mimeMatch[0].length)
             : rawImage;
         const imageBuffer = Buffer.from(base64Data, 'base64');
 
-        // Send as actual image
         res.set('Content-Type', mimeMatch ? mimeMatch[1] : 'image/jpeg');
-        res.set('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        res.set('Cache-Control', 'public, max-age=31536000');
         res.send(imageBuffer);
     } catch (error) {
         console.error('Error serving thumbnail:', error);

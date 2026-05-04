@@ -769,7 +769,7 @@ function isJunkImage(imageUrl) {
 
 async function normalizeMetaImage(imageUrl, { referer } = {}) {
     if (!imageUrl) return null;
-    return await fetchAndStoreImage(imageUrl, { referer, folder: 'buckets/links' }) || imageUrl;
+    return await fetchAndStoreImage(imageUrl, { referer, folder: 'meta/links' }) || imageUrl;
 }
 
 function absolutizeUrl(rawUrl, baseUrl) {
@@ -1112,7 +1112,7 @@ function uniqueImages(candidates, baseUrl, limit = 24) {
 async function resolveBestImage(candidates, { referer, minBytes = 0 } = {}) {
     const tried = uniqueImages(candidates, referer || undefined, 24);
     for (const candidate of tried) {
-        let normalized = await fetchAndStoreImage(candidate, { referer, minBytes, folder: 'buckets/links' });
+        let normalized = await fetchAndStoreImage(candidate, { referer, minBytes, folder: 'meta/links' });
         if (!normalized) normalized = await fetchImageViaScraperAPIProxy(candidate);
         if (normalized) return { image: normalized, candidates: tried };
     }
@@ -1550,19 +1550,6 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             if (!ok) return res.status(400).json({ error: 'One or more links were rejected for safety reasons', blocked });
         }
 
-        const resolvedLinks = Array.isArray(links) ? await Promise.all(links.map(async l => ({
-            href:     l.url   || '',
-            text:     l.title || '',
-            isFree:   !l.monetized,
-            isPinned: !!l.pinned,
-            image:    await fetchAndStoreImage(l.thumb || null, { folder: 'buckets/links' }) ?? l.thumb ?? null,
-        }))) : [];
-
-        const resolvedThumb = await fetchAndStoreImage(thumbnail || null, { folder: 'buckets/thumbnails' }) || '';
-
-        // Auto-set thumbnail from first link image if no explicit thumbnail provided
-        const effectiveThumb = resolvedThumb || resolvedLinks.find(l => l.image)?.image || '';
-
         // Validate repoIds belong to this user
         let resolvedRepoIds = [];
         if (Array.isArray(repoIds) && repoIds.length > 0) {
@@ -1572,6 +1559,8 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
         }
 
         const vis = ['public', 'unlisted', 'private'].includes(visibility) ? visibility : 'private';
+
+        // Create bucket first so we have its ID for scoped R2 paths
         const bucket = await Bucket.create({
             userId:      req.user._id,
             name,
@@ -1583,11 +1572,25 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             price:       Number(price) || 0,
             mature:      !!mature,
             sourceUrl:   sourceUrl || '',
-            thumbnail:   effectiveThumb,
-            links:       resolvedLinks,
             isDraft:     !!draft,
             repoIds:     resolvedRepoIds,
         });
+
+        const bucketId = String(bucket._id);
+        const resolvedLinks = Array.isArray(links) ? await Promise.all(links.map(async l => ({
+            href:     l.url   || '',
+            text:     l.title || '',
+            isFree:   !l.monetized,
+            isPinned: !!l.pinned,
+            image:    await fetchAndStoreImage(l.thumb || null, { folder: `buckets/${bucketId}/links` }) ?? l.thumb ?? null,
+        }))) : [];
+
+        const resolvedThumb = await fetchAndStoreImage(thumbnail || null, { folder: `buckets/${bucketId}/thumbnail` }) || '';
+        const effectiveThumb = resolvedThumb || resolvedLinks.find(l => l.image)?.image || '';
+
+        bucket.links     = resolvedLinks;
+        bucket.thumbnail = effectiveThumb;
+        await bucket.save();
 
         if (vis === 'public' && !bucket.isDraft) {
             fanOutNewBucketPublished(req.user._id, req.user.username || '', bucket._id, bucket.name);
@@ -1670,7 +1673,8 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         if (monetized   !== undefined) update.isPaywalled = !!monetized;
         if (price       !== undefined) update.price       = Number(price) || 0;
         if (sourceUrl   !== undefined) update.sourceUrl   = sourceUrl || '';
-        if (thumbnail   !== undefined) update.thumbnail   = await fetchAndStoreImage(thumbnail || null, { folder: 'buckets/thumbnails' }) || '';
+        const bId = String(req.params.id);
+        if (thumbnail   !== undefined) update.thumbnail   = await fetchAndStoreImage(thumbnail || null, { folder: `buckets/${bId}/thumbnail` }) || '';
         if (links       !== undefined) {
             if (links.length > 256) return res.status(400).json({ error: 'A bucket cannot have more than 256 links' });
             if (links.length > 0) {
@@ -1685,7 +1689,7 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
                 isPinned:   !!l.pinned,
                 isArchived: !!l.archived,
                 // Fall back to the original URL if base64 conversion fails — never wipe a thumbnail
-                image:      await fetchAndStoreImage(l.thumb || null, { folder: 'buckets/links' }) ?? l.thumb ?? null,
+                image:      await fetchAndStoreImage(l.thumb || null, { folder: `buckets/${bId}/links` }) ?? l.thumb ?? null,
             })));
         }
 
@@ -2004,9 +2008,12 @@ app.put('/api/buckets/:name/thumbnail', requireAuth, requireVerification, async 
         const { name } = req.params;
         const { thumbnail } = req.body;
 
-        const storedThumbnail = await fetchAndStoreImage(thumbnail || null, { folder: 'buckets/thumbnails' }) || '';
-        const bucket = await Bucket.findOneAndUpdate(
-            { userId: req.user._id, name },
+        const bucketDoc = await Bucket.findOne({ userId: req.user._id, name }).select('_id');
+        if (!bucketDoc) return res.status(404).json({ error: 'Bucket not found' });
+
+        const storedThumbnail = await fetchAndStoreImage(thumbnail || null, { folder: `buckets/${bucketDoc._id}/thumbnail` }) || '';
+        const bucket = await Bucket.findByIdAndUpdate(
+            bucketDoc._id,
             { thumbnail: storedThumbnail },
             { new: true, timestamps: false }
         );
@@ -2558,7 +2565,7 @@ app.post('/api/buckets/:id/report', requireAuth, requireVerification, async (req
 app.get('/api/buckets/:id/links', requireAuth, requireVerification, async (req, res) => {
     try {
         const skip  = Math.max(0, parseInt(req.query.skip)  || 0);
-        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 8));
+        const limit = Math.min(256, Math.max(1, parseInt(req.query.limit) || 256));
         const [result] = await Bucket.aggregate([
             { $match: { _id: new mongoose.Types.ObjectId(req.params.id), userId: req.user._id } },
             { $project: { total: { $size: '$links' }, links: { $slice: ['$links', skip, limit] } } },
@@ -2658,7 +2665,7 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
                         href:     link.href,
                         text:     link.text || '',
                         duration: link.duration || '',
-                        image:    await fetchAndStoreImage(link.image || null, { folder: 'buckets/links' }) ?? (link.image?.startsWith('http') ? link.image : null),
+                        image:    await fetchAndStoreImage(link.image || null, { folder: `buckets/${bucket._id}/links` }) ?? (link.image?.startsWith('http') ? link.image : null),
                     }))
             );
             if (newLinks.length > 0) {

@@ -4,6 +4,7 @@
 import express from 'express';
 import PartnerApplication from '../models/partnerApplication.js';
 import User from '../models/user.js';
+import { uploadImageToR2 } from '../utils/r2.js';
 
 const router = express.Router();
 
@@ -65,6 +66,19 @@ router.post('/apply', requireVerifiedUser, async (req, res) => {
             return res.status(400).json({ error: 'File too large (max 5 MB each)' });
         }
 
+        // Upload partner files to R2 instead of storing raw base64 in MongoDB
+        function decodeBase64File(dataUri) {
+            const match = dataUri.match(/^data:(image\/[\w+]+);base64,(.+)$/s);
+            if (!match) throw new Error('Invalid image format');
+            return { mimeType: match[1], buffer: Buffer.from(match[2], 'base64') };
+        }
+        const idFile = decodeBase64File(idFileRef);
+        const selfieFile = decodeBase64File(selfieFileRef);
+        const [idUrl, selfieUrl] = await Promise.all([
+            uploadImageToR2(idFile.buffer, idFile.mimeType, 'partners'),
+            uploadImageToR2(selfieFile.buffer, selfieFile.mimeType, 'partners'),
+        ]);
+
         // Validate claimed accounts structure if provided
         let accounts = [];
         if (Array.isArray(claimedAccounts)) {
@@ -80,8 +94,8 @@ router.post('/apply', requireVerifiedUser, async (req, res) => {
         const application = await PartnerApplication.create({
             userId,
             pitch:           pitch.trim().slice(0, 4000),
-            idFileRef,
-            selfieFileRef,
+            idFileRef:       idUrl,
+            selfieFileRef:   selfieUrl,
             claimedAccounts: accounts,
         });
 
