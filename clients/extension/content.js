@@ -81,7 +81,7 @@ if (window.__grabbnInjected) {
     }
   }
 
-  const MAX_SELECTION = 10;
+  const MAX_SELECTION = 100;
 
   function onLinkClick(e) {
     const link = e.target.closest('a[href]');
