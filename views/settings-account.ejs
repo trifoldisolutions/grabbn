@@ -1,0 +1,370 @@
+<%
+  title          = 'Account'
+  page           = 'settings'
+  settingsSection = 'account'
+%>
+<%- include('partials/layout') %>
+
+<div class="flex flex-1 overflow-hidden justify-center">
+  <div class="flex w-full max-w-[992px] overflow-hidden">
+
+  <%- include('partials/settings-nav') %>
+
+  <!-- Content area -->
+  <div class="flex-1 overflow-y-auto">
+    <div class="w-full px-6 py-6">
+
+      <% if (user && !user.isAnonymous) { %>
+
+      <!-- ── Profile ────────────────────────────────────────────────────────── -->
+      <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
+
+        <div class="px-5 py-4">
+          <p class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Profile</p>
+        </div>
+
+        <!-- Avatar -->
+        <div class="px-5 py-4 flex items-center justify-between gap-4">
+          <div class="flex flex-col gap-0.5 min-w-0">
+            <span class="text-sm font-medium text-woodsmoke-900">Avatar</span>
+            <span class="text-xs text-woodsmoke-400">Your public profile picture</span>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
+            <div class="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center <%= user.avatar ? '' : 'bg-orchid-100' %>">
+              <% if (user.avatar) { %>
+                <img src="<%= user.avatar %>" alt="avatar" class="w-full h-full object-cover">
+              <% } else { %>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="text-orchid-600"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>
+              <% } %>
+            </div>
+            <button class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 transition-colors opacity-50 cursor-not-allowed" disabled title="Coming soon">
+              Change
+            </button>
+          </div>
+        </div>
+
+        <!-- Username -->
+        <div class="px-5 py-4">
+          <div class="flex items-start justify-between gap-4" id="usernameDisplay">
+            <div class="flex flex-col gap-0.5 min-w-0">
+              <span class="text-sm font-medium text-woodsmoke-900">Username</span>
+              <span class="text-xs text-woodsmoke-400">@<%= user.username %></span>
+            </div>
+            <button id="usernameEditBtn" class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
+              Edit
+            </button>
+          </div>
+          <div id="usernameForm" class="hidden mt-3 flex flex-col gap-2">
+            <input id="usernameInput" type="text" value="<%= user.username %>" maxlength="26"
+              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors"
+              placeholder="Username">
+            <p class="text-[11px] text-woodsmoke-400">2–26 characters, letters and numbers only.</p>
+            <p id="usernameError" class="hidden text-xs text-red-500"></p>
+            <div class="flex gap-2">
+              <button id="usernameSaveBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
+              <button id="usernameCancelBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bio -->
+        <div class="px-5 py-4">
+          <div class="flex items-start justify-between gap-4" id="bioDisplay">
+            <div class="flex flex-col gap-0.5 min-w-0">
+              <span class="text-sm font-medium text-woodsmoke-900">Bio</span>
+              <span class="text-xs text-woodsmoke-400 break-words"><%= user.bio || 'No bio yet.' %></span>
+            </div>
+            <button id="bioEditBtn" class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
+              Edit
+            </button>
+          </div>
+          <div id="bioForm" class="hidden mt-3 flex flex-col gap-2">
+            <div class="relative">
+              <textarea id="bioInput" maxlength="128" rows="3"
+                class="w-full px-3 py-2.5 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors resize-none"
+                placeholder="Tell people a bit about yourself…"><%= user.bio || '' %></textarea>
+              <span id="bioCount" class="absolute bottom-2 right-3 text-[10px] text-woodsmoke-300"><%= (user.bio || '').length %>/128</span>
+            </div>
+            <p id="bioError" class="hidden text-xs text-red-500"></p>
+            <div class="flex gap-2">
+              <button id="bioSaveBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
+              <button id="bioCancelBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Security ───────────────────────────────────────────────────────── -->
+      <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
+
+        <div class="px-5 py-4">
+          <p class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Security</p>
+        </div>
+
+        <!-- Email -->
+        <div class="px-5 py-4 flex items-center justify-between gap-4">
+          <div class="flex flex-col gap-0.5 min-w-0">
+            <span class="text-sm font-medium text-woodsmoke-900">Email address</span>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="text-xs text-woodsmoke-400 truncate"><%= user.email %></span>
+              <% if (user.isEmailVerified) { %>
+                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">Verified</span>
+              <% } else { %>
+                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-500">Unverified</span>
+              <% } %>
+            </div>
+          </div>
+          <% if (!user.isEmailVerified) { %>
+            <button id="resendOtpBtn" class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
+              Verify email
+            </button>
+          <% } %>
+        </div>
+
+        <!-- Password -->
+        <div class="px-5 py-4">
+          <div class="flex items-start justify-between gap-4" id="passwordDisplay">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-sm font-medium text-woodsmoke-900">Password</span>
+              <span class="text-xs text-woodsmoke-400">Last changed: unknown</span>
+            </div>
+            <button id="passwordEditBtn" class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
+              Change
+            </button>
+          </div>
+          <div id="passwordForm" class="hidden mt-3 flex flex-col gap-2">
+            <input id="currentPasswordInput" type="password"
+              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors"
+              placeholder="Current password" autocomplete="current-password">
+            <input id="newPasswordInput" type="password"
+              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors"
+              placeholder="New password" autocomplete="new-password">
+            <input id="confirmPasswordInput" type="password"
+              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors"
+              placeholder="Confirm new password" autocomplete="new-password">
+            <p class="text-[11px] text-woodsmoke-400">Min. 8 chars with 2 uppercase, 2 lowercase, 2 digits, 2 special characters.</p>
+            <p id="passwordError" class="hidden text-xs text-red-500"></p>
+            <div class="flex gap-2">
+              <button id="passwordSaveBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
+              <button id="passwordCancelBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <p id="accountFeedback" class="hidden text-xs text-center mt-2"></p>
+
+      <% } else { %>
+        <p class="text-sm text-woodsmoke-400">Please <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">sign in</a> to manage your settings.</p>
+      <% } %>
+
+    </div>
+  </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+
+  const feedback = document.getElementById('accountFeedback');
+
+  function showFeedback(msg, ok) {
+    feedback.textContent = msg;
+    feedback.className = `mt-2 text-xs text-center ${ok ? 'text-emerald-600' : 'text-red-500'}`;
+    clearTimeout(feedback._t);
+    feedback._t = setTimeout(() => { feedback.className = 'hidden text-xs text-center'; }, 3000);
+  }
+
+  // ── Generic inline edit toggle ─────────────────────────────────────────────
+  function wireInlineEdit({ editBtn, cancelBtn, form, onCancel }) {
+    editBtn.addEventListener('click', () => {
+      form.classList.remove('hidden');
+      editBtn.classList.add('hidden');
+      form.querySelector('input,textarea')?.focus();
+    });
+    cancelBtn.addEventListener('click', () => {
+      form.classList.add('hidden');
+      editBtn.classList.remove('hidden');
+      onCancel?.();
+    });
+  }
+
+  // ── Username ────────────────────────────────────────────────────────────────
+  const usernameEditBtn   = document.getElementById('usernameEditBtn');
+  const usernameCancelBtn = document.getElementById('usernameCancelBtn');
+  const usernameForm      = document.getElementById('usernameForm');
+  const usernameInput     = document.getElementById('usernameInput');
+  const usernameSaveBtn   = document.getElementById('usernameSaveBtn');
+  const usernameError     = document.getElementById('usernameError');
+
+  wireInlineEdit({ editBtn: usernameEditBtn, cancelBtn: usernameCancelBtn, form: usernameForm });
+
+  async function saveUsername() {
+    const val = usernameInput.value.trim();
+    usernameError.classList.add('hidden');
+    if (!val) return;
+    usernameSaveBtn.disabled = true;
+    usernameSaveBtn.textContent = 'Saving…';
+    try {
+      const res  = await fetch('/api/user/username', {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: val }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        usernameError.textContent = data.error;
+        usernameError.classList.remove('hidden');
+        return;
+      }
+      document.querySelector('#usernameDisplay .text-woodsmoke-400').textContent = `@${data.username}`;
+      usernameForm.classList.add('hidden');
+      usernameEditBtn.classList.remove('hidden');
+      showFeedback('Username updated.', true);
+    } catch {
+      usernameError.textContent = 'Something went wrong. Try again.';
+      usernameError.classList.remove('hidden');
+    } finally {
+      usernameSaveBtn.disabled = false;
+      usernameSaveBtn.textContent = 'Save';
+    }
+  }
+
+  usernameSaveBtn.addEventListener('click', saveUsername);
+  usernameInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveUsername(); });
+
+  // ── Bio ─────────────────────────────────────────────────────────────────────
+  const bioEditBtn   = document.getElementById('bioEditBtn');
+  const bioCancelBtn = document.getElementById('bioCancelBtn');
+  const bioForm      = document.getElementById('bioForm');
+  const bioInput     = document.getElementById('bioInput');
+  const bioSaveBtn   = document.getElementById('bioSaveBtn');
+  const bioError     = document.getElementById('bioError');
+  const bioCount     = document.getElementById('bioCount');
+
+  wireInlineEdit({ editBtn: bioEditBtn, cancelBtn: bioCancelBtn, form: bioForm });
+
+  bioInput.addEventListener('input', () => {
+    bioCount.textContent = `${bioInput.value.length}/128`;
+  });
+
+  async function saveBio() {
+    const val = bioInput.value.trim();
+    bioError.classList.add('hidden');
+    bioSaveBtn.disabled = true;
+    bioSaveBtn.textContent = 'Saving…';
+    try {
+      const res  = await fetch('/api/user/bio', {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bio: val }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        bioError.textContent = data.error;
+        bioError.classList.remove('hidden');
+        return;
+      }
+      document.querySelector('#bioDisplay .text-woodsmoke-400').textContent = val || 'No bio yet.';
+      bioForm.classList.add('hidden');
+      bioEditBtn.classList.remove('hidden');
+      showFeedback('Bio updated.', true);
+    } catch {
+      bioError.textContent = 'Something went wrong. Try again.';
+      bioError.classList.remove('hidden');
+    } finally {
+      bioSaveBtn.disabled = false;
+      bioSaveBtn.textContent = 'Save';
+    }
+  }
+
+  bioSaveBtn.addEventListener('click', saveBio);
+
+  // ── Resend OTP (Verify email) ───────────────────────────────────────────────
+  const resendOtpBtn = document.getElementById('resendOtpBtn');
+  if (resendOtpBtn) {
+    resendOtpBtn.addEventListener('click', async () => {
+      resendOtpBtn.disabled = true;
+      resendOtpBtn.textContent = 'Sending…';
+      try {
+        const res = await fetch('/api/auth/resend-otp', { method: 'POST', credentials: 'include' });
+        if (res.ok) {
+          showFeedback('Verification code sent — check your inbox.', true);
+          resendOtpBtn.textContent = 'Sent!';
+          setTimeout(() => { resendOtpBtn.textContent = 'Verify email'; resendOtpBtn.disabled = false; }, 5000);
+        } else {
+          resendOtpBtn.textContent = 'Try again';
+          resendOtpBtn.disabled = false;
+        }
+      } catch {
+        resendOtpBtn.textContent = 'Try again';
+        resendOtpBtn.disabled = false;
+      }
+    });
+  }
+
+  // ── Password ────────────────────────────────────────────────────────────────
+  const passwordEditBtn      = document.getElementById('passwordEditBtn');
+  const passwordCancelBtn    = document.getElementById('passwordCancelBtn');
+  const passwordForm         = document.getElementById('passwordForm');
+  const currentPasswordInput = document.getElementById('currentPasswordInput');
+  const newPasswordInput     = document.getElementById('newPasswordInput');
+  const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+  const passwordSaveBtn      = document.getElementById('passwordSaveBtn');
+  const passwordError        = document.getElementById('passwordError');
+
+  wireInlineEdit({
+    editBtn: passwordEditBtn, cancelBtn: passwordCancelBtn, form: passwordForm,
+    onCancel: () => {
+      currentPasswordInput.value = '';
+      newPasswordInput.value     = '';
+      confirmPasswordInput.value = '';
+      passwordError.classList.add('hidden');
+    },
+  });
+
+  async function savePassword() {
+    passwordError.classList.add('hidden');
+    const current  = currentPasswordInput.value;
+    const next     = newPasswordInput.value;
+    const confirm  = confirmPasswordInput.value;
+    if (!current || !next || !confirm) { passwordError.textContent = 'All fields are required.'; passwordError.classList.remove('hidden'); return; }
+    if (next !== confirm) { passwordError.textContent = 'New passwords do not match.'; passwordError.classList.remove('hidden'); return; }
+    passwordSaveBtn.disabled = true;
+    passwordSaveBtn.textContent = 'Saving…';
+    try {
+      const res  = await fetch('/api/user/password', {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: current, newPassword: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        passwordError.textContent = data.error;
+        passwordError.classList.remove('hidden');
+        return;
+      }
+      currentPasswordInput.value = '';
+      newPasswordInput.value     = '';
+      confirmPasswordInput.value = '';
+      passwordForm.classList.add('hidden');
+      passwordEditBtn.classList.remove('hidden');
+      showFeedback('Password updated successfully.', true);
+    } catch {
+      passwordError.textContent = 'Something went wrong. Try again.';
+      passwordError.classList.remove('hidden');
+    } finally {
+      passwordSaveBtn.disabled = false;
+      passwordSaveBtn.textContent = 'Save';
+    }
+  }
+
+  passwordSaveBtn.addEventListener('click', savePassword);
+
+})();
+</script>
+
+<%- include('partials/layout-end') %>

@@ -48,8 +48,6 @@
 <!-- Settings left nav -->
 <nav class="w-52 shrink-0 border-r border-silver-100 py-6 pr-2 hidden md:flex flex-col gap-0.5">
 
-  <p class="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-woodsmoke-400">Settings</p>
-
   <% settingsItems.forEach(function(item) {
     const isActive = (typeof settingsSection !== 'undefined') && settingsSection === item.key;
     const isDanger = item.key === 'danger';

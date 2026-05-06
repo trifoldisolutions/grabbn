@@ -95,6 +95,7 @@ const userSchema = new mongoose.Schema(
       default: 'none'
     },
     avatar: { type: String, default: '' },
+    bio:    { type: String, default: '', maxlength: 128 },
     notificationsClearedAt: { type: Date, default: null },
     newsletterSubscribed: { type: Boolean, default: false },
     isMatureGated:        { type: Boolean, default: true  },

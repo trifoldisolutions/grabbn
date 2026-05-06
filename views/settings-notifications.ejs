@@ -1,0 +1,111 @@
+<%
+  title          = 'Notifications'
+  page           = 'settings'
+  settingsSection = 'notifications'
+%>
+<%- include('partials/layout') %>
+
+<div class="flex flex-1 overflow-hidden justify-center">
+  <div class="flex w-full max-w-[992px] overflow-hidden">
+
+    <%- include('partials/settings-nav') %>
+
+    <!-- Content area -->
+    <div class="flex-1 overflow-y-auto">
+      <div class="w-full px-6 py-6">
+
+        <% if (user && !user.isAnonymous) { %>
+
+        <%
+          const prefs = (user.notificationPrefs) || {};
+          const notifItems = [
+            { key: 'newFollower',      label: 'New follower',                       desc: 'Someone started following you' },
+            { key: 'bucketGrabbed',    label: 'Bucket grabbed',                     desc: 'Someone grabbed one of your buckets' },
+            { key: 'bucketUnlocked',   label: 'Bucket unlocked',                    desc: 'Someone unlocked one of your paid buckets' },
+            { key: 'newBucketFollow',  label: 'New bucket from someone you follow', desc: 'A person you follow published a new bucket' },
+            { key: 'commentMention',   label: 'Comment mention or reply',           desc: 'Someone mentioned or replied to you in a comment' },
+            { key: 'newMessage',       label: 'New direct message',                 desc: 'You received a new direct message' },
+            { key: 'newsletter',       label: 'Grabbn newsletter',                  desc: 'Product updates, tips and announcements' },
+          ];
+        %>
+
+        <!-- ── In-app ─────────────────────────────────────────────────────────── -->
+        <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
+
+          <div class="px-5 py-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">In-app notifications</p>
+          </div>
+
+          <% notifItems.forEach(function(item) {
+            const enabled = prefs[item.key] !== false;
+          %>
+          <div class="px-5 py-4 flex items-center justify-between gap-4">
+            <div class="flex flex-col gap-0.5 min-w-0">
+              <span class="text-sm font-medium text-woodsmoke-900"><%= item.label %></span>
+              <span class="text-xs text-woodsmoke-400"><%= item.desc %></span>
+            </div>
+            <button
+              class="notif-toggle relative w-10 h-6 rounded-full transition-colors shrink-0 <%= enabled ? 'bg-orchid-500' : 'bg-silver-200' %>"
+              data-key="<%= item.key %>"
+              data-enabled="<%= enabled ? 'true' : 'false' %>"
+            >
+              <span class="absolute left-1 top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform <%= enabled ? 'translate-x-4' : '' %>"></span>
+            </button>
+          </div>
+          <% }); %>
+
+        </div>
+
+        <p id="notifFeedback" class="hidden text-xs text-center mt-2"></p>
+
+        <% } else { %>
+          <p class="text-sm text-woodsmoke-400">Please <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">sign in</a> to manage your settings.</p>
+        <% } %>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const feedback = document.getElementById('notifFeedback');
+  if (!feedback) return;
+
+  function showFeedback(msg, ok) {
+    feedback.textContent = msg;
+    feedback.className = `mt-2 text-xs text-center ${ok ? 'text-emerald-600' : 'text-red-500'}`;
+    clearTimeout(feedback._t);
+    feedback._t = setTimeout(() => { feedback.className = 'hidden text-xs text-center'; }, 3000);
+  }
+
+  document.querySelectorAll('.notif-toggle').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const key     = btn.dataset.key;
+      const current = btn.dataset.enabled === 'true';
+      const next    = !current;
+      btn.disabled  = true;
+      try {
+        const res = await fetch('/api/user/notification-prefs', {
+          method: 'PATCH', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [key]: next }),
+        });
+        if (!res.ok) throw new Error();
+        btn.dataset.enabled = String(next);
+        btn.classList.toggle('bg-orchid-500', next);
+        btn.classList.toggle('bg-silver-200', !next);
+        btn.querySelector('span').classList.toggle('translate-x-4', next);
+        showFeedback('Preferences saved.', true);
+      } catch {
+        showFeedback('Could not save. Try again.', false);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+})();
+</script>
+
+<%- include('partials/layout-end') %>

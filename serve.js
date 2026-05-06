@@ -3622,7 +3622,7 @@ const appPages = [
     { path: '/showroom',       view: 'showroom',        title: 'Show Room',       page: 'home'          },
     { path: '/explore',        view: 'explore',         title: 'Explore',         page: 'explore'       },
     { path: '/transactions',   view: 'transactions',    title: 'Transactions',    page: 'transactions'  },
-    { path: '/settings',       view: 'settings',        title: 'Settings',        page: 'settings'      },
+    // /settings is handled below (redirect + per-section routes)
     { path: '/docs',           view: 'docs',            title: 'Docs',            page: 'docs'          },
     { path: '/faq',            view: 'faq',             title: 'FAQ',             page: 'faq'           },
     { path: '/contact',        view: 'contact',         title: 'Contact',         page: 'contact'       },
@@ -3638,6 +3638,82 @@ for (const { path: routePath, view, title, page } of appPages) {
         res.render(view, { title, page, user: req.user ?? null });
     });
 }
+
+// Settings — redirect root + per-section routes
+app.get('/settings', anonymousAuth, requireNonAdmin, (req, res) => {
+    res.redirect('/settings/account');
+});
+
+const SETTINGS_SECTIONS = [
+    { section: 'account',       title: 'Account'       },
+    { section: 'privacy',       title: 'Privacy'       },
+    { section: 'content',       title: 'Content'       },
+    { section: 'notifications', title: 'Notifications' },
+    { section: 'monetization',  title: 'Monetization'  },
+    { section: 'integrations',  title: 'Integrations'  },
+    { section: 'danger',        title: 'Danger Zone'   },
+];
+
+for (const { section, title } of SETTINGS_SECTIONS) {
+    app.get(`/settings/${section}`, anonymousAuth, requireNonAdmin, (req, res) => {
+        res.render(`settings-${section}`, { title, page: 'settings', settingsSection: section, user: req.user ?? null });
+    });
+}
+
+// PATCH /api/user/username
+app.patch('/api/user/username', requireAuth, async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username?.trim()) return res.status(400).json({ error: 'Username is required' });
+        const trimmed = username.trim();
+        if (trimmed.length < 2 || trimmed.length > 26) return res.status(400).json({ error: 'Username must be 2–26 characters' });
+        if (!/^[a-zA-Z0-9]+$/.test(trimmed)) return res.status(400).json({ error: 'Username may only contain letters and numbers' });
+        if (trimmed.toLowerCase() === req.user.username?.toLowerCase()) return res.status(400).json({ error: 'This is already your username' });
+        const taken = await User.findOne({ username: new RegExp(`^${trimmed}$`, 'i'), _id: { $ne: req.user._id } });
+        if (taken) return res.status(409).json({ error: 'Username is already taken' });
+        await User.findByIdAndUpdate(req.user._id, { username: trimmed });
+        res.json({ ok: true, username: trimmed });
+    } catch (err) {
+        console.error('Username update error:', err);
+        res.status(500).json({ error: 'Failed to update username' });
+    }
+});
+
+// PATCH /api/user/password
+app.patch('/api/user/password', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both current and new password are required' });
+        const user = await User.findById(req.user._id).select('+password');
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        const valid = await user.comparePassword(currentPassword);
+        if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+        if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        if ((newPassword.match(/[a-z]/g) || []).length < 2) return res.status(400).json({ error: 'Password must contain at least 2 lowercase letters' });
+        if ((newPassword.match(/[A-Z]/g) || []).length < 2) return res.status(400).json({ error: 'Password must contain at least 2 uppercase letters' });
+        if ((newPassword.match(/[0-9]/g) || []).length < 2) return res.status(400).json({ error: 'Password must contain at least 2 digits' });
+        if ((newPassword.match(/[^a-zA-Z0-9]/g) || []).length < 2) return res.status(400).json({ error: 'Password must contain at least 2 special characters' });
+        user.password = newPassword;
+        await user.save(); // triggers bcrypt pre-save hook
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Password update error:', err);
+        res.status(500).json({ error: 'Failed to update password' });
+    }
+});
+
+// PATCH /api/user/bio
+app.patch('/api/user/bio', requireAuth, async (req, res) => {
+    try {
+        const bio = (req.body.bio ?? '').trim();
+        if (bio.length > 128) return res.status(400).json({ error: 'Bio must be 128 characters or fewer' });
+        await User.findByIdAndUpdate(req.user._id, { bio });
+        res.json({ ok: true, bio });
+    } catch (err) {
+        console.error('Bio update error:', err);
+        res.status(500).json({ error: 'Failed to update bio' });
+    }
+});
 
 // Partnership apply page — custom handler to pass application status to template
 app.get('/partnership/apply', anonymousAuth, requireNonAdmin, async (req, res) => {
