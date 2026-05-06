@@ -4,6 +4,8 @@
 %>
 <%- include('partials/layout') %>
 
+<% if (buckets.some(b => b.mature) && !isOwner && (!user || user.isAnonymous || user.isMatureGated !== false) && !matureAck) { %><%- include('partials/mature-gate', { matureContext: 'repo' }) %><% } %>
+
 <div class="w-full max-w-5xl mx-auto px-4 md:px-6 py-5 md:py-8">
 
     <!-- ── Repo header ────────────────────────────────────────────────────── -->

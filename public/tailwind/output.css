@@ -475,6 +475,9 @@
   .z-\[200\] {
     z-index: 200;
   }
+  .z-\[9999\] {
+    z-index: 9999;
+  }
   .col-span-2 {
     grid-column: span 2 / span 2;
   }
@@ -1370,6 +1373,9 @@
   .border-orchid-600 {
     border-color: var(--color-orchid-600);
   }
+  .border-red-100 {
+    border-color: var(--color-red-100);
+  }
   .border-red-200 {
     border-color: var(--color-red-200);
   }
@@ -1438,6 +1444,9 @@
   }
   .bg-amber-400 {
     background-color: var(--color-amber-400);
+  }
+  .bg-amber-500 {
+    background-color: var(--color-amber-500);
   }
   .bg-amber-500\/90 {
     background-color: color-mix(in srgb, oklch(76.9% 0.188 70.08) 90%, transparent);
@@ -1710,6 +1719,12 @@
     background-color: color-mix(in srgb, #191919 60%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-woodsmoke-950) 60%, transparent);
+    }
+  }
+  .bg-woodsmoke-950\/70 {
+    background-color: color-mix(in srgb, #191919 70%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-woodsmoke-950) 70%, transparent);
     }
   }
   .bg-woodsmoke-950\/85 {
@@ -2675,6 +2690,13 @@
       }
     }
   }
+  .hover\:border-silver-200 {
+    &:hover {
+      @media (hover: hover) {
+        border-color: var(--color-silver-200);
+      }
+    }
+  }
   .hover\:border-woodsmoke-700 {
     &:hover {
       @media (hover: hover) {
@@ -2700,6 +2722,13 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-amber-200);
+      }
+    }
+  }
+  .hover\:bg-amber-600 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-amber-600);
       }
     }
   }

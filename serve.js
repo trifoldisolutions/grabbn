@@ -1426,6 +1426,20 @@ app.get('/api/user', requireAuth, requireVerification, (req, res) => {
     });
 });
 
+app.patch('/api/user/settings', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { isMatureGated } = req.body;
+        const update = {};
+        if (isMatureGated !== undefined) update.isMatureGated = !!isMatureGated;
+        if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No valid fields provided' });
+        await User.findByIdAndUpdate(req.user._id, update);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Settings update error:', err);
+        res.status(500).json({ error: 'Failed to update settings' });
+    }
+});
+
 // Get all buckets for current user (NO Singletons returned)
 app.get('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     try {
@@ -2531,7 +2545,7 @@ app.post('/api/buckets/:bucketId/rate', requireAuth, requireVerification, async 
 app.post('/api/buckets/:id/report', requireAuth, requireVerification, async (req, res) => {
     try {
         const { reason, detail } = req.body;
-        const validReasons = ['spam', 'malicious', 'inappropriate', 'copyright', 'other'];
+        const validReasons = ['spam', 'malicious', 'inappropriate', 'copyright', 'mature_content', 'other'];
 
         if (!reason || !validReasons.includes(reason)) {
             return res.status(400).json({ error: 'Invalid report reason' });
@@ -4215,15 +4229,19 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
             Subscription.countDocuments({ followeeId: profileUser._id }),
             Subscription.countDocuments({ followerId: profileUser._id }),
             Bucket.find({ 'grabbedBy.userId': profileUser._id })
-                .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags ratingCount ratingSum createdAt updatedAt')
+                .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature ratingCount ratingSum createdAt updatedAt')
                 .populate('userId', 'username')
                 .sort({ createdAt: -1 })
                 .lean(),
             UserRepo.find({ userId: profileUser._id }).sort({ name: 1 }).lean(),
         ]);
 
-        const ownBuckets     = allBuckets.map(addDisplayThumb);
-        const grabbedBuckets = rawGrabbed.map(addDisplayThumb);
+        const hideMature = !isOwner && (viewer === null || viewer.isAnonymous || viewer.isMatureGated !== false);
+        const ownBuckets       = allBuckets.filter(b => !hideMature || !b.mature).map(addDisplayThumb);
+        const grabbedBuckets   = rawGrabbed.filter(b => !hideMature || !b.mature).map(addDisplayThumb);
+        const publicBucketCount = allBuckets.filter(b => b.visibility === 'public').length;
+        const publicRepoIds     = new Set(allBuckets.filter(b => b.visibility === 'public').flatMap(b => (b.repoIds || []).map(id => id.toString())));
+        const publicRepoCount   = userRepos.filter(r => publicRepoIds.has(r._id.toString())).length;
         const totalViews     = ownBuckets.reduce((sum, b) => sum + (b.viewCount       ?? 0), 0);
         const totalGrabs     = ownBuckets.reduce((sum, b) => sum + (b.grabbedBy?.length ?? 0), 0);
         const memberSince    = new Date(profileUser.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -4236,6 +4254,8 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
             isOwner,
             ownBuckets,
             grabbedBuckets,
+            publicBucketCount,
+            publicRepoCount,
             userRepos,
             totalViews,
             totalGrabs,
@@ -4290,6 +4310,7 @@ app.get('/o/:repoId', anonymousAuth, async (req, res) => {
             title:          repo.name,
             page:           'repo',
             user:           viewer,
+            matureAck:      !!req.cookies.matureAck,
             ogTitle:        `${repo.name} — by @${owner.username}`,
             ogDescription:  `A curated repo of ${buckets.length} bucket${buckets.length !== 1 ? 's' : ''} by @${owner.username}`,
             ogUrl:          pageUrl,
@@ -4517,6 +4538,7 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
             title: bucket.name,
             page: 'explore',
             user: req.user ?? null,
+            matureAck: !!req.cookies.matureAck,
             bucket,
             bucketId,
             curatorName,

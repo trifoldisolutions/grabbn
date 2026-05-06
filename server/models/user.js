@@ -97,6 +97,7 @@ const userSchema = new mongoose.Schema(
     avatar: { type: String, default: '' },
     notificationsClearedAt: { type: Date, default: null },
     newsletterSubscribed: { type: Boolean, default: false },
+    isMatureGated:        { type: Boolean, default: true  },
     // Dedicated token embedded in the bookmarklet so the popup can authenticate
     // without relying on third-party cookies (blocked by many modern browsers).
     bookmarkletToken: { type: String, sparse: true, index: true },

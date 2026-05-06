@@ -1,0 +1,39 @@
+<%# locals: matureContext = 'bucket' | 'repo' %>
+<style>body.mature-gated img { opacity: 0; }</style>
+<script>document.body.classList.add('mature-gated');</script>
+<div id="matureGate" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-woodsmoke-950/70 backdrop-blur-sm">
+  <div class="w-full max-w-md bg-white rounded-xl shadow-xl p-6 flex flex-col gap-5">
+
+    <div class="flex flex-col items-center text-center gap-3">
+      <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-600"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <h2 class="text-lg font-bold text-woodsmoke-950">Mature Content Warning</h2>
+      <p class="text-sm text-woodsmoke-500 leading-relaxed">
+        <% if (locals.matureContext === 'repo') { %>
+          This repository contains one or more collections intended for a mature audience.
+        <% } else { %>
+          This collection is intended for a mature audience.
+        <% } %>
+        Please disregard this page if you are not of the legally required age to access mature content in your jurisdiction.
+      </p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-2">
+      <a href="/explore" class="flex-1 inline-flex items-center justify-center h-12 rounded-md border-2 border-orchid-100 bg-orchid-200 text-sm font-semibold text-orchid-600 hover:bg-silver-50 transition-colors">
+        Take me back - Exit
+      </a>
+      <button id="matureGateProceed" class="flex-1 inline-flex items-center justify-center h-12 rounded-md border-2 border-orchid-200 bg-orchid-200 text-sm font-semibold text-orchid-600 hover:bg-silver-50 transition-colors">
+        I understand - Proceed
+      </button>
+    </div>
+
+  </div>
+</div>
+<script>
+  document.getElementById('matureGateProceed').addEventListener('click', function () {
+    document.cookie = 'matureAck=1; path=/';
+    document.getElementById('matureGate').remove();
+    document.body.classList.remove('mature-gated');
+  });
+</script>
