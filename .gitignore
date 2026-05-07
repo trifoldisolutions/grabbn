@@ -8,6 +8,7 @@ node_modules/
 # Local dev artifacts
 txt/
 nul
+CLAUDE.local.md
 
 # OS files
 .DS_Store

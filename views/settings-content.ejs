@@ -20,13 +20,13 @@
         <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
           <div class="px-5 py-4">
-            <p class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Filtering</p>
+            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Filtering</p>
           </div>
 
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-medium text-woodsmoke-900">Mature content filter</span>
-              <span class="text-xs text-woodsmoke-400">Hide buckets flagged as mature from your feed and search results</span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Mature content filter</span>
+              <span class="text-sm text-woodsmoke-400">Hide buckets flagged as mature from your feed and search results</span>
             </div>
             <button
               id="matureToggle"
@@ -43,13 +43,13 @@
         <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
           <div class="px-5 py-4">
-            <p class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">New bucket defaults</p>
+            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">New bucket defaults</p>
           </div>
 
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-medium text-woodsmoke-900">Default visibility</span>
-              <span class="text-xs text-woodsmoke-400">Visibility applied to new buckets you create</span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Default visibility</span>
+              <span class="text-sm text-woodsmoke-400">Visibility applied to new buckets you create</span>
             </div>
             <select class="h-9 px-3 text-sm border border-silver-200 rounded-md text-woodsmoke-700 bg-white outline-none focus:border-orchid-400 transition-colors shrink-0 opacity-50 cursor-not-allowed" disabled>
               <option>Public</option>
@@ -60,8 +60,8 @@
 
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-medium text-woodsmoke-900">Create as draft by default</span>
-              <span class="text-xs text-woodsmoke-400">New buckets will start as drafts instead of being published immediately</span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Create as draft by default</span>
+              <span class="text-sm text-woodsmoke-400">New buckets will start as drafts instead of being published immediately</span>
             </div>
             <button class="relative w-10 h-6 rounded-full bg-silver-200 opacity-50 cursor-not-allowed shrink-0" disabled>
               <span class="absolute left-1 top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform"></span>
@@ -70,7 +70,7 @@
 
         </div>
 
-        <p id="contentFeedback" class="hidden text-xs text-center mt-2"></p>
+        <p id="contentFeedback" class="hidden text-sm text-center mt-2"></p>
 
         <% } else { %>
           <p class="text-sm text-woodsmoke-400">Please <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">sign in</a> to manage your settings.</p>
@@ -90,9 +90,9 @@
 
   function showFeedback(msg, ok) {
     feedback.textContent = msg;
-    feedback.className = `mt-2 text-xs text-center ${ok ? 'text-emerald-600' : 'text-red-500'}`;
+    feedback.className = `mt-2 text-sm text-center ${ok ? 'text-emerald-600' : 'text-red-500'}`;
     clearTimeout(feedback._t);
-    feedback._t = setTimeout(() => { feedback.className = 'hidden text-xs text-center'; }, 3000);
+    feedback._t = setTimeout(() => { feedback.className = 'hidden text-sm text-center'; }, 3000);
   }
 
   toggle.addEventListener('click', async () => {

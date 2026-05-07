@@ -20,24 +20,24 @@
         <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
           <div class="px-5 py-4">
-            <p class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Bookmarklet</p>
+            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Bookmarklet</p>
           </div>
 
           <div class="px-5 py-4">
             <div class="flex items-start justify-between gap-4 mb-3">
               <div class="flex flex-col gap-0.5 min-w-0">
-                <span class="text-sm font-medium text-woodsmoke-900">Your token</span>
-                <span class="text-xs text-woodsmoke-400">Use this token to authenticate the Grabbn bookmarklet</span>
+                <span class="text-sm font-semibold text-woodsmoke-900">Your token</span>
+                <span class="text-sm text-woodsmoke-400">Use this token to authenticate the Grabbn bookmarklet</span>
               </div>
-              <button id="regenTokenBtn" class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0 opacity-50 cursor-not-allowed" disabled>
+              <button id="regenTokenBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0 opacity-50 cursor-not-allowed" disabled>
                 Regenerate
               </button>
             </div>
             <div class="flex items-center gap-2">
-              <code class="flex-1 h-10 flex items-center px-3 bg-silver-50 border border-silver-200 rounded-md text-xs text-woodsmoke-500 font-mono truncate select-all">
+              <code class="flex-1 h-10 flex items-center px-3 bg-silver-50 border border-silver-200 rounded-md text-sm text-woodsmoke-500 font-mono truncate select-all">
                 <%= user.bookmarkletToken || '—' %>
               </code>
-              <button id="copyTokenBtn" class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
+              <button id="copyTokenBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
                 Copy
               </button>
             </div>
@@ -49,25 +49,25 @@
         <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
           <div class="px-5 py-4">
-            <p class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Browser extension</p>
+            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Browser extension</p>
           </div>
 
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-medium text-woodsmoke-900">Chrome / Edge</span>
-              <span class="text-xs text-woodsmoke-400">Install the Grabbn extension from the Chrome Web Store</span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Chrome / Edge</span>
+              <span class="text-sm text-woodsmoke-400">Install the Grabbn extension from the Chrome Web Store</span>
             </div>
-            <button class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
+            <button class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
               Install
             </button>
           </div>
 
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-medium text-woodsmoke-900">Firefox</span>
-              <span class="text-xs text-woodsmoke-400">Install the Grabbn add-on from Firefox Add-ons</span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Firefox</span>
+              <span class="text-sm text-woodsmoke-400">Install the Grabbn add-on from Firefox Add-ons</span>
             </div>
-            <button class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
+            <button class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
               Install
             </button>
           </div>

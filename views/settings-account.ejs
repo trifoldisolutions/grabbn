@@ -20,24 +20,25 @@
       <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
         <div class="px-5 py-4">
-          <p class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Profile</p>
+          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Profile</p>
         </div>
 
         <!-- Avatar -->
         <div class="px-5 py-4 flex items-center justify-between gap-4">
           <div class="flex flex-col gap-0.5 min-w-0">
-            <span class="text-sm font-medium text-woodsmoke-900">Avatar</span>
-            <span class="text-xs text-woodsmoke-400">Your public profile picture</span>
+            <span class="text-sm font-semibold text-woodsmoke-900">Avatar</span>
+            <span class="text-sm text-woodsmoke-400">JPG, PNG, WebP or GIF · max 2 MB</span>
           </div>
           <div class="flex items-center gap-3 shrink-0">
-            <div class="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center <%= user.avatar ? '' : 'bg-orchid-100' %>">
+            <div id="avatarPreview" class="w-10 h-10 rounded-md overflow-hidden flex items-center justify-center <%= user.avatar ? '' : 'bg-orchid-100' %>">
               <% if (user.avatar) { %>
-                <img src="<%= user.avatar %>" alt="avatar" class="w-full h-full object-cover">
+                <img id="avatarImg" src="<%= user.avatar %>" alt="avatar" class="w-full h-full object-cover">
               <% } else { %>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="text-orchid-600"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>
+                <svg id="avatarPlaceholder" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="text-orchid-600"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>
               <% } %>
             </div>
-            <button class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 transition-colors opacity-50 cursor-not-allowed" disabled title="Coming soon">
+            <input id="avatarInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
+            <button id="avatarChangeBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors">
               Change
             </button>
           </div>
@@ -47,10 +48,10 @@
         <div class="px-5 py-4">
           <div class="flex items-start justify-between gap-4" id="usernameDisplay">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-medium text-woodsmoke-900">Username</span>
-              <span class="text-xs text-woodsmoke-400">@<%= user.username %></span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Username</span>
+              <span class="text-sm text-woodsmoke-400">@<%= user.username %></span>
             </div>
-            <button id="usernameEditBtn" class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
+            <button id="usernameEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
               Edit
             </button>
           </div>
@@ -59,10 +60,10 @@
               class="w-full h-10 px-3 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors"
               placeholder="Username">
             <p class="text-[11px] text-woodsmoke-400">2–26 characters, letters and numbers only.</p>
-            <p id="usernameError" class="hidden text-xs text-red-500"></p>
+            <p id="usernameError" class="hidden text-sm text-red-500"></p>
             <div class="flex gap-2">
-              <button id="usernameSaveBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
-              <button id="usernameCancelBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+              <button id="usernameSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
+              <button id="usernameCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
             </div>
           </div>
         </div>
@@ -71,10 +72,10 @@
         <div class="px-5 py-4">
           <div class="flex items-start justify-between gap-4" id="bioDisplay">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-medium text-woodsmoke-900">Bio</span>
-              <span class="text-xs text-woodsmoke-400 break-words"><%= user.bio || 'No bio yet.' %></span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Bio</span>
+              <span class="text-sm text-woodsmoke-400 break-words"><%= user.bio || 'No bio yet.' %></span>
             </div>
-            <button id="bioEditBtn" class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
+            <button id="bioEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
               Edit
             </button>
           </div>
@@ -85,11 +86,80 @@
                 placeholder="Tell people a bit about yourself…"><%= user.bio || '' %></textarea>
               <span id="bioCount" class="absolute bottom-2 right-3 text-[10px] text-woodsmoke-300"><%= (user.bio || '').length %>/128</span>
             </div>
-            <p id="bioError" class="hidden text-xs text-red-500"></p>
+            <p id="bioError" class="hidden text-sm text-red-500"></p>
             <div class="flex gap-2">
-              <button id="bioSaveBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
-              <button id="bioCancelBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+              <button id="bioSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
+              <button id="bioCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
             </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Links ────────────────────────────────────────────────────────────── -->
+      <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
+
+        <div class="px-5 py-4">
+          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Links</p>
+        </div>
+
+        <!-- Website -->
+        <div class="px-5 py-4">
+          <div class="flex items-center justify-between gap-4" id="websiteDisplay">
+            <div class="flex flex-col gap-0.5 min-w-0">
+              <span class="text-sm font-semibold text-woodsmoke-900">Website</span>
+              <% if (user.website) { %>
+                <a id="websiteUrl" href="<%= user.website %>" target="_blank" rel="noopener noreferrer"
+                  class="text-sm text-orchid-500 hover:underline truncate"><%= user.website %></a>
+              <% } else { %>
+                <span id="websiteUrl" class="text-sm text-woodsmoke-400">Not set</span>
+              <% } %>
+            </div>
+            <button id="websiteEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">Edit</button>
+          </div>
+          <div id="websiteForm" class="hidden mt-3 flex flex-col gap-2">
+            <input id="websiteInput" type="url" value="<%= user.website || '' %>" maxlength="200"
+              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md outline-none focus:border-orchid-400 transition-colors"
+              placeholder="https://yourwebsite.com">
+            <p id="websiteError" class="hidden text-sm text-red-500"></p>
+            <div class="flex gap-2">
+              <button id="websiteSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
+              <button id="websiteCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Socials -->
+        <div class="px-5 py-4">
+          <div class="flex items-center justify-between gap-4 mb-3">
+            <span class="text-sm font-semibold text-woodsmoke-900">Socials</span>
+            <button id="addSocialBtn" class="flex items-center justify-center gap-1.5 text-sm font-semibold h-8 px-3 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              Add
+            </button>
+          </div>
+          <div id="socialsList" class="flex flex-wrap gap-2"></div>
+          <div id="addSocialForm" class="hidden mt-2">
+            <div class="flex items-center gap-2">
+              <div class="relative shrink-0" id="platformPickerWrap">
+                <button id="platformPickerBtn" type="button"
+                  class="flex items-center gap-2 h-9 px-3 text-sm font-semibold border border-silver-200 rounded-md text-woodsmoke-400 hover:border-woodsmoke-300 transition-colors w-36">
+                  <span id="platformPickerLabel" class="flex-1 text-left truncate">Platform</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div id="platformDropdown" class="hidden absolute top-full left-0 mt-1 w-44 bg-white border border-silver-200 rounded-md shadow-lg z-50 py-1 max-h-52 overflow-y-auto"></div>
+              </div>
+              <input id="socialUrlInput" type="url" maxlength="200"
+                class="flex-1 h-9 px-3 text-sm border border-silver-200 rounded-md outline-none focus:border-orchid-400 transition-colors min-w-0"
+                placeholder="https://...">
+              <button id="addSocialSaveBtn" class="flex items-center justify-center w-9 h-9 shrink-0 bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+              </button>
+              <button id="addSocialCancelBtn" class="flex items-center justify-center w-9 h-9 shrink-0 border border-silver-200 text-woodsmoke-400 rounded-md hover:bg-silver-50 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <p id="addSocialError" class="hidden text-sm text-red-500 mt-1.5"></p>
           </div>
         </div>
 
@@ -99,15 +169,15 @@
       <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
         <div class="px-5 py-4">
-          <p class="text-xs font-semibold uppercase tracking-wide text-woodsmoke-400">Security</p>
+          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Security</p>
         </div>
 
         <!-- Email -->
         <div class="px-5 py-4 flex items-center justify-between gap-4">
           <div class="flex flex-col gap-0.5 min-w-0">
-            <span class="text-sm font-medium text-woodsmoke-900">Email address</span>
+            <span class="text-sm font-semibold text-woodsmoke-900">Email address</span>
             <div class="flex items-center gap-1.5 mt-0.5">
-              <span class="text-xs text-woodsmoke-400 truncate"><%= user.email %></span>
+              <span class="text-sm text-woodsmoke-400 truncate"><%= user.email %></span>
               <% if (user.isEmailVerified) { %>
                 <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">Verified</span>
               <% } else { %>
@@ -116,7 +186,7 @@
             </div>
           </div>
           <% if (!user.isEmailVerified) { %>
-            <button id="resendOtpBtn" class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
+            <button id="resendOtpBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
               Verify email
             </button>
           <% } %>
@@ -126,10 +196,10 @@
         <div class="px-5 py-4">
           <div class="flex items-start justify-between gap-4" id="passwordDisplay">
             <div class="flex flex-col gap-0.5">
-              <span class="text-sm font-medium text-woodsmoke-900">Password</span>
-              <span class="text-xs text-woodsmoke-400">Last changed: unknown</span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Password</span>
+              <span class="text-sm text-woodsmoke-400">Last changed: unknown</span>
             </div>
-            <button id="passwordEditBtn" class="flex items-center justify-center text-xs font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
+            <button id="passwordEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
               Change
             </button>
           </div>
@@ -144,17 +214,17 @@
               class="w-full h-10 px-3 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors"
               placeholder="Confirm new password" autocomplete="new-password">
             <p class="text-[11px] text-woodsmoke-400">Min. 8 chars with 2 uppercase, 2 lowercase, 2 digits, 2 special characters.</p>
-            <p id="passwordError" class="hidden text-xs text-red-500"></p>
+            <p id="passwordError" class="hidden text-sm text-red-500"></p>
             <div class="flex gap-2">
-              <button id="passwordSaveBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
-              <button id="passwordCancelBtn" class="flex items-center justify-center h-9 px-5 text-xs font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+              <button id="passwordSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
+              <button id="passwordCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
             </div>
           </div>
         </div>
 
       </div>
 
-      <p id="accountFeedback" class="hidden text-xs text-center mt-2"></p>
+      <p id="accountFeedback" class="hidden text-sm text-center mt-2"></p>
 
       <% } else { %>
         <p class="text-sm text-woodsmoke-400">Please <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">sign in</a> to manage your settings.</p>
@@ -173,9 +243,9 @@
 
   function showFeedback(msg, ok) {
     feedback.textContent = msg;
-    feedback.className = `mt-2 text-xs text-center ${ok ? 'text-emerald-600' : 'text-red-500'}`;
+    feedback.className = `mt-2 text-sm text-center ${ok ? 'text-emerald-600' : 'text-red-500'}`;
     clearTimeout(feedback._t);
-    feedback._t = setTimeout(() => { feedback.className = 'hidden text-xs text-center'; }, 3000);
+    feedback._t = setTimeout(() => { feedback.className = 'hidden text-sm text-center'; }, 3000);
   }
 
   // ── Generic inline edit toggle ─────────────────────────────────────────────
@@ -363,6 +433,301 @@
   }
 
   passwordSaveBtn.addEventListener('click', savePassword);
+
+  // ── Links: shared validation ────────────────────────────────────────────────
+  const _SHORTENER_HOSTS = new Set([
+    'bit.ly','tinyurl.com','t.co','ow.ly','goo.gl','buff.ly','short.link','tiny.cc',
+    'is.gd','v.gd','rb.gy','cutt.ly','shorturl.at','clck.ru','rebrand.ly','bl.ink',
+    'lnkd.in','snip.ly','soo.gd','adf.ly','bit.do','tr.im','cli.gs','youtu.be',
+  ]);
+  const _PLATFORM_DOMAINS = {
+    twitter:   ['twitter.com','x.com'],
+    github:    ['github.com'],
+    instagram: ['instagram.com'],
+    linkedin:  ['linkedin.com'],
+    youtube:   ['youtube.com','youtu.be'],
+    tiktok:    ['tiktok.com'],
+    facebook:  ['facebook.com','fb.com'],
+    discord:   ['discord.gg','discord.com'],
+    twitch:    ['twitch.tv'],
+    bluesky:   ['bsky.app','bsky.social'],
+    other:     null,
+    onlyfans:  ['onlyfans.com'],
+    fansly:    ['fansly.com'],
+    fanvue:    ['fanvue.com'],
+    pornhub:   ['pornhub.com'],
+  };
+  function validateLinkUrl(url, platform = null) {
+    if (!url) return null;
+    let u;
+    try { u = new URL(url); } catch { return 'Enter a valid URL.'; }
+    if (u.protocol !== 'https:') return 'Links must use HTTPS.';
+    const host = u.hostname.replace(/^www\./, '');
+    if (_SHORTENER_HOSTS.has(host)) return 'URL shorteners are not allowed.';
+    if (platform && platform !== 'other') {
+      const allowed = _PLATFORM_DOMAINS[platform];
+      if (allowed) {
+        const ok = allowed.some(d => host === d || host.endsWith('.' + d));
+        if (!ok) {
+          const p = PLATFORMS.find(x => x.id === platform);
+          return `Must be a ${p ? p.name : platform} link (${allowed.join(' or ')}).`;
+        }
+      }
+    }
+    return null;
+  }
+
+  // ── Links: Website ──────────────────────────────────────────────────────────
+  let savedWebsite = '<%- (user.website || '').replace(/'/g, "\\'") %>';
+
+  wireInlineEdit({ editBtn: document.getElementById('websiteEditBtn'), cancelBtn: document.getElementById('websiteCancelBtn'), form: document.getElementById('websiteForm') });
+
+  async function saveWebsite() {
+    const websiteError = document.getElementById('websiteError');
+    const websiteSaveBtn = document.getElementById('websiteSaveBtn');
+    websiteError.classList.add('hidden');
+    const val = document.getElementById('websiteInput').value.trim();
+    const urlErr = validateLinkUrl(val);
+    if (urlErr) { websiteError.textContent = urlErr; websiteError.classList.remove('hidden'); return; }
+    websiteSaveBtn.disabled = true;
+    websiteSaveBtn.textContent = 'Saving…';
+    try {
+      const res  = await fetch('/api/user/links', {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ website: val, socialLinks: socialLinksState }),
+      });
+      const data = await res.json();
+      if (!res.ok) { websiteError.textContent = data.error; websiteError.classList.remove('hidden'); return; }
+      savedWebsite = val;
+      const old = document.getElementById('websiteUrl');
+      if (val) {
+        const a = document.createElement('a');
+        a.id = 'websiteUrl'; a.href = val; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.className = 'text-sm text-orchid-500 hover:underline truncate';
+        a.textContent = val;
+        old.replaceWith(a);
+      } else {
+        const s = document.createElement('span');
+        s.id = 'websiteUrl'; s.className = 'text-sm text-woodsmoke-400'; s.textContent = 'Not set';
+        old.replaceWith(s);
+      }
+      document.getElementById('websiteForm').classList.add('hidden');
+      document.getElementById('websiteEditBtn').classList.remove('hidden');
+      showFeedback('Website updated.', true);
+    } catch {
+      websiteError.textContent = 'Something went wrong. Try again.';
+      websiteError.classList.remove('hidden');
+    } finally {
+      websiteSaveBtn.disabled = false;
+      websiteSaveBtn.textContent = 'Save';
+    }
+  }
+
+  document.getElementById('websiteSaveBtn').addEventListener('click', saveWebsite);
+  document.getElementById('websiteInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveWebsite(); });
+
+  // ── Links: Socials ───────────────────────────────────────────────────────────
+  const PLATFORMS = [
+    { id: 'twitter',   name: 'Twitter / X',  color: '#000000' },
+    { id: 'github',    name: 'GitHub',        color: '#24292e' },
+    { id: 'instagram', name: 'Instagram',     color: '#C13584' },
+    { id: 'linkedin',  name: 'LinkedIn',      color: '#0077B5' },
+    { id: 'youtube',   name: 'YouTube',       color: '#FF0000' },
+    { id: 'tiktok',    name: 'TikTok',        color: '#010101' },
+    { id: 'facebook',  name: 'Facebook',      color: '#1877F2' },
+    { id: 'discord',   name: 'Discord',       color: '#5865F2' },
+    { id: 'twitch',    name: 'Twitch',        color: '#9146FF' },
+    { id: 'bluesky',   name: 'Bluesky',       color: '#0085FF' },
+    { id: 'other',     name: 'Other',         color: '#6B7280' },
+  ];
+  const ADULT_PLATFORMS = [
+    { id: 'onlyfans', name: 'OnlyFans', color: '#00AFF0' },
+    { id: 'fansly',   name: 'Fansly',   color: '#1a82f7' },
+    { id: 'fanvue',   name: 'Fanvue',   color: '#7C3AED' },
+    { id: 'pornhub',  name: 'Pornhub',  color: '#FF9000' },
+  ];
+  const matureUnlocked = <%= !user.isMatureGated %>;
+
+  let socialLinksState = <%- JSON.stringify((user.socialLinks || []).map(s => ({ platform: s.platform, url: s.url }))) %>;
+  let selectedPlatform = null;
+
+  const socialsList       = document.getElementById('socialsList');
+  const addSocialBtn      = document.getElementById('addSocialBtn');
+  const addSocialForm     = document.getElementById('addSocialForm');
+  const addSocialError    = document.getElementById('addSocialError');
+  const platformDropdown  = document.getElementById('platformDropdown');
+  const platformPickerBtn = document.getElementById('platformPickerBtn');
+  const platformPickerLabel = document.getElementById('platformPickerLabel');
+  const socialUrlInput    = document.getElementById('socialUrlInput');
+  const addSocialSaveBtn  = document.getElementById('addSocialSaveBtn');
+  const addSocialCancelBtn = document.getElementById('addSocialCancelBtn');
+
+  // Populate platform dropdown
+  function makePlatformItem(p) {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-woodsmoke-700 hover:bg-silver-50 transition-colors text-left';
+    item.innerHTML = `<span class="w-2 h-2 rounded-full shrink-0" style="background:${p.color}"></span>${p.name}`;
+    item.addEventListener('click', () => {
+      selectedPlatform = p;
+      platformPickerLabel.textContent = p.name;
+      platformPickerLabel.style.color = p.color;
+      platformDropdown.classList.add('hidden');
+      socialUrlInput.focus();
+    });
+    return item;
+  }
+  PLATFORMS.forEach(p => platformDropdown.appendChild(makePlatformItem(p)));
+  if (matureUnlocked) {
+    const divider = document.createElement('div');
+    divider.className = 'flex items-center gap-2 px-3 py-1.5 mt-0.5 border-t border-silver-100';
+    divider.innerHTML = '<span class="text-[10px] font-semibold uppercase tracking-wide text-woodsmoke-300">18+</span>';
+    platformDropdown.appendChild(divider);
+    ADULT_PLATFORMS.forEach(p => platformDropdown.appendChild(makePlatformItem(p)));
+  }
+
+  platformPickerBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    platformDropdown.classList.toggle('hidden');
+  });
+  document.addEventListener('click', e => {
+    if (!document.getElementById('platformPickerWrap').contains(e.target)) platformDropdown.classList.add('hidden');
+  });
+
+  function hostOf(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+  }
+
+  function renderSocials() {
+    socialsList.innerHTML = '';
+    if (socialLinksState.length === 0) {
+      socialsList.innerHTML = '<p class="text-sm text-woodsmoke-300 pb-1">No socials added yet.</p>';
+    } else {
+      socialLinksState.forEach((s, i) => {
+        const p = PLATFORMS.find(x => x.id === s.platform) || ADULT_PLATFORMS.find(x => x.id === s.platform) || PLATFORMS[PLATFORMS.length - 1];
+        const label = p.id === 'other' ? hostOf(s.url) : p.name;
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-md border border-orchid-200 bg-orchid-50';
+        row.innerHTML = `
+          <span class="w-1.5 h-1.5 rounded-full shrink-0 bg-orchid-400"></span>
+          <a href="${s.url}" target="_blank" rel="noopener noreferrer"
+            class="text-[11px] font-semibold whitespace-nowrap text-orchid-600 hover:text-orchid-800 transition-colors">${label}</a>
+          <button class="flex items-center justify-center w-4 h-4 shrink-0 rounded text-orchid-300 hover:text-red-400 transition-colors" data-remove="${i}" title="Remove">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>`;
+        row.querySelector('[data-remove]').addEventListener('click', async () => {
+          socialLinksState.splice(i, 1);
+          renderSocials();
+          await persistSocials();
+        });
+        socialsList.appendChild(row);
+      });
+    }
+    addSocialBtn.classList.toggle('hidden', socialLinksState.length >= 3);
+  }
+
+  async function persistSocials() {
+    try {
+      const res = await fetch('/api/user/links', {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ website: savedWebsite, socialLinks: socialLinksState }),
+      });
+      if (res.ok) showFeedback('Socials updated.', true);
+      else showFeedback('Failed to save.', false);
+    } catch { showFeedback('Something went wrong.', false); }
+  }
+
+  addSocialBtn.addEventListener('click', () => {
+    selectedPlatform = null;
+    platformPickerLabel.textContent = 'Platform';
+    platformPickerLabel.style.color = '';
+    socialUrlInput.value = '';
+    addSocialError.classList.add('hidden');
+    addSocialForm.classList.remove('hidden');
+    addSocialBtn.classList.add('hidden');
+    platformPickerBtn.focus();
+  });
+
+  addSocialCancelBtn.addEventListener('click', () => {
+    addSocialForm.classList.add('hidden');
+    addSocialError.classList.add('hidden');
+    if (socialLinksState.length < 3) addSocialBtn.classList.remove('hidden');
+  });
+
+  async function confirmAddSocial() {
+    addSocialError.classList.add('hidden');
+    if (!selectedPlatform) { addSocialError.textContent = 'Pick a platform first.'; addSocialError.classList.remove('hidden'); return; }
+    const url = socialUrlInput.value.trim();
+    if (!url) { addSocialError.textContent = 'Enter a URL.'; addSocialError.classList.remove('hidden'); return; }
+    const socialUrlErr = validateLinkUrl(url, selectedPlatform.id);
+    if (socialUrlErr) { addSocialError.textContent = socialUrlErr; addSocialError.classList.remove('hidden'); return; }
+    addSocialSaveBtn.disabled = true;
+    socialLinksState.push({ platform: selectedPlatform.id, url });
+    renderSocials();
+    addSocialForm.classList.add('hidden');
+    addSocialSaveBtn.disabled = false;
+    await persistSocials();
+  }
+
+  addSocialSaveBtn.addEventListener('click', confirmAddSocial);
+  socialUrlInput.addEventListener('keydown', e => { if (e.key === 'Enter') confirmAddSocial(); });
+
+  renderSocials();
+
+  // ── Avatar ──────────────────────────────────────────────────────────────────
+  const avatarChangeBtn = document.getElementById('avatarChangeBtn');
+  const avatarInput     = document.getElementById('avatarInput');
+  const avatarPreview   = document.getElementById('avatarPreview');
+
+  avatarChangeBtn.addEventListener('click', () => avatarInput.click());
+
+  avatarInput.addEventListener('change', async () => {
+    const file = avatarInput.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showFeedback('Image must be under 2 MB.', false);
+      avatarInput.value = '';
+      return;
+    }
+    avatarChangeBtn.disabled = true;
+    avatarChangeBtn.textContent = 'Uploading…';
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res  = await fetch('/api/user/avatar', {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar: dataUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showFeedback(data.error || 'Upload failed.', false); return; }
+      const placeholder = document.getElementById('avatarPlaceholder');
+      let img = document.getElementById('avatarImg');
+      if (placeholder) { placeholder.remove(); avatarPreview.classList.remove('bg-orchid-100'); }
+      if (!img) {
+        img = document.createElement('img');
+        img.id = 'avatarImg';
+        img.alt = 'avatar';
+        img.className = 'w-full h-full object-cover';
+        avatarPreview.appendChild(img);
+      }
+      img.src = data.avatar;
+      showFeedback('Avatar updated.', true);
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      showFeedback('Something went wrong. Try again.', false);
+    } finally {
+      avatarChangeBtn.disabled = false;
+      avatarChangeBtn.textContent = 'Change';
+      avatarInput.value = '';
+    }
+  });
 
 })();
 </script>

@@ -566,6 +566,9 @@
   .mt-10 {
     margin-top: calc(var(--spacing) * 10);
   }
+  .mt-auto {
+    margin-top: auto;
+  }
   .mr-3 {
     margin-right: calc(var(--spacing) * 3);
   }
@@ -726,6 +729,9 @@
   .h-24 {
     height: calc(var(--spacing) * 24);
   }
+  .h-28 {
+    height: calc(var(--spacing) * 28);
+  }
   .h-40 {
     height: calc(var(--spacing) * 40);
   }
@@ -858,6 +864,12 @@
   .w-24 {
     width: calc(var(--spacing) * 24);
   }
+  .w-28 {
+    width: calc(var(--spacing) * 28);
+  }
+  .w-36 {
+    width: calc(var(--spacing) * 36);
+  }
   .w-44 {
     width: calc(var(--spacing) * 44);
   }
@@ -920,6 +932,9 @@
   }
   .max-w-\[130px\] {
     max-width: 130px;
+  }
+  .max-w-\[160px\] {
+    max-width: 160px;
   }
   .max-w-\[180px\] {
     max-width: 180px;
@@ -1310,6 +1325,9 @@
   }
   .self-start {
     align-self: flex-start;
+  }
+  .self-stretch {
+    align-self: stretch;
   }
   .truncate {
     overflow: hidden;
@@ -2026,6 +2044,9 @@
   .pt-16 {
     padding-top: calc(var(--spacing) * 16);
   }
+  .pr-1 {
+    padding-right: calc(var(--spacing) * 1);
+  }
   .pr-2 {
     padding-right: calc(var(--spacing) * 2);
   }
@@ -2091,6 +2112,9 @@
   }
   .pl-0\.5 {
     padding-left: calc(var(--spacing) * 0.5);
+  }
+  .pl-2 {
+    padding-left: calc(var(--spacing) * 2);
   }
   .text-center {
     text-align: center;
@@ -3168,6 +3192,13 @@
     &:hover {
       @media (hover: hover) {
         color: var(--color-orchid-700);
+      }
+    }
+  }
+  .hover\:text-orchid-800 {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-orchid-800);
       }
     }
   }

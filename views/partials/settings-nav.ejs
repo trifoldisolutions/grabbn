@@ -51,7 +51,7 @@
   <% settingsItems.forEach(function(item) {
     const isActive = (typeof settingsSection !== 'undefined') && settingsSection === item.key;
     const isDanger = item.key === 'danger';
-    const baseClass = 'flex items-center gap-2.5 px-3 min-h-12 rounded-lg text-sm font-medium transition-colors';
+    const baseClass = 'flex items-center gap-2.5 px-3 min-h-12 rounded-lg text-sm font-semibold transition-colors';
     const activeClass   = isDanger ? 'bg-red-50 text-red-500'    : 'bg-orchid-50 text-orchid-600';
     const inactiveClass = isDanger ? 'text-woodsmoke-600 hover:bg-red-50 hover:text-red-500' : 'text-woodsmoke-600 hover:bg-silver-50 hover:text-woodsmoke-950';
     const finalClass = baseClass + ' ' + (isActive ? activeClass : inactiveClass);
@@ -65,7 +65,47 @@
     </a>
   <% }); %>
 
+  <!-- Unsaved changes save button — shown by JS when any inline form is open -->
+  <div class="mt-auto pt-4 pr-2">
+    <button id="globalSettingsSave"
+      class="hidden w-full flex items-center justify-center gap-2 h-10 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-all">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+      Save changes
+    </button>
+  </div>
+
 </nav>
+
+<script>
+(function () {
+  const saveBtn = document.getElementById('globalSettingsSave');
+  if (!saveBtn) return;
+
+  function getOpenForms() {
+    return Array.from(document.querySelectorAll('[id$="Form"]')).filter(el => !el.classList.contains('hidden'));
+  }
+
+  function sync() {
+    saveBtn.classList.toggle('hidden', getOpenForms().length === 0);
+  }
+
+  saveBtn.addEventListener('click', () => {
+    getOpenForms().forEach(form => {
+      const btn = form.querySelector('button[id$="SaveBtn"]');
+      if (btn && !btn.disabled) btn.click();
+    });
+  });
+
+  // Watch the whole page for class mutations (hidden being added/removed on forms)
+  new MutationObserver(sync).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class'],
+    subtree: true,
+  });
+
+  sync();
+})();
+</script>
 
 <!-- Mobile: horizontal scrollable nav -->
 <nav class="md:hidden flex gap-1 overflow-x-auto px-4 py-3 border-b border-silver-100 shrink-0 scrollbar-hide">
@@ -74,7 +114,7 @@
     const isDanger = item.key === 'danger';
     const activeClass   = isDanger ? 'bg-red-50 text-red-500 border-red-100' : 'bg-orchid-50 text-orchid-600 border-orchid-100';
     const inactiveClass = 'text-woodsmoke-500 border-silver-100 hover:border-silver-200';
-    const cls = 'flex items-center gap-1.5 px-3 h-9 rounded-full text-xs font-medium border shrink-0 transition-colors ' + (isActive ? activeClass : inactiveClass);
+    const cls = 'flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold border shrink-0 transition-colors ' + (isActive ? activeClass : inactiveClass);
   %>
     <a href="<%= item.href %>" class="<%= cls %>">
       <%- item.icon %>

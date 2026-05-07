@@ -22,7 +22,7 @@ import { buildRepositories } from './server/jobs/buildRepositories.js';
 import { buildExploreScores } from './server/jobs/buildExploreScores.js';
 import { FILTER_PUBLIC } from './server/utils/filters.js';
 import { validateLinks } from './server/utils/urlSafety.js';
-import { fetchAndStoreImage, deleteR2Images } from './server/utils/r2.js';
+import { fetchAndStoreImage, deleteR2Images, uploadImageToR2 } from './server/utils/r2.js';
 import bucketShareRouter from './server/routes/bucketShare.js';
 import authRouter from './server/routes/auth.js';
 import creditsRouter, { handleWebhook } from './server/routes/credits.js';
@@ -3712,6 +3712,97 @@ app.patch('/api/user/bio', requireAuth, async (req, res) => {
     } catch (err) {
         console.error('Bio update error:', err);
         res.status(500).json({ error: 'Failed to update bio' });
+    }
+});
+
+// PATCH /api/user/links
+const URL_SHORTENER_HOSTS = new Set([
+    'bit.ly','tinyurl.com','t.co','ow.ly','goo.gl','buff.ly','short.link','tiny.cc',
+    'is.gd','v.gd','rb.gy','cutt.ly','shorturl.at','clck.ru','rebrand.ly','bl.ink',
+    'lnkd.in','snip.ly','soo.gd','adf.ly','bit.do','tr.im','cli.gs','yfrog.com',
+    'migre.me','ff.im','url4.eu','twitthis.com','su.pr','twurl.nl','youtu.be',
+]);
+const PLATFORM_DOMAINS = {
+    twitter:   ['twitter.com','x.com'],
+    github:    ['github.com'],
+    instagram: ['instagram.com'],
+    linkedin:  ['linkedin.com'],
+    youtube:   ['youtube.com','youtu.be'],
+    tiktok:    ['tiktok.com'],
+    facebook:  ['facebook.com','fb.com'],
+    discord:   ['discord.gg','discord.com'],
+    twitch:    ['twitch.tv'],
+    bluesky:   ['bsky.app','bsky.social'],
+    other:     null,
+    // adult — only available when isMatureGated is false
+    onlyfans:  ['onlyfans.com'],
+    fansly:    ['fansly.com'],
+    fanvue:    ['fanvue.com'],
+    pornhub:   ['pornhub.com'],
+};
+const ADULT_PLATFORMS = new Set(['onlyfans','fansly','fanvue','pornhub']);
+function validateLinkUrl(url, platform = null) {
+    if (!url) return null; // empty is allowed
+    let u;
+    try { u = new URL(url); } catch { return 'Enter a valid URL.'; }
+    if (u.protocol !== 'https:') return 'Links must use HTTPS.';
+    const host = u.hostname.replace(/^www\./, '');
+    if (URL_SHORTENER_HOSTS.has(host)) return 'URL shorteners are not allowed.';
+    if (platform && platform !== 'other') {
+        const allowed = PLATFORM_DOMAINS[platform];
+        if (allowed) {
+            const match = allowed.some(d => host === d || host.endsWith('.' + d));
+            if (!match) return `Must be a valid ${platform} link (${allowed.join(' or ')}).`;
+        }
+    }
+    return null;
+}
+app.patch('/api/user/links', requireAuth, async (req, res) => {
+    try {
+        const website     = (req.body.website ?? '').trim();
+        const rawSocials  = Array.isArray(req.body.socialLinks) ? req.body.socialLinks : [];
+        const websiteErr  = validateLinkUrl(website);
+        if (websiteErr) return res.status(400).json({ error: websiteErr });
+        if (rawSocials.length > 3) return res.status(400).json({ error: 'Max 3 social links' });
+        const socialLinks = [];
+        for (const s of rawSocials) {
+            const platform = (s.platform ?? '').trim();
+            const url      = (s.url ?? '').trim();
+            if (!PLATFORM_DOMAINS.hasOwnProperty(platform)) return res.status(400).json({ error: 'Invalid platform' });
+            if (ADULT_PLATFORMS.has(platform) && req.user.isMatureGated !== false) return res.status(403).json({ error: 'Disable the mature content filter to add this platform' });
+            const urlErr = validateLinkUrl(url, platform);
+            if (urlErr) return res.status(400).json({ error: urlErr });
+            socialLinks.push({ platform, url });
+        }
+        await User.findByIdAndUpdate(req.user._id, { website, socialLinks });
+        res.json({ ok: true, website, socialLinks });
+    } catch (err) {
+        console.error('Links update error:', err);
+        res.status(500).json({ error: 'Failed to update links' });
+    }
+});
+
+// PATCH /api/user/avatar
+const ALLOWED_AVATAR_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB decoded
+app.patch('/api/user/avatar', requireAuth, async (req, res) => {
+    try {
+        const { avatar } = req.body;
+        if (!avatar || typeof avatar !== 'string') return res.status(400).json({ error: 'No image provided' });
+        const match = avatar.match(/^data:(image\/[\w+]+);base64,(.+)$/s);
+        if (!match) return res.status(400).json({ error: 'Invalid image format' });
+        const [, mimeType, b64] = match;
+        if (!ALLOWED_AVATAR_MIME.has(mimeType)) return res.status(400).json({ error: 'Unsupported image type' });
+        const buffer = Buffer.from(b64, 'base64');
+        if (buffer.byteLength > MAX_AVATAR_BYTES) return res.status(400).json({ error: 'Image must be under 2 MB' });
+        const oldAvatar = req.user.avatar;
+        const url = await uploadImageToR2(buffer, mimeType, 'users/avatars');
+        await User.findByIdAndUpdate(req.user._id, { avatar: url });
+        if (oldAvatar) deleteR2Images([oldAvatar]).catch(() => {});
+        res.json({ ok: true, avatar: url });
+    } catch (err) {
+        console.error('Avatar update error:', err);
+        res.status(500).json({ error: 'Failed to update avatar' });
     }
 });
 

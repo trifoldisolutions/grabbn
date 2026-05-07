@@ -94,8 +94,10 @@ const userSchema = new mongoose.Schema(
       enum: ['none', 'pending', 'active'],
       default: 'none'
     },
-    avatar: { type: String, default: '' },
-    bio:    { type: String, default: '', maxlength: 128 },
+    avatar:      { type: String, default: '' },
+    bio:         { type: String, default: '', maxlength: 128 },
+    website:     { type: String, default: '' },
+    socialLinks: { type: [{ platform: String, url: String }], default: [] },
     notificationsClearedAt: { type: Date, default: null },
     newsletterSubscribed: { type: Boolean, default: false },
     isMatureGated:        { type: Boolean, default: true  },
