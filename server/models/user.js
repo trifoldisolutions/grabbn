@@ -94,13 +94,16 @@ const userSchema = new mongoose.Schema(
       enum: ['none', 'pending', 'active'],
       default: 'none'
     },
-    avatar:      { type: String, default: '' },
-    bio:         { type: String, default: '', maxlength: 128 },
+    avatar:       { type: String, default: '' },
+    displayName:  { type: String, default: '', maxlength: 60 },
+    bio:          { type: String, default: '', maxlength: 128 },
     website:     { type: String, default: '' },
     socialLinks: { type: [{ platform: String, url: String }], default: [] },
     notificationsClearedAt: { type: Date, default: null },
     newsletterSubscribed: { type: Boolean, default: false },
     isMatureGated:        { type: Boolean, default: true  },
+    category:  { type: String, default: '' },
+    language:  { type: String, default: 'en' },
     // Dedicated token embedded in the bookmarklet so the popup can authenticate
     // without relying on third-party cookies (blocked by many modern browsers).
     bookmarkletToken: { type: String, sparse: true, index: true },
@@ -117,6 +120,18 @@ const userSchema = new mongoose.Schema(
     metaFetchCount: { type: Number, default: 0 },
     metaFetchBonus: { type: Number, default: 0 },
     metaFetchLimit: { type: Number, default: null },  // per-user override; null = use META_DAILY_LIMIT
+    notificationPrefs: {
+      new_follower:           { type: Boolean, default: true },
+      bucket_grabbed:         { type: Boolean, default: true },
+      bucket_unlocked:        { type: Boolean, default: true },
+      new_bucket_published:   { type: Boolean, default: true },
+      grabbed_bucket_updated: { type: Boolean, default: true },
+      comment_mention:        { type: Boolean, default: true },
+      bucket_tagged:          { type: Boolean, default: true },
+      comment_reply:          { type: Boolean, default: true },
+      comment_agreed:         { type: Boolean, default: true },
+      new_dm:                 { type: Boolean, default: true },
+    },
     // Rate-limiting for comment posts (1 comment per minute per user)
     lastCommentAt: { type: Date, default: null },
     // Region inferred from IP on first visit (ISO 3166-1 alpha-2 country + subdivision code)

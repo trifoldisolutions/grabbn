@@ -17,129 +17,135 @@
 <div class="w-full max-w-5xl mx-auto px-4 md:px-6 py-8">
 
     <!-- ── Profile header ─────────────────────────────────────────────── -->
-    <div class="flex flex-col gap-6 mb-8">
+    <div class="flex flex-col items-center gap-4 mb-8">
 
-        <!-- Row 1: Avatar + Info -->
-        <div class="flex items-start gap-5">
+        <!-- Avatar -->
+        <div class="w-24 h-24 rounded-full overflow-hidden shrink-0 flex items-center justify-center <%= profileUser.avatar ? '' : 'bg-orchid-100' %>">
+            <% if (profileUser.avatar) { %>
+                <img src="<%= profileUser.avatar %>" alt="avatar" class="w-full h-full object-cover">
+            <% } else { %>
+                <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" class="text-orchid-600"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>
+            <% } %>
+        </div>
 
-            <!-- Avatar -->
-            <div class="h-40 aspect-square rounded-full overflow-hidden shrink-0 flex items-center justify-center <%= profileUser.avatar ? '' : 'bg-orchid-100' %>">
-                <% if (profileUser.avatar) { %>
-                    <img src="<%= profileUser.avatar %>" alt="avatar" class="w-full h-full object-cover">
-                <% } else { %>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" class="text-orchid-600"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>
-                <% } %>
+        <!-- Username, bio, links -->
+        <div class="text-center">
+            <div class="flex items-center justify-center gap-2 flex-wrap">
+              <h1 class="text-2xl font-bold">@<%= profileUser.username %></h1>
+              <% if (profileUser.category) {
+                   const _isAdultCat = ['adult-content','webcam-live','nsfw-art','adult-education'].includes(profileUser.category);
+                   const _catLabel   = profileUser.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                 %>
+                <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-md border <%= _isAdultCat ? 'bg-red-50 border-red-200 text-red-500' : 'bg-orchid-50 border-orchid-200 text-orchid-600' %>">
+                  <% if (_isAdultCat) { %><span class="text-[9px] font-bold leading-none">18+</span><% } %>
+                  <%= _catLabel %>
+                </span>
+              <% } %>
             </div>
-
-            <!-- Info column -->
-            <div class="flex flex-col gap-2 min-w-0 flex-1 pt-0.5">
-                <h1 class="text-xl font-bold leading-tight">@<%= profileUser.username %></h1>
-
-                <!-- Stats -->
-                <div class="flex items-center gap-6 mt-1">
-                    <div class="flex flex-col gap-0.5 items-center">
-                        <span class="text-lg font-bold leading-tight"><%= isOwner ? ownBuckets.length : publicBucketCount %></span>
-                        <span class="text-xs text-gray-500">Buckets</span>
-                    </div>
-                    <div class="flex flex-col gap-0.5 items-center">
-                        <span class="text-lg font-bold leading-tight"><%= totalGrabs.toLocaleString() %></span>
-                        <span class="text-xs text-gray-500">Grabs</span>
-                    </div>
-                    <div class="flex flex-col gap-0.5 items-center">
-                        <span class="text-lg font-bold leading-tight" data-stat="subscribers"><%= subscriberCount.toLocaleString() %></span>
-                        <span class="text-xs text-gray-500">Subscribers</span>
-                    </div>
-                    <div class="flex flex-col gap-0.5 items-center">
-                        <span class="text-lg font-bold leading-tight"><%= followingCount.toLocaleString() %></span>
-                        <span class="text-xs text-gray-500">Following</span>
+            <% if (profileUser.bio) { %>
+                <p class="text-sm text-gray-500 mt-1 max-w-xs"><%= profileUser.bio %></p>
+            <% } else if (isOwner) { %>
+                <a href="/settings/account" class="text-xs text-gray-400 hover:text-orchid-500 mt-1 inline-block transition-colors">Add a bio</a>
+            <% } %>
+            <% if (!profileUser.category && isOwner) { %>
+                <a href="/settings/account" class="text-[10px] text-silver-400 hover:text-orchid-500 mt-1.5 inline-block transition-colors">+ Set a category</a>
+            <% } %>
+            <%
+              const _profileLinks = [];
+              if (profileUser.website) _profileLinks.push({ url: profileUser.website });
+              (profileUser.socialLinks || []).forEach(function(s) { if (s.url) _profileLinks.push({ url: s.url }); });
+            %>
+            <% if (_profileLinks.length) { %>
+                <div class="flex items-center gap-2 mt-2.5 flex-wrap justify-center">
+                  <% _profileLinks.forEach(function(lk) { %>
+                    <% let host = ''; try { host = new URL(lk.url).hostname.replace(/^www\./, ''); } catch {} %>
+                    <a href="<%= lk.url %>" target="_blank" rel="noopener noreferrer"
+                      class="text-xs text-woodsmoke-500 hover:text-orchid-500 border border-silver-200 hover:border-orchid-200 px-2.5 py-1 rounded-md transition-colors truncate max-w-[160px]">
+                      <%= host || lk.url %>
+                    </a>
+                  <% }); %>
+                </div>
+            <% } %>
+            <% if (isOwner) { %>
+                <div class="flex flex-col items-center mt-3">
+                    <div class="relative w-full max-w-sm mt-3">
+                        <span class="absolute left-1/2 -translate-x-1/2 -top-2.75 flex items-center gap-1 text-xs text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded-full whitespace-nowrap z-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 2a5 5 0 1 0 0 10A5 5 0 0 0 12 2M4 13a8 8 0 0 0 8 8a8 8 0 0 0 8-8z" opacity=".3"/><path fill="currentColor" fill-rule="evenodd" d="M12 4a3 3 0 1 0 0 6a3 3 0 0 0 0-6M7 7a5 5 0 1 1 10 0A5 5 0 0 1 7 7m-3 6a8 8 0 0 1 16 0v1H4v-1zm2.1 3H18.9A8 8 0 0 1 4.1 16z" clip-rule="evenodd"/></g></svg>
+                            Only visible to you
+                        </span>
+                        <div class="border border-gray-100 rounded-xl overflow-hidden">
+                        <div class="flex items-center gap-4 bg-gray-50 px-4 py-2.5">
+                            <a href="/topup" title="Top Up" class="h-12 aspect-square flex items-center justify-center rounded-lg text-orchid-500 hover:text-orchid-700 hover:bg-orchid-50 transition-colors shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.5 20a1.5 1.5 0 0 0 3 0v-6.5H20a1.5 1.5 0 0 0 0-3h-6.5V4a1.5 1.5 0 0 0-3 0v6.5H4a1.5 1.5 0 0 0 0 3h6.5z"/></g></svg>
+                            </a>
+                            <div class="w-px h-8 bg-gray-200 shrink-0"></div>
+                            <div class="flex flex-col items-center">
+                                <span id="profileCreditBalance" class="text-lg font-bold text-gray-800 leading-tight">—</span>
+                                <span class="text-xs text-gray-500">Balance</span>
+                            </div>
+                            <div class="w-px h-8 bg-gray-200 shrink-0"></div>
+                            <div class="flex flex-col items-center">
+                                <span id="profileCreditEarned" class="text-lg font-bold text-emerald-600 leading-tight">—</span>
+                                <span class="text-xs text-gray-500">7d earnings</span>
+                            </div>
+                            <div class="w-px h-8 bg-gray-200 shrink-0"></div>
+                            <div class="flex flex-col items-center">
+                                <span id="profileCreditSpent" class="text-lg font-bold text-red-500 leading-tight">—</span>
+                                <span class="text-xs text-gray-500">7d spendings</span>
+                            </div>
+                        </div>
+                        <div class="py-1.5 text-center">
+                            <a href="/transactions" class="text-sm text-orchid-500 hover:text-orchid-700 transition-colors">Get more insights →</a>
+                        </div>
+                        </div>
                     </div>
                 </div>
-
-                <% if (profileUser.bio) { %>
-                    <p class="text-sm text-gray-500 leading-relaxed"><%= profileUser.bio %></p>
-                <% } else if (isOwner) { %>
-                    <a href="/settings/account" class="text-xs text-gray-400 hover:text-orchid-500 transition-colors">Add a bio</a>
-                <% } %>
-
-                <span class="text-xs text-gray-400">Member since <%= memberSince %></span>
-
-                <%
-                  const _profileLinks = [];
-                  if (profileUser.website) _profileLinks.push({ url: profileUser.website });
-                  (profileUser.socialLinks || []).forEach(function(s) { if (s.url) _profileLinks.push({ url: s.url }); });
-                %>
-                <% if (_profileLinks.length) { %>
-                    <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
-                      <% _profileLinks.forEach(function(lk) { %>
-                        <% let host = ''; try { host = new URL(lk.url).hostname.replace(/^www\./, ''); } catch {} %>
-                        <a href="<%= lk.url %>" target="_blank" rel="noopener noreferrer"
-                          class="text-xs text-woodsmoke-500 hover:text-orchid-500 border border-silver-200 hover:border-orchid-200 px-2 py-0.5 rounded-md transition-colors truncate max-w-[160px]">
-                          <%= host || lk.url %>
-                        </a>
-                      <% }); %>
-                    </div>
-                <% } %>
-
-                
-            </div>
-
+            <% } %>
         </div>
+
+        <!-- Stats row -->
+        <div class="flex items-center gap-8 mt-1">
+            <div class="flex flex-col items-center">
+                <span class="text-lg font-bold"><%= isOwner ? ownBuckets.length : publicBucketCount %></span>
+                <span class="text-xs text-gray-500">Buckets</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <span class="text-lg font-bold"><%= totalGrabs.toLocaleString() %></span>
+                <span class="text-xs text-gray-500">Grabs</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <span class="text-lg font-bold" data-stat="subscribers"><%= subscriberCount.toLocaleString() %></span>
+                <span class="text-xs text-gray-500">Subscribers</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <span class="text-lg font-bold"><%= followingCount.toLocaleString() %></span>
+                <span class="text-xs text-gray-500">Following</span>
+            </div>
+        </div>
+
+        <!-- Member since -->
+        <p class="text-xs text-gray-400">Member since <%= memberSince %></p>
 
         <!-- Action buttons -->
         <div class="flex items-center gap-2">
             <% if (isOwner) { %>
-                <a href="/settings" class="flex-1 flex items-center justify-center px-5 h-12 text-sm font-semibold border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
+                <a href="/settings" class="flex items-center justify-center px-5 py-2 text-sm font-semibold border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
                     Edit Profile
                 </a>
             <% } else { %>
-                <button id="followBtn" disabled class="flex-1 flex items-center justify-center px-5 h-12 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors opacity-50 cursor-not-allowed">
+                <button id="followBtn" disabled class="flex items-center justify-center px-5 py-2 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors opacity-50 cursor-not-allowed">
                     Follow
                 </button>
-                <button id="dmBtn" class="flex-1 flex items-center justify-center gap-1.5 px-5 h-12 text-sm font-semibold border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
+                <button id="dmBtn" class="flex items-center justify-center gap-1.5 px-5 py-2 text-sm font-semibold border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10a9.96 9.96 0 0 1-4.644-1.142L3.31 21.97a1 1 0 0 1-1.282-1.282l1.114-4.044A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2m0 2a8 8 0 0 0-6.992 11.923l.16.282l-1.005 3.646l3.646-1.005l.282.16A8 8 0 1 0 12 4m-3 7a1 1 0 1 1 0 2a1 1 0 0 1 0-2m3 0a1 1 0 1 1 0 2a1 1 0 0 1 0-2m3 0a1 1 0 1 1 0 2a1 1 0 0 1 0-2"/></g></svg>
                     Message
                 </button>
             <% } %>
-            <button id="shareProfileBtn" class="flex-1 flex items-center justify-center gap-1.5 px-5 h-12 text-sm font-semibold border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
+            <button id="shareProfileBtn" class="flex items-center justify-center gap-1.5 px-5 py-2 text-sm font-semibold border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
                 Share
             </button>
         </div>
-
-        <!-- Owner-only: credit balance card -->
-        <% if (isOwner) { %>
-            <div class="relative w-full max-w-sm">
-                <span class="absolute left-1/2 -translate-x-1/2 -top-2.5 flex items-center gap-1 text-xs text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded-md whitespace-nowrap z-10">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 2a5 5 0 1 0 0 10A5 5 0 0 0 12 2M4 13a8 8 0 0 0 8 8a8 8 0 0 0 8-8z" opacity=".3"/><path fill="currentColor" fill-rule="evenodd" d="M12 4a3 3 0 1 0 0 6a3 3 0 0 0 0-6M7 7a5 5 0 1 1 10 0A5 5 0 0 1 7 7m-3 6a8 8 0 0 1 16 0v1H4v-1zm2.1 3H18.9A8 8 0 0 1 4.1 16z" clip-rule="evenodd"/></g></svg>
-                    Only visible to you
-                </span>
-                <div class="border border-gray-100 rounded-md overflow-hidden">
-                    <div class="flex items-center gap-4 bg-gray-50 px-4 py-2.5">
-                        <a href="/topup" title="Top Up" class="h-12 aspect-square flex items-center justify-center rounded-md text-orchid-500 hover:text-orchid-700 hover:bg-orchid-50 transition-colors shrink-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.5 20a1.5 1.5 0 0 0 3 0v-6.5H20a1.5 1.5 0 0 0 0-3h-6.5V4a1.5 1.5 0 0 0-3 0v6.5H4a1.5 1.5 0 0 0 0 3h6.5z"/></g></svg>
-                        </a>
-                        <div class="w-px h-8 bg-gray-200 shrink-0"></div>
-                        <div class="flex flex-col items-center">
-                            <span id="profileCreditBalance" class="text-lg font-bold text-gray-800 leading-tight">—</span>
-                            <span class="text-xs text-gray-500">Balance</span>
-                        </div>
-                        <div class="w-px h-8 bg-gray-200 shrink-0"></div>
-                        <div class="flex flex-col items-center">
-                            <span id="profileCreditEarned" class="text-lg font-bold text-emerald-600 leading-tight">—</span>
-                            <span class="text-xs text-gray-500">7d earnings</span>
-                        </div>
-                        <div class="w-px h-8 bg-gray-200 shrink-0"></div>
-                        <div class="flex flex-col items-center">
-                            <span id="profileCreditSpent" class="text-lg font-bold text-red-500 leading-tight">—</span>
-                            <span class="text-xs text-gray-500">7d spendings</span>
-                        </div>
-                    </div>
-                    <div class="py-1.5 text-center">
-                        <a href="/transactions" class="text-sm text-orchid-500 hover:text-orchid-700 transition-colors">Get more insights →</a>
-                    </div>
-                </div>
-            </div>
-        <% } %>
 
     </div>
 

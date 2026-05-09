@@ -1,13 +1,14 @@
 import * as cheerio from 'cheerio';
 import http from 'http';
 import https from 'https';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { WebSocketServer } from 'ws';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import User from './server/models/user.js';
@@ -21,6 +22,7 @@ import Subscription from './server/models/subscription.js';
 import { buildRepositories } from './server/jobs/buildRepositories.js';
 import { buildExploreScores } from './server/jobs/buildExploreScores.js';
 import { FILTER_PUBLIC } from './server/utils/filters.js';
+import { sendOtpEmail } from './server/utils/email.js';
 import { validateLinks } from './server/utils/urlSafety.js';
 import { fetchAndStoreImage, deleteR2Images, uploadImageToR2 } from './server/utils/r2.js';
 import bucketShareRouter from './server/routes/bucketShare.js';
@@ -3715,6 +3717,52 @@ app.patch('/api/user/bio', requireAuth, async (req, res) => {
     }
 });
 
+// PATCH /api/user/display-name
+app.patch('/api/user/display-name', requireAuth, async (req, res) => {
+    try {
+        const displayName = (req.body.displayName ?? '').trim();
+        if (displayName.length > 60) return res.status(400).json({ error: 'Display name must be 60 characters or fewer' });
+        await User.findByIdAndUpdate(req.user._id, { displayName });
+        res.json({ ok: true, displayName });
+    } catch (err) {
+        console.error('Display name update error:', err);
+        res.status(500).json({ error: 'Failed to update display name' });
+    }
+});
+
+// PATCH /api/user/language
+const VALID_LANGUAGES = new Set([
+    'en','es','fr','de','pt','it','nl','ru','ja','zh','ko','ar','hi','tr','pl','sv','no','da','fi','id',
+]);
+app.patch('/api/user/language', requireAuth, async (req, res) => {
+    try {
+        const language = (req.body.language ?? '').trim();
+        if (!VALID_LANGUAGES.has(language)) return res.status(400).json({ error: 'Invalid language' });
+        await User.findByIdAndUpdate(req.user._id, { language });
+        res.json({ ok: true, language });
+    } catch (err) {
+        console.error('Language update error:', err);
+        res.status(500).json({ error: 'Failed to update language' });
+    }
+});
+
+// PATCH /api/user/category
+const _categoriesJson  = JSON.parse(readFileSync(path.join(__dirname, 'public/data/categories.json'), 'utf8'));
+const VALID_CATEGORIES = new Set(['', ..._categoriesJson.categories.map(c => c.value), ..._categoriesJson.adultCategories.map(c => c.value)]);
+const ADULT_CATEGORIES = new Set(_categoriesJson.adultCategories.map(c => c.value));
+app.patch('/api/user/category', requireAuth, async (req, res) => {
+    try {
+        const category = (req.body.category ?? '').trim();
+        if (!VALID_CATEGORIES.has(category)) return res.status(400).json({ error: 'Invalid category' });
+        if (ADULT_CATEGORIES.has(category) && req.user.isMatureGated) return res.status(403).json({ error: 'Disable the mature filter to select an adult category' });
+        await User.findByIdAndUpdate(req.user._id, { category });
+        res.json({ ok: true, category });
+    } catch (err) {
+        console.error('Category update error:', err);
+        res.status(500).json({ error: 'Failed to update category' });
+    }
+});
+
 // PATCH /api/user/links
 const URL_SHORTENER_HOSTS = new Set([
     'bit.ly','tinyurl.com','t.co','ow.ly','goo.gl','buff.ly','short.link','tiny.cc',
@@ -3803,6 +3851,140 @@ app.patch('/api/user/avatar', requireAuth, async (req, res) => {
     } catch (err) {
         console.error('Avatar update error:', err);
         res.status(500).json({ error: 'Failed to update avatar' });
+    }
+});
+
+// POST /api/user/avatar — alias for the PATCH handler (accepts same base64 body)
+app.post('/api/user/avatar', requireAuth, async (req, res) => {
+    try {
+        const { avatar } = req.body;
+        if (!avatar || typeof avatar !== 'string') return res.status(400).json({ error: 'No image provided' });
+        const match = avatar.match(/^data:(image\/[\w+]+);base64,(.+)$/s);
+        if (!match) return res.status(400).json({ error: 'Invalid image format' });
+        const [, mimeType, b64] = match;
+        if (!ALLOWED_AVATAR_MIME.has(mimeType)) return res.status(400).json({ error: 'Unsupported image type' });
+        const buffer = Buffer.from(b64, 'base64');
+        if (buffer.byteLength > MAX_AVATAR_BYTES) return res.status(400).json({ error: 'Image must be under 2 MB' });
+        const oldAvatar = req.user.avatar;
+        const url = await uploadImageToR2(buffer, mimeType, 'users/avatars');
+        await User.findByIdAndUpdate(req.user._id, { avatar: url });
+        if (oldAvatar) deleteR2Images([oldAvatar]).catch(() => {});
+        res.json({ ok: true, avatar: url });
+    } catch (err) {
+        console.error('Avatar upload error:', err);
+        res.status(500).json({ error: 'Failed to upload avatar' });
+    }
+});
+
+// PATCH /api/user/profile — consolidated profile update (username)
+app.patch('/api/user/profile', requireAuth, async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username?.trim()) return res.status(400).json({ error: 'Username is required' });
+        const trimmed = username.trim();
+        if (trimmed.length < 2 || trimmed.length > 26) return res.status(400).json({ error: 'Username must be 2–26 characters' });
+        if (!/^[a-zA-Z0-9]+$/.test(trimmed)) return res.status(400).json({ error: 'Username may only contain letters and numbers' });
+        if (trimmed.toLowerCase() === req.user.username?.toLowerCase()) return res.status(400).json({ error: 'This is already your username' });
+        const taken = await User.findOne({ username: new RegExp(`^${trimmed}$`, 'i'), _id: { $ne: req.user._id } });
+        if (taken) return res.status(409).json({ error: 'Username is already taken' });
+        await User.findByIdAndUpdate(req.user._id, { username: trimmed });
+        res.json({ ok: true, username: trimmed });
+    } catch (err) {
+        console.error('Profile update error:', err);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+// PATCH /api/user/email — change email address (requires current password; triggers new OTP)
+app.patch('/api/user/email', requireAuth, async (req, res) => {
+    try {
+        const { newEmail, currentPassword } = req.body;
+        if (!newEmail || !currentPassword) return res.status(400).json({ error: 'New email and current password are required' });
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail)) return res.status(400).json({ error: 'Invalid email format' });
+        const normalized = newEmail.toLowerCase().trim();
+        if (normalized === req.user.email) return res.status(400).json({ error: 'This is already your email address' });
+        const user = await User.findById(req.user._id).select('+password');
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        const valid = await user.comparePassword(currentPassword);
+        if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+        const taken = await User.findOne({ email: normalized, _id: { $ne: req.user._id } });
+        if (taken) return res.status(409).json({ error: 'Email is already in use' });
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        user.email = normalized;
+        user.isEmailVerified = false;
+        user.otpCode = createHash('sha256').update(code).digest('hex');
+        user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+        user.otpSentAt = new Date();
+        await user.save();
+        await sendOtpEmail(normalized, code);
+        res.json({ ok: true, requiresOtp: true, email: normalized });
+    } catch (err) {
+        console.error('Email update error:', err);
+        res.status(500).json({ error: 'Failed to update email' });
+    }
+});
+
+// PATCH /api/user/notification-prefs — per-type notification toggles
+const VALID_NOTIF_TYPES = new Set([
+    'new_follower', 'bucket_grabbed', 'bucket_unlocked', 'new_bucket_published',
+    'grabbed_bucket_updated', 'comment_mention', 'bucket_tagged', 'comment_reply',
+    'comment_agreed', 'new_dm',
+]);
+app.patch('/api/user/notification-prefs', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const prefs = req.body;
+        if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs)) {
+            return res.status(400).json({ error: 'Prefs must be an object' });
+        }
+        const update = {};
+        for (const [key, val] of Object.entries(prefs)) {
+            if (!VALID_NOTIF_TYPES.has(key)) return res.status(400).json({ error: `Unknown notification type: ${key}` });
+            if (typeof val !== 'boolean') return res.status(400).json({ error: `Value for ${key} must be a boolean` });
+            update[`notificationPrefs.${key}`] = val;
+        }
+        if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No valid fields provided' });
+        await User.findByIdAndUpdate(req.user._id, { $set: update });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Notification prefs update error:', err);
+        res.status(500).json({ error: 'Failed to update notification preferences' });
+    }
+});
+
+// GET /api/user/export — download user data as JSON
+app.get('/api/user/export', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const [user, buckets, grabbedBuckets] = await Promise.all([
+            User.findById(userId).select(
+                'username email avatar bio website socialLinks category isMatureGated newsletterSubscribed notificationPrefs createdAt'
+            ).lean(),
+            Bucket.find({ userId }).select('name description tags visibility monetized price mature isDraft links createdAt updatedAt').lean(),
+            Bucket.find({ 'grabbedBy.userId': userId }).select('name _id').lean(),
+        ]);
+        res.setHeader('Content-Disposition', 'attachment; filename="grabbn-export.json"');
+        res.json({
+            exportedAt: new Date().toISOString(),
+            profile: user,
+            buckets: buckets.map(b => ({
+                name: b.name,
+                description: b.description,
+                tags: b.tags,
+                visibility: b.visibility,
+                monetized: b.monetized,
+                price: b.price,
+                mature: b.mature,
+                isDraft: b.isDraft,
+                linkCount: (b.links || []).length,
+                createdAt: b.createdAt,
+                updatedAt: b.updatedAt,
+            })),
+            grabbed: grabbedBuckets.map(b => ({ id: b._id, name: b.name })),
+        });
+    } catch (err) {
+        console.error('Export error:', err);
+        res.status(500).json({ error: 'Failed to export data' });
     }
 });
 

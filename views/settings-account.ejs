@@ -11,7 +11,7 @@
   <%- include('partials/settings-nav') %>
 
   <!-- Content area -->
-  <div class="flex-1 overflow-y-auto">
+  <div class="flex-1 overflow-y-auto scrollbar-hide">
     <div class="w-full px-6 py-6">
 
       <% if (user && !user.isAnonymous) { %>
@@ -68,6 +68,30 @@
           </div>
         </div>
 
+        <!-- Display Name -->
+        <div class="px-5 py-4">
+          <div class="flex items-start justify-between gap-4" id="displayNameDisplay">
+            <div class="flex flex-col gap-0.5 min-w-0">
+              <span class="text-sm font-semibold text-woodsmoke-900">Display name</span>
+              <span class="text-sm text-woodsmoke-400 break-words"><%= user.displayName || 'Not set' %></span>
+            </div>
+            <button id="displayNameEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
+              Edit
+            </button>
+          </div>
+          <div id="displayNameForm" class="hidden mt-3 flex flex-col gap-2">
+            <input id="displayNameInput" type="text" value="<%= user.displayName || '' %>" maxlength="60"
+              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md outline-none focus:border-orchid-400 transition-colors"
+              placeholder="Your full name">
+            <p class="text-[11px] text-woodsmoke-400">Shown alongside your username. Max 60 characters.</p>
+            <p id="displayNameError" class="hidden text-sm text-red-500"></p>
+            <div class="flex gap-2">
+              <button id="displayNameSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
+              <button id="displayNameCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Bio -->
         <div class="px-5 py-4">
           <div class="flex items-start justify-between gap-4" id="bioDisplay">
@@ -91,6 +115,22 @@
               <button id="bioSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
               <button id="bioCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
             </div>
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div class="px-5 py-4 flex items-center justify-between gap-4">
+          <div class="flex flex-col gap-0.5 min-w-0">
+            <span class="text-sm font-semibold text-woodsmoke-900">Category</span>
+            <span id="categoryDisplay" class="text-sm text-woodsmoke-400"><%= user.category ? user.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Not set' %></span>
+          </div>
+          <div class="relative shrink-0" id="categoryPickerWrap">
+            <button id="categoryPickerBtn" type="button"
+              class="flex items-center gap-2 h-9 px-3 text-sm font-semibold border border-silver-200 rounded-md text-woodsmoke-700 hover:border-woodsmoke-300 transition-colors w-44">
+              <span id="categoryPickerLabel" class="flex-1 text-left truncate"><%= user.category ? user.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Not set' %></span>
+              <svg id="categoryChevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="shrink-0 transition-transform duration-150"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.536 13.707a1 1 0 0 1-1.415 0L12 11.586l-2.121 2.121a1 1 0 0 1-1.415-1.414l2.829-2.828a1 1 0 0 1 1.414 0l2.829 2.828a1 1 0 0 1 0 1.414"/></g></svg>
+            </button>
+            <div id="categoryDropdown" class="hidden absolute top-full right-0 mt-1 w-72 bg-white border border-silver-200 rounded-md shadow-lg z-50 py-1 max-h-72 overflow-y-auto"></div>
           </div>
         </div>
 
@@ -219,6 +259,31 @@
               <button id="passwordSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
               <button id="passwordCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
             </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Preferences ─────────────────────────────────────────────────────── -->
+      <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
+
+        <div class="px-5 py-4">
+          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Preferences</p>
+        </div>
+
+        <!-- Language -->
+        <div class="px-5 py-4 flex items-center justify-between gap-4">
+          <div class="flex flex-col gap-0.5 min-w-0">
+            <span class="text-sm font-semibold text-woodsmoke-900">Language</span>
+            <span id="languageDisplay" class="text-sm text-woodsmoke-400"><%= ({en:'English',es:'Spanish',fr:'French',de:'German',pt:'Portuguese',it:'Italian',nl:'Dutch',ru:'Russian',ja:'Japanese',zh:'Chinese',ko:'Korean',ar:'Arabic',hi:'Hindi',tr:'Turkish',pl:'Polish',sv:'Swedish',no:'Norwegian',da:'Danish',fi:'Finnish',id:'Indonesian'})[user.language || 'en'] || 'English' %></span>
+          </div>
+          <div class="relative shrink-0" id="languagePickerWrap">
+            <button id="languagePickerBtn" type="button"
+              class="flex items-center gap-2 h-9 px-3 text-sm font-semibold border border-silver-200 rounded-md text-woodsmoke-700 hover:border-woodsmoke-300 transition-colors w-40">
+              <span id="languagePickerLabel" class="flex-1 text-left truncate"><%= ({en:'English',es:'Spanish',fr:'French',de:'German',pt:'Portuguese',it:'Italian',nl:'Dutch',ru:'Russian',ja:'Japanese',zh:'Chinese',ko:'Korean',ar:'Arabic',hi:'Hindi',tr:'Turkish',pl:'Polish',sv:'Swedish',no:'Norwegian',da:'Danish',fi:'Finnish',id:'Indonesian'})[user.language || 'en'] || 'English' %></span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" id="languageChevron" class="shrink-0 transition-transform duration-150"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.536 13.707a1 1 0 0 1-1.415 0L12 11.586l-2.121 2.121a1 1 0 0 1-1.415-1.414l2.829-2.828a1 1 0 0 1 1.414 0l2.829 2.828a1 1 0 0 1 0 1.414"/></g></svg>
+            </button>
+            <div id="languageDropdown" class="hidden absolute top-full right-0 mt-1 w-48 bg-white border border-silver-200 rounded-md shadow-lg z-50 py-1 max-h-64 overflow-y-auto"></div>
           </div>
         </div>
 
@@ -589,7 +654,9 @@
 
   platformPickerBtn.addEventListener('click', e => {
     e.stopPropagation();
+    const wasHidden = platformDropdown.classList.contains('hidden');
     platformDropdown.classList.toggle('hidden');
+    if (wasHidden) positionDropdown(platformPickerBtn, platformDropdown);
   });
   document.addEventListener('click', e => {
     if (!document.getElementById('platformPickerWrap').contains(e.target)) platformDropdown.classList.add('hidden');
@@ -675,6 +742,238 @@
   socialUrlInput.addEventListener('keydown', e => { if (e.key === 'Enter') confirmAddSocial(); });
 
   renderSocials();
+
+  // ── Shared: smart dropdown positioning ──────────────────────────────────────
+  function positionDropdown(btn, dropdown) {
+    const btnRect      = btn.getBoundingClientRect();
+    const dropHeight   = dropdown.offsetHeight;
+    const spaceBelow   = window.innerHeight - btnRect.bottom;
+    const spaceAbove   = btnRect.top;
+    const openUpward   = spaceBelow < dropHeight + 8 && spaceAbove > spaceBelow;
+    dropdown.style.top    = openUpward ? 'auto' : '100%';
+    dropdown.style.bottom = openUpward ? '100%' : 'auto';
+    dropdown.style.marginTop    = openUpward ? '0' : '4px';
+    dropdown.style.marginBottom = openUpward ? '4px' : '0';
+  }
+
+  // ── Category ────────────────────────────────────────────────────────────────
+  let CATEGORIES       = [{ value: '', label: 'Not set', description: '' }];
+  let ADULT_CATEGORIES = [];
+
+  fetch('/data/categories.json')
+    .then(r => r.json())
+    .then(data => {
+      CATEGORIES       = [{ value: '', label: 'Not set', description: '' }, ...data.categories];
+      ADULT_CATEGORIES = data.adultCategories;
+    })
+    .catch(() => {});
+
+  const categoryPickerBtn   = document.getElementById('categoryPickerBtn');
+  const categoryPickerLabel = document.getElementById('categoryPickerLabel');
+  const categoryChevron     = document.getElementById('categoryChevron');
+  const categoryDropdown    = document.getElementById('categoryDropdown');
+  const categoryDisplay     = document.getElementById('categoryDisplay');
+  let currentCategory       = '<%= user.category || "" %>';
+
+  function buildCategoryDropdown() {
+    categoryDropdown.innerHTML = '';
+    CATEGORIES.forEach(c => categoryDropdown.appendChild(makeCategoryItem(c)));
+    if (matureUnlocked) {
+      const divider = document.createElement('div');
+      divider.className = 'flex items-center gap-2 px-3 py-1.5 mt-0.5 border-t border-silver-100';
+      divider.innerHTML = '<span class="text-[10px] font-semibold uppercase tracking-wide text-woodsmoke-300">18+</span>';
+      categoryDropdown.appendChild(divider);
+      ADULT_CATEGORIES.forEach(c => categoryDropdown.appendChild(makeCategoryItem(c)));
+    }
+  }
+
+  function makeCategoryItem(c) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'w-full flex items-start justify-between gap-3 px-3 py-2 hover:bg-silver-50 transition-colors text-left';
+    const isActive = c.value === currentCategory;
+    btn.innerHTML = `
+      <span class="flex flex-col min-w-0">
+        <span class="text-sm font-semibold text-woodsmoke-700 leading-snug">${c.label}</span>
+        ${c.description ? `<span class="text-xs text-woodsmoke-400 leading-snug truncate">${c.description}</span>` : ''}
+      </span>
+      ${isActive ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-orchid-500 shrink-0 mt-1"><path d="M20 6 9 17l-5-5"/></svg>' : '<span class="w-3 shrink-0"></span>'}`;
+    btn.addEventListener('click', () => selectCategory(c));
+    return btn;
+  }
+
+  function openCategoryDropdown() {
+    buildCategoryDropdown();
+    categoryDropdown.classList.remove('hidden');
+    positionDropdown(categoryPickerBtn, categoryDropdown);
+    categoryChevron.classList.add('rotate-180');
+  }
+
+  function closeCategoryDropdown() {
+    categoryDropdown.classList.add('hidden');
+    categoryChevron.classList.remove('rotate-180');
+  }
+
+  categoryPickerBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    categoryDropdown.classList.contains('hidden') ? openCategoryDropdown() : closeCategoryDropdown();
+  });
+
+  document.addEventListener('click', e => {
+    if (!document.getElementById('categoryPickerWrap').contains(e.target)) closeCategoryDropdown();
+  });
+
+  async function selectCategory(c) {
+    closeCategoryDropdown();
+    if (c.value === currentCategory) return;
+    const prev = currentCategory;
+    currentCategory = c.value;
+    categoryPickerLabel.textContent = c.label;
+    categoryDisplay.textContent = c.label;
+    try {
+      const res = await fetch('/api/user/category', {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: c.value }),
+      });
+      if (!res.ok) throw new Error();
+      showFeedback('Category updated.', true);
+    } catch {
+      currentCategory = prev;
+      const prevCat = [...CATEGORIES, ...ADULT_CATEGORIES].find(x => x.value === prev);
+      categoryPickerLabel.textContent = prevCat ? prevCat.label : 'Not set';
+      categoryDisplay.textContent = prevCat ? prevCat.label : 'Not set';
+      showFeedback('Could not save. Try again.', false);
+    }
+  }
+
+  // ── Display Name ────────────────────────────────────────────────────────────
+  wireInlineEdit({
+    editBtn:   document.getElementById('displayNameEditBtn'),
+    cancelBtn: document.getElementById('displayNameCancelBtn'),
+    form:      document.getElementById('displayNameForm'),
+  });
+
+  async function saveDisplayName() {
+    const input = document.getElementById('displayNameInput');
+    const errEl = document.getElementById('displayNameError');
+    const saveBtn = document.getElementById('displayNameSaveBtn');
+    errEl.classList.add('hidden');
+    const val = input.value.trim();
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    try {
+      const res  = await fetch('/api/user/display-name', {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName: val }),
+      });
+      const data = await res.json();
+      if (!res.ok) { errEl.textContent = data.error; errEl.classList.remove('hidden'); return; }
+      document.querySelector('#displayNameDisplay .text-woodsmoke-400').textContent = val || 'Not set';
+      document.getElementById('displayNameForm').classList.add('hidden');
+      document.getElementById('displayNameEditBtn').classList.remove('hidden');
+      showFeedback('Display name updated.', true);
+    } catch {
+      errEl.textContent = 'Something went wrong. Try again.';
+      errEl.classList.remove('hidden');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save';
+    }
+  }
+
+  document.getElementById('displayNameSaveBtn').addEventListener('click', saveDisplayName);
+  document.getElementById('displayNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveDisplayName(); });
+
+  // ── Language ─────────────────────────────────────────────────────────────────
+  const LANGUAGES = [
+    { code: 'en', label: 'English'    },
+    { code: 'es', label: 'Spanish'    },
+    { code: 'fr', label: 'French'     },
+    { code: 'de', label: 'German'     },
+    { code: 'pt', label: 'Portuguese' },
+    { code: 'it', label: 'Italian'    },
+    { code: 'nl', label: 'Dutch'      },
+    { code: 'ru', label: 'Russian'    },
+    { code: 'ja', label: 'Japanese'   },
+    { code: 'zh', label: 'Chinese'    },
+    { code: 'ko', label: 'Korean'     },
+    { code: 'ar', label: 'Arabic'     },
+    { code: 'hi', label: 'Hindi'      },
+    { code: 'tr', label: 'Turkish'    },
+    { code: 'pl', label: 'Polish'     },
+    { code: 'sv', label: 'Swedish'    },
+    { code: 'no', label: 'Norwegian'  },
+    { code: 'da', label: 'Danish'     },
+    { code: 'fi', label: 'Finnish'    },
+    { code: 'id', label: 'Indonesian' },
+  ];
+
+  const languagePickerBtn   = document.getElementById('languagePickerBtn');
+  const languagePickerLabel = document.getElementById('languagePickerLabel');
+  const languageChevron     = document.getElementById('languageChevron');
+  const languageDropdown    = document.getElementById('languageDropdown');
+  const languageDisplay     = document.getElementById('languageDisplay');
+  let currentLanguage       = '<%= user.language || "en" %>';
+
+  function buildLanguageDropdown() {
+    languageDropdown.innerHTML = '';
+    LANGUAGES.forEach(l => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'w-full flex items-center justify-between px-3 py-2 text-sm text-woodsmoke-700 hover:bg-silver-50 transition-colors text-left';
+      const isActive = l.code === currentLanguage;
+      btn.innerHTML = `<span>${l.label}</span>${isActive ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-orchid-500 shrink-0"><path d="M20 6 9 17l-5-5"/></svg>' : '<span class="w-3"></span>'}`;
+      btn.addEventListener('click', () => selectLanguage(l));
+      languageDropdown.appendChild(btn);
+    });
+  }
+
+  languagePickerBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (languageDropdown.classList.contains('hidden')) {
+      buildLanguageDropdown();
+      languageDropdown.classList.remove('hidden');
+      positionDropdown(languagePickerBtn, languageDropdown);
+      languageChevron.classList.add('rotate-180');
+    } else {
+      languageDropdown.classList.add('hidden');
+      languageChevron.classList.remove('rotate-180');
+    }
+  });
+
+  document.addEventListener('click', e => {
+    if (!document.getElementById('languagePickerWrap').contains(e.target)) {
+      languageDropdown.classList.add('hidden');
+      languageChevron.classList.remove('rotate-180');
+    }
+  });
+
+  async function selectLanguage(l) {
+    languageDropdown.classList.add('hidden');
+    languageChevron.classList.remove('rotate-180');
+    if (l.code === currentLanguage) return;
+    const prev = currentLanguage;
+    currentLanguage = l.code;
+    languagePickerLabel.textContent = l.label;
+    languageDisplay.textContent = l.label;
+    try {
+      const res = await fetch('/api/user/language', {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: l.code }),
+      });
+      if (!res.ok) throw new Error();
+      showFeedback('Language updated.', true);
+    } catch {
+      currentLanguage = prev;
+      const prevLang = LANGUAGES.find(x => x.code === prev);
+      languagePickerLabel.textContent = prevLang ? prevLang.label : 'English';
+      languageDisplay.textContent = prevLang ? prevLang.label : 'English';
+      showFeedback('Could not save. Try again.', false);
+    }
+  }
 
   // ── Avatar ──────────────────────────────────────────────────────────────────
   const avatarChangeBtn = document.getElementById('avatarChangeBtn');

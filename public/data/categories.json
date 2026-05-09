@@ -1,0 +1,30 @@
+{
+  "categories": [
+    { "value": "personal",        "label": "Personal",          "description": "Personal account sharing everyday life and thoughts" },
+    { "value": "photography",     "label": "Photography",       "description": "Photo collections, visual storytelling, and camera work" },
+    { "value": "gaming",          "label": "Gaming",            "description": "Video games, streams, reviews, and gaming culture" },
+    { "value": "technology",      "label": "Technology",        "description": "Tech news, software, hardware, and digital tools" },
+    { "value": "art-design",      "label": "Art & Design",      "description": "Visual art, graphic design, illustration, and creative work" },
+    { "value": "music",           "label": "Music",             "description": "Music production, playlists, artists, and audio culture" },
+    { "value": "sports-fitness",  "label": "Sports & Fitness",  "description": "Sports, workouts, training, and athletic lifestyle" },
+    { "value": "food-cooking",    "label": "Food & Cooking",    "description": "Recipes, restaurants, culinary techniques, and food culture" },
+    { "value": "travel",          "label": "Travel",            "description": "Destinations, trip guides, and travel inspiration" },
+    { "value": "finance",         "label": "Finance",           "description": "Investing, personal finance, markets, and money management" },
+    { "value": "education",       "label": "Education",         "description": "Learning resources, courses, and educational content" },
+    { "value": "entertainment",   "label": "Entertainment",     "description": "Pop culture, memes, viral content, and general entertainment" },
+    { "value": "fashion-beauty",  "label": "Fashion & Beauty",  "description": "Style, fashion trends, makeup, and beauty tips" },
+    { "value": "health-wellness", "label": "Health & Wellness", "description": "Mental health, nutrition, wellbeing, and healthy living" },
+    { "value": "business",        "label": "Business",          "description": "Entrepreneurship, startups, marketing, and business strategy" },
+    { "value": "science",         "label": "Science",           "description": "Scientific research, discoveries, and STEM topics" },
+    { "value": "books-literature","label": "Books & Literature","description": "Book recommendations, reading lists, and literary discussion" },
+    { "value": "movies-tv",       "label": "Movies & TV",       "description": "Film, television, reviews, and screen culture" },
+    { "value": "anime-manga",     "label": "Anime & Manga",     "description": "Anime series, manga, and Japanese pop culture" },
+    { "value": "other",           "label": "Other",             "description": "Doesn't fit a specific category" }
+  ],
+  "adultCategories": [
+    { "value": "adult-content",   "label": "Adult Content",     "description": "General adult and explicit content" },
+    { "value": "webcam-live",     "label": "Webcam / Live",     "description": "Live streams and webcam content" },
+    { "value": "nsfw-art",        "label": "NSFW Art",          "description": "Explicit or mature artistic work" },
+    { "value": "adult-education", "label": "Adult Education",   "description": "Sex education and adult-oriented educational content" }
+  ]
+}
