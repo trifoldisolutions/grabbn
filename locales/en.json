@@ -1,0 +1,95 @@
+{
+  "nav.search_placeholder": "search users and buckets by name, @username, ID or share link…",
+  "nav.search_placeholder_mobile": "search...",
+  "nav.notifications": "Notifications",
+  "nav.mark_all_read": "Mark all as read",
+  "nav.clear_all": "Clear all",
+  "nav.messages": "Messages",
+  "nav.mark_all_read_short": "Mark all read",
+  "nav.open_inbox": "Open inbox",
+  "nav.view_profile": "View Profile",
+  "nav.log_out": "Log Out",
+  "nav.delete_account": "Delete Account",
+  "nav.sign_in": "Sign In / Log In",
+
+  "settings.nav.account": "Account",
+  "settings.nav.privacy": "Privacy",
+  "settings.nav.content": "Content",
+  "settings.nav.notifications": "Notifications",
+  "settings.nav.monetization": "Monetization",
+  "settings.nav.integrations": "Integrations",
+  "settings.nav.danger": "Danger Zone",
+  "settings.nav.save_changes": "Save changes",
+
+  "settings.account.section.profile": "Profile",
+  "settings.account.section.links": "Links",
+  "settings.account.section.security": "Security",
+  "settings.account.section.preferences": "Preferences",
+
+  "settings.account.avatar.label": "Avatar",
+  "settings.account.avatar.hint": "JPG, PNG, WebP or GIF · max 2 MB",
+  "settings.account.avatar.change": "Change",
+
+  "settings.account.username.label": "Username",
+  "settings.account.username.hint": "2–26 characters, letters and numbers only.",
+
+  "settings.account.display_name.label": "Display name",
+  "settings.account.display_name.not_set": "Not set",
+  "settings.account.display_name.placeholder": "Your full name",
+  "settings.account.display_name.hint": "Shown alongside your username. Max 60 characters.",
+
+  "settings.account.bio.label": "Bio",
+  "settings.account.bio.empty": "No bio yet.",
+  "settings.account.bio.placeholder": "Tell people a bit about yourself…",
+
+  "settings.account.category.label": "Category",
+  "settings.account.category.not_set": "Not set",
+
+  "settings.account.website.label": "Website",
+  "settings.account.website.not_set": "Not set",
+
+  "settings.account.socials.label": "Socials",
+  "settings.account.socials.add": "Add",
+  "settings.account.socials.platform": "Platform",
+  "settings.account.socials.empty": "No socials added yet.",
+
+  "settings.account.email.label": "Email address",
+  "settings.account.email.verified": "Verified",
+  "settings.account.email.unverified": "Unverified",
+  "settings.account.email.verify_btn": "Verify email",
+
+  "settings.account.password.label": "Password",
+  "settings.account.password.last_changed": "Last changed: unknown",
+  "settings.account.password.current": "Current password",
+  "settings.account.password.new": "New password",
+  "settings.account.password.confirm": "Confirm new password",
+  "settings.account.password.hint": "Min. 8 chars with 2 uppercase, 2 lowercase, 2 digits, 2 special characters.",
+
+  "settings.account.language.label": "Language",
+
+  "settings.common.edit": "Edit",
+  "settings.common.save": "Save",
+  "settings.common.cancel": "Cancel",
+  "settings.common.change": "Change",
+  "settings.common.saving": "Saving…",
+  "settings.common.sign_in_prompt": "Please <a href=\"/?openAuth=true\" class=\"text-orchid-600 font-semibold hover:underline\">sign in</a> to manage your settings.",
+
+  "settings.privacy.section.messaging": "Messaging",
+  "settings.privacy.messaging.who_can_message": "Who can message you",
+  "settings.privacy.messaging.who_can_message_hint": "Control who is allowed to send you direct messages",
+  "settings.privacy.messaging.everyone": "Everyone",
+  "settings.privacy.messaging.people_i_follow": "People I follow",
+  "settings.privacy.messaging.no_one": "No one",
+
+  "settings.privacy.section.profile": "Profile",
+  "settings.privacy.profile.show_grabbed": "Show grabbed buckets on profile",
+  "settings.privacy.profile.show_grabbed_hint": "When on, your grabbed buckets appear on your public profile",
+  "settings.privacy.profile.visibility": "Profile visibility",
+  "settings.privacy.profile.visibility_hint": "Control whether your profile is publicly visible or hidden from search and browse",
+  "settings.privacy.profile.show_explore": "Show in Explore",
+  "settings.privacy.profile.show_explore_hint": "When off, your profile and buckets won't appear in recommendations or the Explore feed",
+  "settings.privacy.common.coming_soon": "Coming soon",
+
+  "settings.privacy.section.blocked": "Blocked users",
+  "settings.privacy.blocked.empty": "No blocked users."
+}

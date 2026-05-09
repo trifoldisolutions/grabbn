@@ -20,14 +20,14 @@
       <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
         <div class="px-5 py-4">
-          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Profile</p>
+          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400"><%= t('settings.account.section.profile') %></p>
         </div>
 
         <!-- Avatar -->
         <div class="px-5 py-4 flex items-center justify-between gap-4">
           <div class="flex flex-col gap-0.5 min-w-0">
-            <span class="text-sm font-semibold text-woodsmoke-900">Avatar</span>
-            <span class="text-sm text-woodsmoke-400">JPG, PNG, WebP or GIF · max 2 MB</span>
+            <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.account.avatar.label') %></span>
+            <span class="text-sm text-woodsmoke-400"><%= t('settings.account.avatar.hint') %></span>
           </div>
           <div class="flex items-center gap-3 shrink-0">
             <div id="avatarPreview" class="w-10 h-10 rounded-md overflow-hidden flex items-center justify-center <%= user.avatar ? '' : 'bg-orchid-100' %>">
@@ -39,31 +39,54 @@
             </div>
             <input id="avatarInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
             <button id="avatarChangeBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors">
-              Change
+              <%= t('settings.account.avatar.change') %>
             </button>
           </div>
         </div>
 
         <!-- Username -->
         <div class="px-5 py-4">
+          <%
+            const _uLog = (user.usernameChangeLog || []).map(d => new Date(d).getTime());
+            const _uNow = Date.now();
+            const _uLimits = [
+              { count: 2, windowMs: 24 * 60 * 60 * 1000 },
+              { count: 3, windowMs: 7 * 24 * 60 * 60 * 1000 },
+              { count: 4, windowMs: 30 * 24 * 60 * 60 * 1000 },
+            ];
+            let _canChangeUsername = true;
+            let _nextUsernameDate = null;
+            for (const { count, windowMs } of _uLimits) {
+              const inWindow = _uLog.filter(t => _uNow - t < windowMs).sort((a, b) => a - b);
+              if (inWindow.length >= count) {
+                _canChangeUsername = false;
+                _nextUsernameDate = new Date(inWindow[0] + windowMs).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                break;
+              }
+            }
+          %>
           <div class="flex items-start justify-between gap-4" id="usernameDisplay">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Username</span>
+              <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.account.username.label') %></span>
               <span class="text-sm text-woodsmoke-400">@<%= user.username %></span>
+              <% if (!_canChangeUsername) { %>
+                <span id="usernameAvailableHint" class="text-[11px] text-woodsmoke-300 mt-0.5">Available to change <%= _nextUsernameDate %></span>
+              <% } %>
             </div>
-            <button id="usernameEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
-              Edit
+            <button id="usernameEditBtn" <%= _canChangeUsername ? '' : 'disabled' %>
+              class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md shrink-0 transition-colors text-woodsmoke-600 hover:border-woodsmoke-300 disabled:opacity-50 disabled:cursor-default">
+              <%= t('settings.common.edit') %>
             </button>
           </div>
           <div id="usernameForm" class="hidden mt-3 flex flex-col gap-2">
-            <input id="usernameInput" type="text" value="<%= user.username %>" maxlength="26"
-              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors"
+            <input id="usernameInput" type="text" value="<%= user.username %>" maxlength="20"
+              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md outline-none focus:border-orchid-400 transition-colors"
               placeholder="Username">
-            <p class="text-[11px] text-woodsmoke-400">2–26 characters, letters and numbers only.</p>
+            <p class="text-[11px] text-woodsmoke-400"><%= t('settings.account.username.hint') %></p>
             <p id="usernameError" class="hidden text-sm text-red-500"></p>
             <div class="flex gap-2">
-              <button id="usernameSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
-              <button id="usernameCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+              <button id="usernameSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><%= t('settings.common.save') %></button>
+              <button id="usernameCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors"><%= t('settings.common.cancel') %></button>
             </div>
           </div>
         </div>
@@ -72,22 +95,25 @@
         <div class="px-5 py-4">
           <div class="flex items-start justify-between gap-4" id="displayNameDisplay">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Display name</span>
-              <span class="text-sm text-woodsmoke-400 break-words"><%= user.displayName || 'Not set' %></span>
+              <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.account.display_name.label') %></span>
+              <span class="text-sm text-woodsmoke-400 break-words"><%= user.displayName || t('settings.account.display_name.not_set') %></span>
             </div>
-            <button id="displayNameEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
-              Edit
+            <button id="displayNameEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-default">
+              <%= t('settings.common.edit') %>
             </button>
           </div>
           <div id="displayNameForm" class="hidden mt-3 flex flex-col gap-2">
-            <input id="displayNameInput" type="text" value="<%= user.displayName || '' %>" maxlength="60"
+            <input id="displayNameInput" type="text" value="<%= user.displayName || '' %>"
               class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md outline-none focus:border-orchid-400 transition-colors"
-              placeholder="Your full name">
-            <p class="text-[11px] text-woodsmoke-400">Shown alongside your username. Max 60 characters.</p>
+              placeholder="<%= t('settings.account.display_name.placeholder') %>">
+            <div class="flex items-center justify-between">
+              <p class="text-[11px] text-woodsmoke-400">Letters only · max 30 characters</p>
+              <span id="displayNameCount" class="text-[10px] text-woodsmoke-300"><%= (user.displayName || '').length %>/30</span>
+            </div>
             <p id="displayNameError" class="hidden text-sm text-red-500"></p>
             <div class="flex gap-2">
-              <button id="displayNameSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
-              <button id="displayNameCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+              <button id="displayNameSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><%= t('settings.common.save') %></button>
+              <button id="displayNameCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors"><%= t('settings.common.cancel') %></button>
             </div>
           </div>
         </div>
@@ -96,24 +122,24 @@
         <div class="px-5 py-4">
           <div class="flex items-start justify-between gap-4" id="bioDisplay">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Bio</span>
-              <span class="text-sm text-woodsmoke-400 break-words"><%= user.bio || 'No bio yet.' %></span>
+              <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.account.bio.label') %></span>
+              <span class="text-sm text-woodsmoke-400 break-words"><%= user.bio || t('settings.account.bio.empty') %></span>
             </div>
-            <button id="bioEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
-              Edit
+            <button id="bioEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-default">
+              <%= t('settings.common.edit') %>
             </button>
           </div>
           <div id="bioForm" class="hidden mt-3 flex flex-col gap-2">
             <div class="relative">
               <textarea id="bioInput" maxlength="128" rows="3"
                 class="w-full px-3 py-2.5 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors resize-none"
-                placeholder="Tell people a bit about yourself…"><%= user.bio || '' %></textarea>
+                placeholder="<%= t('settings.account.bio.placeholder') %>"><%= user.bio || '' %></textarea>
               <span id="bioCount" class="absolute bottom-2 right-3 text-[10px] text-woodsmoke-300"><%= (user.bio || '').length %>/128</span>
             </div>
             <p id="bioError" class="hidden text-sm text-red-500"></p>
             <div class="flex gap-2">
-              <button id="bioSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
-              <button id="bioCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+              <button id="bioSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><%= t('settings.common.save') %></button>
+              <button id="bioCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors"><%= t('settings.common.cancel') %></button>
             </div>
           </div>
         </div>
@@ -121,13 +147,13 @@
         <!-- Category -->
         <div class="px-5 py-4 flex items-center justify-between gap-4">
           <div class="flex flex-col gap-0.5 min-w-0">
-            <span class="text-sm font-semibold text-woodsmoke-900">Category</span>
-            <span id="categoryDisplay" class="text-sm text-woodsmoke-400"><%= user.category ? user.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Not set' %></span>
+            <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.account.category.label') %></span>
+            <span id="categoryDisplay" class="text-sm text-woodsmoke-400"><%= user.category ? user.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : t('settings.account.category.not_set') %></span>
           </div>
           <div class="relative shrink-0" id="categoryPickerWrap">
             <button id="categoryPickerBtn" type="button"
               class="flex items-center gap-2 h-9 px-3 text-sm font-semibold border border-silver-200 rounded-md text-woodsmoke-700 hover:border-woodsmoke-300 transition-colors w-44">
-              <span id="categoryPickerLabel" class="flex-1 text-left truncate"><%= user.category ? user.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Not set' %></span>
+              <span id="categoryPickerLabel" class="flex-1 text-left truncate"><%= user.category ? user.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : t('settings.account.category.not_set') %></span>
               <svg id="categoryChevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="shrink-0 transition-transform duration-150"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.536 13.707a1 1 0 0 1-1.415 0L12 11.586l-2.121 2.121a1 1 0 0 1-1.415-1.414l2.829-2.828a1 1 0 0 1 1.414 0l2.829 2.828a1 1 0 0 1 0 1.414"/></g></svg>
             </button>
             <div id="categoryDropdown" class="hidden absolute top-full right-0 mt-1 w-72 bg-white border border-silver-200 rounded-md shadow-lg z-50 py-1 max-h-72 overflow-y-auto"></div>
@@ -140,22 +166,22 @@
       <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
         <div class="px-5 py-4">
-          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Links</p>
+          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400"><%= t('settings.account.section.links') %></p>
         </div>
 
         <!-- Website -->
         <div class="px-5 py-4">
           <div class="flex items-center justify-between gap-4" id="websiteDisplay">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Website</span>
+              <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.account.website.label') %></span>
               <% if (user.website) { %>
                 <a id="websiteUrl" href="<%= user.website %>" target="_blank" rel="noopener noreferrer"
                   class="text-sm text-orchid-500 hover:underline truncate"><%= user.website %></a>
               <% } else { %>
-                <span id="websiteUrl" class="text-sm text-woodsmoke-400">Not set</span>
+                <span id="websiteUrl" class="text-sm text-woodsmoke-400"><%= t('settings.account.website.not_set') %></span>
               <% } %>
             </div>
-            <button id="websiteEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">Edit</button>
+            <button id="websiteEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-default"><%= t('settings.common.edit') %></button>
           </div>
           <div id="websiteForm" class="hidden mt-3 flex flex-col gap-2">
             <input id="websiteInput" type="url" value="<%= user.website || '' %>" maxlength="200"
@@ -163,8 +189,8 @@
               placeholder="https://yourwebsite.com">
             <p id="websiteError" class="hidden text-sm text-red-500"></p>
             <div class="flex gap-2">
-              <button id="websiteSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
-              <button id="websiteCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+              <button id="websiteSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><%= t('settings.common.save') %></button>
+              <button id="websiteCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors"><%= t('settings.common.cancel') %></button>
             </div>
           </div>
         </div>
@@ -172,10 +198,10 @@
         <!-- Socials -->
         <div class="px-5 py-4">
           <div class="flex items-center justify-between gap-4 mb-3">
-            <span class="text-sm font-semibold text-woodsmoke-900">Socials</span>
+            <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.account.socials.label') %></span>
             <button id="addSocialBtn" class="flex items-center justify-center gap-1.5 text-sm font-semibold h-8 px-3 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-              Add
+              <%= t('settings.account.socials.add') %>
             </button>
           </div>
           <div id="socialsList" class="flex flex-wrap gap-2"></div>
@@ -184,7 +210,7 @@
               <div class="relative shrink-0" id="platformPickerWrap">
                 <button id="platformPickerBtn" type="button"
                   class="flex items-center gap-2 h-9 px-3 text-sm font-semibold border border-silver-200 rounded-md text-woodsmoke-400 hover:border-woodsmoke-300 transition-colors w-36">
-                  <span id="platformPickerLabel" class="flex-1 text-left truncate">Platform</span>
+                  <span id="platformPickerLabel" class="flex-1 text-left truncate"><%= t('settings.account.socials.platform') %></span>
                   <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0"><path d="m6 9 6 6 6-6"/></svg>
                 </button>
                 <div id="platformDropdown" class="hidden absolute top-full left-0 mt-1 w-44 bg-white border border-silver-200 rounded-md shadow-lg z-50 py-1 max-h-52 overflow-y-auto"></div>
@@ -192,7 +218,7 @@
               <input id="socialUrlInput" type="url" maxlength="200"
                 class="flex-1 h-9 px-3 text-sm border border-silver-200 rounded-md outline-none focus:border-orchid-400 transition-colors min-w-0"
                 placeholder="https://...">
-              <button id="addSocialSaveBtn" class="flex items-center justify-center w-9 h-9 shrink-0 bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40">
+              <button id="addSocialSaveBtn" class="flex items-center justify-center w-9 h-9 shrink-0 bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
               </button>
               <button id="addSocialCancelBtn" class="flex items-center justify-center w-9 h-9 shrink-0 border border-silver-200 text-woodsmoke-400 rounded-md hover:bg-silver-50 transition-colors">
@@ -209,25 +235,25 @@
       <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
         <div class="px-5 py-4">
-          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Security</p>
+          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400"><%= t('settings.account.section.security') %></p>
         </div>
 
         <!-- Email -->
         <div class="px-5 py-4 flex items-center justify-between gap-4">
           <div class="flex flex-col gap-0.5 min-w-0">
-            <span class="text-sm font-semibold text-woodsmoke-900">Email address</span>
+            <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.account.email.label') %></span>
             <div class="flex items-center gap-1.5 mt-0.5">
               <span class="text-sm text-woodsmoke-400 truncate"><%= user.email %></span>
               <% if (user.isEmailVerified) { %>
-                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">Verified</span>
+                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600"><%= t('settings.account.email.verified') %></span>
               <% } else { %>
-                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-500">Unverified</span>
+                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-500"><%= t('settings.account.email.unverified') %></span>
               <% } %>
             </div>
           </div>
           <% if (!user.isEmailVerified) { %>
             <button id="resendOtpBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
-              Verify email
+              <%= t('settings.account.email.verify_btn') %>
             </button>
           <% } %>
         </div>
@@ -236,28 +262,58 @@
         <div class="px-5 py-4">
           <div class="flex items-start justify-between gap-4" id="passwordDisplay">
             <div class="flex flex-col gap-0.5">
-              <span class="text-sm font-semibold text-woodsmoke-900">Password</span>
-              <span class="text-sm text-woodsmoke-400">Last changed: unknown</span>
+              <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.account.password.label') %></span>
+              <span class="text-sm text-woodsmoke-400">
+                <% if (user.passwordChangedAt) { %>
+                  Last changed <%= new Date(user.passwordChangedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %>
+                <% } else { %>
+                  <%= t('settings.account.password.last_changed') %>
+                <% } %>
+              </span>
             </div>
-            <button id="passwordEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
-              Change
+            <button id="passwordEditBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-default">
+              <%= t('settings.common.change') %>
             </button>
           </div>
           <div id="passwordForm" class="hidden mt-3 flex flex-col gap-2">
-            <input id="currentPasswordInput" type="password"
-              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors"
-              placeholder="Current password" autocomplete="current-password">
-            <input id="newPasswordInput" type="password"
-              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors"
-              placeholder="New password" autocomplete="new-password">
-            <input id="confirmPasswordInput" type="password"
-              class="w-full h-10 px-3 text-sm border border-silver-200 rounded-lg outline-none focus:border-orchid-400 transition-colors"
-              placeholder="Confirm new password" autocomplete="new-password">
-            <p class="text-[11px] text-woodsmoke-400">Min. 8 chars with 2 uppercase, 2 lowercase, 2 digits, 2 special characters.</p>
+            <div class="relative">
+              <input id="currentPasswordInput" type="password"
+                class="w-full h-10 px-3 pr-10 text-sm border border-silver-200 rounded-md outline-none focus:border-orchid-400 transition-colors"
+                placeholder="<%= t('settings.account.password.current') %>" autocomplete="current-password">
+              <button type="button" data-pw-toggle="currentPasswordInput" class="absolute right-3 top-1/2 -translate-y-1/2 text-woodsmoke-300 hover:text-woodsmoke-500 transition-colors">
+                <svg data-pw-eye xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 5c3.679 0 8.162 2.417 9.73 5.901c.146.328.27.71.27 1.099c0 .388-.123.771-.27 1.099C20.161 16.583 15.678 19 12 19s-8.162-2.417-9.73-5.901C2.124 12.77 2 12.389 2 12c0-.388.123-.771.27-1.099C3.839 7.417 8.322 5 12 5m0 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8m0 2a2 2 0 1 1 0 4a2 2 0 0 1 0-4"/></g></svg>
+                <svg data-pw-eye-off class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M2.5 9a1.5 1.5 0 0 1 2.945-.404c1.947 6.502 11.158 6.503 13.109.005a1.5 1.5 0 1 1 2.877.85a10.1 10.1 0 0 1-1.623 3.236l.96.96a1.5 1.5 0 1 1-2.122 2.12l-1.01-1.01a9.6 9.6 0 0 1-1.67.915l.243.906a1.5 1.5 0 0 1-2.897.776l-.251-.935c-.705.073-1.417.073-2.122 0l-.25.935a1.5 1.5 0 0 1-2.898-.776l.242-.907a9.6 9.6 0 0 1-1.669-.914l-1.01 1.01a1.5 1.5 0 1 1-2.122-2.12l.96-.96a10.1 10.1 0 0 1-1.62-3.23A1.5 1.5 0 0 1 2.5 9"/></g></svg>
+              </button>
+            </div>
+            <div class="relative">
+              <input id="newPasswordInput" type="password"
+                class="w-full h-10 px-3 pr-10 text-sm border border-silver-200 rounded-md outline-none focus:border-orchid-400 transition-colors"
+                placeholder="<%= t('settings.account.password.new') %>" autocomplete="new-password">
+              <button type="button" data-pw-toggle="newPasswordInput" class="absolute right-3 top-1/2 -translate-y-1/2 text-woodsmoke-300 hover:text-woodsmoke-500 transition-colors">
+                <svg data-pw-eye xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 5c3.679 0 8.162 2.417 9.73 5.901c.146.328.27.71.27 1.099c0 .388-.123.771-.27 1.099C20.161 16.583 15.678 19 12 19s-8.162-2.417-9.73-5.901C2.124 12.77 2 12.389 2 12c0-.388.123-.771.27-1.099C3.839 7.417 8.322 5 12 5m0 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8m0 2a2 2 0 1 1 0 4a2 2 0 0 1 0-4"/></g></svg>
+                <svg data-pw-eye-off class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M2.5 9a1.5 1.5 0 0 1 2.945-.404c1.947 6.502 11.158 6.503 13.109.005a1.5 1.5 0 1 1 2.877.85a10.1 10.1 0 0 1-1.623 3.236l.96.96a1.5 1.5 0 1 1-2.122 2.12l-1.01-1.01a9.6 9.6 0 0 1-1.67.915l.243.906a1.5 1.5 0 0 1-2.897.776l-.251-.935c-.705.073-1.417.073-2.122 0l-.25.935a1.5 1.5 0 0 1-2.898-.776l.242-.907a9.6 9.6 0 0 1-1.669-.914l-1.01 1.01a1.5 1.5 0 1 1-2.122-2.12l.96-.96a10.1 10.1 0 0 1-1.62-3.23A1.5 1.5 0 0 1 2.5 9"/></g></svg>
+              </button>
+            </div>
+            <div class="relative">
+              <input id="confirmPasswordInput" type="password"
+                class="w-full h-10 px-3 pr-10 text-sm border border-silver-200 rounded-md outline-none focus:border-orchid-400 transition-colors"
+                placeholder="<%= t('settings.account.password.confirm') %>" autocomplete="new-password">
+              <button type="button" data-pw-toggle="confirmPasswordInput" class="absolute right-3 top-1/2 -translate-y-1/2 text-woodsmoke-300 hover:text-woodsmoke-500 transition-colors">
+                <svg data-pw-eye xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 5c3.679 0 8.162 2.417 9.73 5.901c.146.328.27.71.27 1.099c0 .388-.123.771-.27 1.099C20.161 16.583 15.678 19 12 19s-8.162-2.417-9.73-5.901C2.124 12.77 2 12.389 2 12c0-.388.123-.771.27-1.099C3.839 7.417 8.322 5 12 5m0 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8m0 2a2 2 0 1 1 0 4a2 2 0 0 1 0-4"/></g></svg>
+                <svg data-pw-eye-off class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M2.5 9a1.5 1.5 0 0 1 2.945-.404c1.947 6.502 11.158 6.503 13.109.005a1.5 1.5 0 1 1 2.877.85a10.1 10.1 0 0 1-1.623 3.236l.96.96a1.5 1.5 0 1 1-2.122 2.12l-1.01-1.01a9.6 9.6 0 0 1-1.67.915l.243.906a1.5 1.5 0 0 1-2.897.776l-.251-.935c-.705.073-1.417.073-2.122 0l-.25.935a1.5 1.5 0 0 1-2.898-.776l.242-.907a9.6 9.6 0 0 1-1.669-.914l-1.01 1.01a1.5 1.5 0 1 1-2.122-2.12l.96-.96a10.1 10.1 0 0 1-1.62-3.23A1.5 1.5 0 0 1 2.5 9"/></g></svg>
+              </button>
+            </div>
+            <ul id="passwordReqs" class="grid grid-cols-2 gap-x-4 gap-y-1 mt-0.5">
+              <li id="req-length"  class="flex items-center gap-1.5 text-[11px] text-woodsmoke-300"><span class="req-dot w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>8+ characters</li>
+              <li id="req-upper"   class="flex items-center gap-1.5 text-[11px] text-woodsmoke-300"><span class="req-dot w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>2 uppercase</li>
+              <li id="req-lower"   class="flex items-center gap-1.5 text-[11px] text-woodsmoke-300"><span class="req-dot w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>2 lowercase</li>
+              <li id="req-digit"   class="flex items-center gap-1.5 text-[11px] text-woodsmoke-300"><span class="req-dot w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>2 numbers</li>
+              <li id="req-special" class="flex items-center gap-1.5 text-[11px] text-woodsmoke-300"><span class="req-dot w-1.5 h-1.5 rounded-full bg-current shrink-0"></span>2 special chars</li>
+            </ul>
             <p id="passwordError" class="hidden text-sm text-red-500"></p>
             <div class="flex gap-2">
-              <button id="passwordSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
-              <button id="passwordCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+              <button id="passwordSaveBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><%= t('settings.common.save') %></button>
+              <button id="passwordCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors"><%= t('settings.common.cancel') %></button>
             </div>
           </div>
         </div>
@@ -268,13 +324,13 @@
       <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
         <div class="px-5 py-4">
-          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Preferences</p>
+          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400"><%= t('settings.account.section.preferences') %></p>
         </div>
 
         <!-- Language -->
         <div class="px-5 py-4 flex items-center justify-between gap-4">
           <div class="flex flex-col gap-0.5 min-w-0">
-            <span class="text-sm font-semibold text-woodsmoke-900">Language</span>
+            <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.account.language.label') %></span>
             <span id="languageDisplay" class="text-sm text-woodsmoke-400"><%= ({en:'English',es:'Spanish',fr:'French',de:'German',pt:'Portuguese',it:'Italian',nl:'Dutch',ru:'Russian',ja:'Japanese',zh:'Chinese',ko:'Korean',ar:'Arabic',hi:'Hindi',tr:'Turkish',pl:'Polish',sv:'Swedish',no:'Norwegian',da:'Danish',fi:'Finnish',id:'Indonesian'})[user.language || 'en'] || 'English' %></span>
           </div>
           <div class="relative shrink-0" id="languagePickerWrap">
@@ -292,12 +348,29 @@
       <p id="accountFeedback" class="hidden text-sm text-center mt-2"></p>
 
       <% } else { %>
-        <p class="text-sm text-woodsmoke-400">Please <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">sign in</a> to manage your settings.</p>
+        <p class="text-sm text-woodsmoke-400"><%- t('settings.common.sign_in_prompt') %></p>
       <% } %>
 
     </div>
   </div>
 
+  </div>
+</div>
+
+<!-- Username confirmation modal -->
+<div id="usernameConfirmModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/40" id="usernameConfirmBackdrop"></div>
+  <div class="relative bg-white rounded-md shadow-xl w-full max-w-sm p-6 flex flex-col gap-4">
+    <div class="flex flex-col gap-1">
+      <p class="font-semibold text-woodsmoke-900">Change username?</p>
+      <p class="text-sm text-woodsmoke-400">
+        You're changing from <span class="font-semibold text-woodsmoke-700" id="usernameConfirmOld"></span> to <span class="font-semibold text-woodsmoke-700" id="usernameConfirmNew"></span>.
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button id="usernameConfirmBtn" class="flex items-center justify-center flex-1 h-9 px-5 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Confirm</button>
+      <button id="usernameConfirmCancelBtn" class="flex items-center justify-center flex-1 h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -316,13 +389,14 @@
   // ── Generic inline edit toggle ─────────────────────────────────────────────
   function wireInlineEdit({ editBtn, cancelBtn, form, onCancel }) {
     editBtn.addEventListener('click', () => {
+      if (editBtn.disabled) return;
       form.classList.remove('hidden');
-      editBtn.classList.add('hidden');
+      editBtn.disabled = true;
       form.querySelector('input,textarea')?.focus();
     });
     cancelBtn.addEventListener('click', () => {
       form.classList.add('hidden');
-      editBtn.classList.remove('hidden');
+      editBtn.disabled = false;
       onCancel?.();
     });
   }
@@ -335,14 +409,38 @@
   const usernameSaveBtn   = document.getElementById('usernameSaveBtn');
   const usernameError     = document.getElementById('usernameError');
 
+  const usernameConfirmModal      = document.getElementById('usernameConfirmModal');
+  const usernameConfirmOld        = document.getElementById('usernameConfirmOld');
+  const usernameConfirmNew        = document.getElementById('usernameConfirmNew');
+  const usernameConfirmBtn        = document.getElementById('usernameConfirmBtn');
+  const usernameConfirmCancelBtn  = document.getElementById('usernameConfirmCancelBtn');
+  const usernameConfirmBackdrop   = document.getElementById('usernameConfirmBackdrop');
+
   wireInlineEdit({ editBtn: usernameEditBtn, cancelBtn: usernameCancelBtn, form: usernameForm });
 
-  async function saveUsername() {
+  function closeUsernameConfirm() {
+    usernameConfirmModal.classList.add('hidden');
+    usernameConfirmBtn.disabled = false;
+    usernameConfirmBtn.textContent = 'Confirm';
+  }
+
+  usernameConfirmCancelBtn.addEventListener('click', closeUsernameConfirm);
+  usernameConfirmBackdrop.addEventListener('click', closeUsernameConfirm);
+
+  function requestUsernameConfirm() {
     const val = usernameInput.value.trim();
     usernameError.classList.add('hidden');
     if (!val) return;
-    usernameSaveBtn.disabled = true;
-    usernameSaveBtn.textContent = 'Saving…';
+    usernameConfirmOld.textContent = `@<%= user.username %>`;
+    usernameConfirmNew.textContent = `@${val}`;
+    usernameConfirmModal.classList.remove('hidden');
+  }
+
+  async function confirmUsernameChange() {
+    const val = usernameInput.value.trim();
+    if (!val) return;
+    usernameConfirmBtn.disabled = true;
+    usernameConfirmBtn.textContent = 'Saving…';
     try {
       const res  = await fetch('/api/user/username', {
         method: 'PATCH', credentials: 'include',
@@ -350,26 +448,24 @@
         body: JSON.stringify({ username: val }),
       });
       const data = await res.json();
+      closeUsernameConfirm();
       if (!res.ok) {
         usernameError.textContent = data.error;
         usernameError.classList.remove('hidden');
         return;
       }
-      document.querySelector('#usernameDisplay .text-woodsmoke-400').textContent = `@${data.username}`;
-      usernameForm.classList.add('hidden');
-      usernameEditBtn.classList.remove('hidden');
       showFeedback('Username updated.', true);
+      setTimeout(() => window.location.reload(), 800);
     } catch {
+      closeUsernameConfirm();
       usernameError.textContent = 'Something went wrong. Try again.';
       usernameError.classList.remove('hidden');
-    } finally {
-      usernameSaveBtn.disabled = false;
-      usernameSaveBtn.textContent = 'Save';
     }
   }
 
-  usernameSaveBtn.addEventListener('click', saveUsername);
-  usernameInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveUsername(); });
+  usernameConfirmBtn.addEventListener('click', confirmUsernameChange);
+  usernameSaveBtn.addEventListener('click', requestUsernameConfirm);
+  usernameInput.addEventListener('keydown', e => { if (e.key === 'Enter') requestUsernameConfirm(); });
 
   // ── Bio ─────────────────────────────────────────────────────────────────────
   const bioEditBtn   = document.getElementById('bioEditBtn');
@@ -451,6 +547,35 @@
   const passwordSaveBtn      = document.getElementById('passwordSaveBtn');
   const passwordError        = document.getElementById('passwordError');
 
+  // Show/hide toggles
+  document.querySelectorAll('[data-pw-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.pwToggle);
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.querySelector('[data-pw-eye]').classList.toggle('hidden', !showing);
+      btn.querySelector('[data-pw-eye-off]').classList.toggle('hidden', showing);
+    });
+  });
+
+  // Live requirements checker
+  const REQS = [
+    { id: 'req-length',  test: v => v.length >= 8 },
+    { id: 'req-upper',   test: v => (v.match(/[A-Z]/g) || []).length >= 2 },
+    { id: 'req-lower',   test: v => (v.match(/[a-z]/g) || []).length >= 2 },
+    { id: 'req-digit',   test: v => (v.match(/[0-9]/g) || []).length >= 2 },
+    { id: 'req-special', test: v => (v.match(/[^a-zA-Z0-9]/g) || []).length >= 2 },
+  ];
+
+  newPasswordInput.addEventListener('input', () => {
+    const val = newPasswordInput.value;
+    REQS.forEach(({ id, test }) => {
+      const li = document.getElementById(id);
+      li.classList.toggle('text-emerald-500', test(val));
+      li.classList.toggle('text-woodsmoke-300', !test(val));
+    });
+  });
+
   wireInlineEdit({
     editBtn: passwordEditBtn, cancelBtn: passwordCancelBtn, form: passwordForm,
     onCancel: () => {
@@ -458,14 +583,19 @@
       newPasswordInput.value     = '';
       confirmPasswordInput.value = '';
       passwordError.classList.add('hidden');
+      REQS.forEach(({ id }) => {
+        const li = document.getElementById(id);
+        li.classList.remove('text-emerald-500');
+        li.classList.add('text-woodsmoke-300');
+      });
     },
   });
 
   async function savePassword() {
     passwordError.classList.add('hidden');
-    const current  = currentPasswordInput.value;
-    const next     = newPasswordInput.value;
-    const confirm  = confirmPasswordInput.value;
+    const current = currentPasswordInput.value;
+    const next    = newPasswordInput.value;
+    const confirm = confirmPasswordInput.value;
     if (!current || !next || !confirm) { passwordError.textContent = 'All fields are required.'; passwordError.classList.remove('hidden'); return; }
     if (next !== confirm) { passwordError.textContent = 'New passwords do not match.'; passwordError.classList.remove('hidden'); return; }
     passwordSaveBtn.disabled = true;
@@ -485,9 +615,8 @@
       currentPasswordInput.value = '';
       newPasswordInput.value     = '';
       confirmPasswordInput.value = '';
-      passwordForm.classList.add('hidden');
-      passwordEditBtn.classList.remove('hidden');
       showFeedback('Password updated successfully.', true);
+      setTimeout(() => window.location.reload(), 800);
     } catch {
       passwordError.textContent = 'Something went wrong. Try again.';
       passwordError.classList.remove('hidden');
@@ -848,20 +977,58 @@
   }
 
   // ── Display Name ────────────────────────────────────────────────────────────
+  const displayNameInput  = document.getElementById('displayNameInput');
+  const displayNameCount  = document.getElementById('displayNameCount');
+  const displayNameErrEl  = document.getElementById('displayNameError');
+  const displayNameSaveBtn = document.getElementById('displayNameSaveBtn');
+  const displayNameEditBtn = document.getElementById('displayNameEditBtn');
+
+  function toTitleCase(str) {
+    return str.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
+  }
+
+  function updateDisplayNameCounter() {
+    const len = displayNameInput.value.length;
+    displayNameCount.textContent = `${len}/30`;
+    displayNameCount.classList.toggle('text-red-400', len > 30);
+    displayNameCount.classList.toggle('text-woodsmoke-300', len <= 30);
+  }
+
+  displayNameInput.addEventListener('input', () => {
+    // Strip non-letter, non-space chars live
+    const pos = displayNameInput.selectionStart;
+    const cleaned = displayNameInput.value.replace(/[^a-zA-Z ]/g, '');
+    if (cleaned !== displayNameInput.value) {
+      displayNameInput.value = cleaned;
+      displayNameInput.setSelectionRange(pos - 1, pos - 1);
+    }
+    updateDisplayNameCounter();
+  });
+
+  displayNameInput.addEventListener('blur', () => {
+    if (displayNameInput.value.trim()) {
+      displayNameInput.value = toTitleCase(displayNameInput.value.trim().replace(/\s+/g, ' '));
+      updateDisplayNameCounter();
+    }
+  });
+
   wireInlineEdit({
-    editBtn:   document.getElementById('displayNameEditBtn'),
+    editBtn:   displayNameEditBtn,
     cancelBtn: document.getElementById('displayNameCancelBtn'),
     form:      document.getElementById('displayNameForm'),
+    onCancel: () => { displayNameErrEl.classList.add('hidden'); },
   });
 
   async function saveDisplayName() {
-    const input = document.getElementById('displayNameInput');
-    const errEl = document.getElementById('displayNameError');
-    const saveBtn = document.getElementById('displayNameSaveBtn');
-    errEl.classList.add('hidden');
-    const val = input.value.trim();
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
+    displayNameErrEl.classList.add('hidden');
+    const val = displayNameInput.value.trim().replace(/\s+/g, ' ');
+    if (val.length > 30) {
+      displayNameErrEl.textContent = 'Display name may not exceed 30 characters.';
+      displayNameErrEl.classList.remove('hidden');
+      return;
+    }
+    displayNameSaveBtn.disabled = true;
+    displayNameSaveBtn.textContent = 'Saving…';
     try {
       const res  = await fetch('/api/user/display-name', {
         method: 'PATCH', credentials: 'include',
@@ -869,22 +1036,22 @@
         body: JSON.stringify({ displayName: val }),
       });
       const data = await res.json();
-      if (!res.ok) { errEl.textContent = data.error; errEl.classList.remove('hidden'); return; }
-      document.querySelector('#displayNameDisplay .text-woodsmoke-400').textContent = val || 'Not set';
+      if (!res.ok) { displayNameErrEl.textContent = data.error; displayNameErrEl.classList.remove('hidden'); return; }
+      document.querySelector('#displayNameDisplay .text-woodsmoke-400').textContent = data.displayName || 'Not set';
       document.getElementById('displayNameForm').classList.add('hidden');
-      document.getElementById('displayNameEditBtn').classList.remove('hidden');
+      displayNameEditBtn.disabled = false;
       showFeedback('Display name updated.', true);
     } catch {
-      errEl.textContent = 'Something went wrong. Try again.';
-      errEl.classList.remove('hidden');
+      displayNameErrEl.textContent = 'Something went wrong. Try again.';
+      displayNameErrEl.classList.remove('hidden');
     } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save';
+      displayNameSaveBtn.disabled = false;
+      displayNameSaveBtn.textContent = 'Save';
     }
   }
 
-  document.getElementById('displayNameSaveBtn').addEventListener('click', saveDisplayName);
-  document.getElementById('displayNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') saveDisplayName(); });
+  displayNameSaveBtn.addEventListener('click', saveDisplayName);
+  displayNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveDisplayName(); });
 
   // ── Language ─────────────────────────────────────────────────────────────────
   const LANGUAGES = [
@@ -965,7 +1132,7 @@
         body: JSON.stringify({ language: l.code }),
       });
       if (!res.ok) throw new Error();
-      showFeedback('Language updated.', true);
+      window.location.reload();
     } catch {
       currentLanguage = prev;
       const prevLang = LANGUAGES.find(x => x.code === prev);

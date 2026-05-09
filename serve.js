@@ -23,6 +23,7 @@ import { buildRepositories } from './server/jobs/buildRepositories.js';
 import { buildExploreScores } from './server/jobs/buildExploreScores.js';
 import { FILTER_PUBLIC } from './server/utils/filters.js';
 import { sendOtpEmail } from './server/utils/email.js';
+import { translate } from './server/i18n.js';
 import { validateLinks } from './server/utils/urlSafety.js';
 import { fetchAndStoreImage, deleteR2Images, uploadImageToR2 } from './server/utils/r2.js';
 import bucketShareRouter from './server/routes/bucketShare.js';
@@ -230,6 +231,13 @@ app.use(cookieParser());
 
 // Apply anonymous auth to all routes (must be before auth router)
 app.use(anonymousAuth);
+
+// ── i18n: inject t() into every EJS render ──────────────────────────────────
+app.use((req, res, next) => {
+    const lang = req.user?.language || 'en';
+    res.locals.t = (key) => translate(lang, key);
+    next();
+});
 
 // ── EJS helper: route external image URLs through the proxy ─────────────────
 // Base64 data URLs and relative paths pass through unchanged; anything that
@@ -3662,18 +3670,48 @@ for (const { section, title } of SETTINGS_SECTIONS) {
     });
 }
 
+const USERNAME_LIMITS = [
+    { count: 2, windowMs: 24 * 60 * 60 * 1000,      label: 'daily'   },
+    { count: 3, windowMs: 7  * 24 * 60 * 60 * 1000, label: 'weekly'  },
+    { count: 4, windowMs: 30 * 24 * 60 * 60 * 1000, label: 'monthly' },
+];
+
+// Returns { blocked: true, availableAt: Date } or { blocked: false }
+function checkUsernameRateLimit(user) {
+    const now = Date.now();
+    const log = (user.usernameChangeLog || []).map(d => new Date(d).getTime());
+    for (const { count, windowMs } of USERNAME_LIMITS) {
+        const inWindow = log.filter(t => now - t < windowMs).sort((a, b) => a - b);
+        if (inWindow.length >= count) {
+            return { blocked: true, availableAt: new Date(inWindow[0] + windowMs) };
+        }
+    }
+    return { blocked: false };
+}
+
+
 // PATCH /api/user/username
 app.patch('/api/user/username', requireAuth, async (req, res) => {
     try {
         const { username } = req.body;
         if (!username?.trim()) return res.status(400).json({ error: 'Username is required' });
         const trimmed = username.trim();
-        if (trimmed.length < 2 || trimmed.length > 26) return res.status(400).json({ error: 'Username must be 2–26 characters' });
+        if (trimmed.length < 3 || trimmed.length > 20) return res.status(400).json({ error: 'Username must be 3–20 characters' });
         if (!/^[a-zA-Z0-9]+$/.test(trimmed)) return res.status(400).json({ error: 'Username may only contain letters and numbers' });
         if (trimmed.toLowerCase() === req.user.username?.toLowerCase()) return res.status(400).json({ error: 'This is already your username' });
-        const taken = await User.findOne({ username: new RegExp(`^${trimmed}$`, 'i'), _id: { $ne: req.user._id } });
-        if (taken) return res.status(409).json({ error: 'Username is already taken' });
-        await User.findByIdAndUpdate(req.user._id, { username: trimmed });
+        const rateLimit = checkUsernameRateLimit(req.user);
+        if (rateLimit.blocked) {
+            const formatted = rateLimit.availableAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            return res.status(429).json({ error: `You've hit a username change limit. Try again on ${formatted}.` });
+        }
+        const isAdmin = ['moderator', 'superadmin'].includes(req.user.role);
+        const roleFilter = isAdmin ? { role: { $in: ['moderator', 'superadmin'] } } : { role: 'user' };
+        const taken = await User.findOne({ username: new RegExp(`^${trimmed}$`, 'i'), _id: { $ne: req.user._id }, ...roleFilter });
+        if (taken) return res.status(409).json({ error: 'This username is already taken' });
+        const now = new Date();
+        const pruned = (req.user.usernameChangeLog || []).filter(d => now - new Date(d).getTime() < 30 * 24 * 60 * 60 * 1000);
+        pruned.push(now);
+        await User.findByIdAndUpdate(req.user._id, { username: trimmed, usernameChangeLog: pruned });
         res.json({ ok: true, username: trimmed });
     } catch (err) {
         console.error('Username update error:', err);
@@ -3696,7 +3734,8 @@ app.patch('/api/user/password', requireAuth, requireVerification, async (req, re
         if ((newPassword.match(/[0-9]/g) || []).length < 2) return res.status(400).json({ error: 'Password must contain at least 2 digits' });
         if ((newPassword.match(/[^a-zA-Z0-9]/g) || []).length < 2) return res.status(400).json({ error: 'Password must contain at least 2 special characters' });
         user.password = newPassword;
-        await user.save(); // triggers bcrypt pre-save hook
+        user.passwordChangedAt = new Date();
+        await user.save();
         res.json({ ok: true });
     } catch (err) {
         console.error('Password update error:', err);
@@ -3720,8 +3759,14 @@ app.patch('/api/user/bio', requireAuth, async (req, res) => {
 // PATCH /api/user/display-name
 app.patch('/api/user/display-name', requireAuth, async (req, res) => {
     try {
-        const displayName = (req.body.displayName ?? '').trim();
-        if (displayName.length > 60) return res.status(400).json({ error: 'Display name must be 60 characters or fewer' });
+        const raw = (req.body.displayName ?? '').trim();
+        if (raw === '') {
+            await User.findByIdAndUpdate(req.user._id, { displayName: '' });
+            return res.json({ ok: true, displayName: '' });
+        }
+        if (!/^[a-zA-Z ]+$/.test(raw)) return res.status(400).json({ error: 'Display name may only contain letters' });
+        if (raw.length > 30) return res.status(400).json({ error: 'Display name may not exceed 30 characters' });
+        const displayName = raw.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
         await User.findByIdAndUpdate(req.user._id, { displayName });
         res.json({ ok: true, displayName });
     } catch (err) {
@@ -3882,12 +3927,22 @@ app.patch('/api/user/profile', requireAuth, async (req, res) => {
         const { username } = req.body;
         if (!username?.trim()) return res.status(400).json({ error: 'Username is required' });
         const trimmed = username.trim();
-        if (trimmed.length < 2 || trimmed.length > 26) return res.status(400).json({ error: 'Username must be 2–26 characters' });
+        if (trimmed.length < 3 || trimmed.length > 20) return res.status(400).json({ error: 'Username must be 3–20 characters' });
         if (!/^[a-zA-Z0-9]+$/.test(trimmed)) return res.status(400).json({ error: 'Username may only contain letters and numbers' });
         if (trimmed.toLowerCase() === req.user.username?.toLowerCase()) return res.status(400).json({ error: 'This is already your username' });
-        const taken = await User.findOne({ username: new RegExp(`^${trimmed}$`, 'i'), _id: { $ne: req.user._id } });
-        if (taken) return res.status(409).json({ error: 'Username is already taken' });
-        await User.findByIdAndUpdate(req.user._id, { username: trimmed });
+        const rateLimit = checkUsernameRateLimit(req.user);
+        if (rateLimit.blocked) {
+            const formatted = rateLimit.availableAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            return res.status(429).json({ error: `You've hit a username change limit. Try again on ${formatted}.` });
+        }
+        const isAdmin = ['moderator', 'superadmin'].includes(req.user.role);
+        const roleFilter = isAdmin ? { role: { $in: ['moderator', 'superadmin'] } } : { role: 'user' };
+        const taken = await User.findOne({ username: new RegExp(`^${trimmed}$`, 'i'), _id: { $ne: req.user._id }, ...roleFilter });
+        if (taken) return res.status(409).json({ error: 'This username is already taken' });
+        const now = new Date();
+        const pruned = (req.user.usernameChangeLog || []).filter(d => now - new Date(d).getTime() < 30 * 24 * 60 * 60 * 1000);
+        pruned.push(now);
+        await User.findByIdAndUpdate(req.user._id, { username: trimmed, usernameChangeLog: pruned });
         res.json({ ok: true, username: trimmed });
     } catch (err) {
         console.error('Profile update error:', err);
@@ -4586,8 +4641,12 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
         ]);
 
         const hideMature = !isOwner && (viewer === null || viewer.isAnonymous || viewer.isMatureGated !== false);
-        const ownBuckets       = allBuckets.filter(b => !hideMature || !b.mature).map(addDisplayThumb);
-        const grabbedBuckets   = rawGrabbed.filter(b => !hideMature || !b.mature).map(addDisplayThumb);
+        const matureAck  = !!req.cookies?.matureAck;
+        const profileHasMature = allBuckets.some(b => b.mature) || rawGrabbed.some(b => b.mature);
+        const showMatureGate   = hideMature && profileHasMature && !matureAck;
+
+        const ownBuckets        = allBuckets.map(addDisplayThumb);
+        const grabbedBuckets    = rawGrabbed.map(addDisplayThumb);
         const publicBucketCount = allBuckets.filter(b => b.visibility === 'public').length;
         const publicRepoIds     = new Set(allBuckets.filter(b => b.visibility === 'public').flatMap(b => (b.repoIds || []).map(id => id.toString())));
         const publicRepoCount   = userRepos.filter(r => publicRepoIds.has(r._id.toString())).length;
@@ -4611,6 +4670,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
             subscriberCount,
             followingCount,
             memberSince,
+            showMatureGate,
         });
     } catch (err) {
         console.error('Profile page error:', err);

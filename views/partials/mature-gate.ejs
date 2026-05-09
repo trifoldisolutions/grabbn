@@ -12,6 +12,8 @@
       <p class="text-sm text-woodsmoke-500 leading-relaxed">
         <% if (locals.matureContext === 'repo') { %>
           This repository contains one or more collections intended for a mature audience.
+        <% } else if (locals.matureContext === 'profile') { %>
+          This profile contains mature content intended for adults only.
         <% } else { %>
           This collection is intended for a mature audience.
         <% } %>

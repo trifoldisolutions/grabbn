@@ -95,7 +95,7 @@ const userSchema = new mongoose.Schema(
       default: 'none'
     },
     avatar:       { type: String, default: '' },
-    displayName:  { type: String, default: '', maxlength: 60 },
+    displayName:  { type: String, default: '', maxlength: 30 },
     bio:          { type: String, default: '', maxlength: 128 },
     website:     { type: String, default: '' },
     socialLinks: { type: [{ platform: String, url: String }], default: [] },
@@ -134,6 +134,9 @@ const userSchema = new mongoose.Schema(
     },
     // Rate-limiting for comment posts (1 comment per minute per user)
     lastCommentAt: { type: Date, default: null },
+    passwordChangedAt: { type: Date, default: null },
+    // Rate-limiting for username changes (2/day, 3/week, 4/month)
+    usernameChangeLog: { type: [Date], default: [] },
     // Region inferred from IP on first visit (ISO 3166-1 alpha-2 country + subdivision code)
     country: { type: String, default: null },
     region:  { type: String, default: null },

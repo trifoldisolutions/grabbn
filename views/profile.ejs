@@ -4,6 +4,8 @@
 %>
 <%- include('partials/layout') %>
 
+<% if (showMatureGate) { %><%- include('partials/mature-gate', { matureContext: 'profile' }) %><% } %>
+
 <!-- ── Embed bucket data for client-side modal ─────────────────────────── -->
 <script>
     window.__PROFILE_OWN__           = <%- JSON.stringify(ownBuckets) %>;
@@ -30,12 +32,16 @@
 
         <!-- Username, bio, links -->
         <div class="text-center">
-            <div class="flex items-center justify-center gap-2 flex-wrap">
-              <h1 class="text-2xl font-bold">@<%= profileUser.username %></h1>
+            <% if (profileUser.displayName) { %>
+              <h1 class="text-2xl font-bold text-woodsmoke-950"><%= profileUser.displayName %></h1>
+            <% } %>
+            <div class="flex items-center justify-center gap-2 flex-wrap <%= profileUser.displayName ? 'mt-0.5' : '' %>">
+              <span class="<%= profileUser.displayName ? 'text-sm font-medium text-woodsmoke-500' : 'text-2xl font-bold' %>">@<%= profileUser.username %></span>
               <% if (profileUser.category) {
                    const _isAdultCat = ['adult-content','webcam-live','nsfw-art','adult-education'].includes(profileUser.category);
                    const _catLabel   = profileUser.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                  %>
+                <% if (profileUser.displayName) { %><span class="text-woodsmoke-300 text-xs">•</span><% } %>
                 <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-md border <%= _isAdultCat ? 'bg-red-50 border-red-200 text-red-500' : 'bg-orchid-50 border-orchid-200 text-orchid-600' %>">
                   <% if (_isAdultCat) { %><span class="text-[9px] font-bold leading-none">18+</span><% } %>
                   <%= _catLabel %>
