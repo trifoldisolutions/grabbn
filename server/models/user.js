@@ -104,6 +104,12 @@ const userSchema = new mongoose.Schema(
     isMatureGated:        { type: Boolean, default: true  },
     category:  { type: String, default: '' },
     language:  { type: String, default: 'en' },
+    privacy: {
+      showActivityStatus:  { type: Boolean, default: true },
+      showGrabbedBuckets:  { type: Boolean, default: true },
+      accountVisibility:  { type: String, enum: ['public', 'unlisted', 'private'], default: 'public' },
+      whoCanMessage:      { type: [String], default: ['everyone'] },
+    },
     // Dedicated token embedded in the bookmarklet so the popup can authenticate
     // without relying on third-party cookies (blocked by many modern browsers).
     bookmarkletToken: { type: String, sparse: true, index: true },

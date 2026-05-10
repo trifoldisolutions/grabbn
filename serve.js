@@ -106,15 +106,18 @@ wss.on('connection', (ws, req) => {
 
     // Notify conversation partners that this user just came online (first tab only)
     if (isFirstTab) {
-        Conversation.find({ participants: userId }).select('participants').lean()
-            .then(convs => {
-                const partners = [...new Set(
-                    convs.flatMap(c => c.participants.map(String).filter(id => id !== userId))
-                )];
-                for (const partnerId of partners) {
-                    pushNotification(partnerId, { type: 'user_online', userId });
-                }
-            }).catch(() => {});
+        User.findById(userId).select('privacy').lean().then(u => {
+            if (u?.privacy?.showActivityStatus === false) return;
+            Conversation.find({ participants: userId }).select('participants').lean()
+                .then(convs => {
+                    const partners = [...new Set(
+                        convs.flatMap(c => c.participants.map(String).filter(id => id !== userId))
+                    )];
+                    for (const partnerId of partners) {
+                        pushNotification(partnerId, { type: 'user_online', userId });
+                    }
+                }).catch(() => {});
+        }).catch(() => {});
     }
 
     ws.on('close', () => {
@@ -126,16 +129,19 @@ wss.on('connection', (ws, req) => {
                 // Stamp lastActive so "last seen" is accurate
                 const lastSeenAt = new Date();
                 User.findByIdAndUpdate(userId, { lastActive: lastSeenAt }, { timestamps: false }).catch(() => {});
-                // Notify conversation partners that this user went offline
-                Conversation.find({ participants: userId }).select('participants').lean()
-                    .then(convs => {
-                        const partners = [...new Set(
-                            convs.flatMap(c => c.participants.map(String).filter(id => id !== userId))
-                        )];
-                        for (const partnerId of partners) {
-                            pushNotification(partnerId, { type: 'user_offline', userId, lastSeenAt: lastSeenAt.toISOString() });
-                        }
-                    }).catch(() => {});
+                // Notify conversation partners that this user went offline (only if status is visible)
+                User.findById(userId).select('privacy').lean().then(u => {
+                    if (u?.privacy?.showActivityStatus === false) return;
+                    Conversation.find({ participants: userId }).select('participants').lean()
+                        .then(convs => {
+                            const partners = [...new Set(
+                                convs.flatMap(c => c.participants.map(String).filter(id => id !== userId))
+                            )];
+                            for (const partnerId of partners) {
+                                pushNotification(partnerId, { type: 'user_offline', userId, lastSeenAt: lastSeenAt.toISOString() });
+                            }
+                        }).catch(() => {});
+                }).catch(() => {});
             }
         }
     });
@@ -272,13 +278,12 @@ app.get('/api/users/:userId/online-status', anonymousAuth, async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: 'Invalid user ID' });
         }
+        const u = await User.findById(userId).select('lastActive privacy').lean();
+        if (!u) return res.json({ online: false, lastSeenAt: null });
+        if (u.privacy?.showActivityStatus === false) return res.json({ hidden: true });
         const connections = wsClients.get(String(userId));
         const online = !!(connections && connections.size > 0);
-        let lastSeenAt = null;
-        if (!online) {
-            const u = await User.findById(userId).select('lastActive').lean();
-            lastSeenAt = u?.lastActive ?? null;
-        }
+        const lastSeenAt = online ? null : (u.lastActive ?? null);
         return res.json({ online, lastSeenAt });
     } catch (err) {
         console.error('[online-status]', err);
@@ -1438,9 +1443,23 @@ app.get('/api/user', requireAuth, requireVerification, (req, res) => {
 
 app.patch('/api/user/settings', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { isMatureGated } = req.body;
+        const { isMatureGated, showActivityStatus, showGrabbedBuckets, whoCanMessage, accountVisibility } = req.body;
         const update = {};
         if (isMatureGated !== undefined) update.isMatureGated = !!isMatureGated;
+        if (showActivityStatus  !== undefined) update['privacy.showActivityStatus']  = !!showActivityStatus;
+        if (showGrabbedBuckets !== undefined) update['privacy.showGrabbedBuckets'] = !!showGrabbedBuckets;
+        if (whoCanMessage !== undefined) {
+            const VALID_WCM = new Set(['no_one', 'people_i_follow', 'people_who_follow_me', 'same_category', 'everyone']);
+            const values = Array.isArray(whoCanMessage) ? whoCanMessage : [whoCanMessage];
+            if (!values.length || values.some(v => !VALID_WCM.has(v)))
+                return res.status(400).json({ error: 'Invalid whoCanMessage value' });
+            update['privacy.whoCanMessage'] = values;
+        }
+        if (accountVisibility !== undefined) {
+            if (!['public', 'unlisted', 'private'].includes(accountVisibility))
+                return res.status(400).json({ error: 'Invalid accountVisibility value' });
+            update['privacy.accountVisibility'] = accountVisibility;
+        }
         if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No valid fields provided' });
         await User.findByIdAndUpdate(req.user._id, update);
         res.json({ ok: true });
@@ -3053,9 +3072,12 @@ app.get('/api/explore', anonymousAuth, async (req, res) => {
             .sort({ exploreScore: -1 })
             .skip(skip)
             .limit(limit * 5)
-            .populate('userId', 'username anonymousId avatar')
+            .populate('userId', 'username anonymousId avatar privacy')
             .select('name thumbnail links isPaywalled price viewCount shareCount ratingSum ratingCount createdAt updatedAt userId grabbedBy description hashtags exploreScore')
             .lean();
+
+        // Strip buckets from private/unlisted accounts before further processing
+        const visibleCandidates = candidates.filter(b => !['private', 'unlisted'].includes(b.userId?.privacy?.accountVisibility));
 
         // Phase 2: filter out buckets already shown to this user in the last 2h,
         // and buckets the user has explicitly skipped (never show again).
@@ -3067,7 +3089,7 @@ app.get('/api/explore', anonymousAuth, async (req, res) => {
 
         const clientExcluded = new Set(excludeIds.map(String));
 
-        let unseenCandidates = candidates;
+        let unseenCandidates = visibleCandidates;
         if (impressionFilter) {
             const [seen, skipped] = await Promise.all([
                 FeedImpression.find(impressionFilter).select('bucketId').lean(),
@@ -3077,11 +3099,11 @@ app.get('/api/explore', anonymousAuth, async (req, res) => {
             ]);
             const seenIds    = new Set(seen.map(i => String(i.bucketId)));
             const skippedIds = new Set(skipped.map(s => String(s.bucketId)));
-            unseenCandidates = candidates.filter(b =>
+            unseenCandidates = visibleCandidates.filter(b =>
                 !seenIds.has(String(b._id)) && !skippedIds.has(String(b._id)) && !clientExcluded.has(String(b._id))
             );
         } else if (clientExcluded.size) {
-            unseenCandidates = candidates.filter(b => !clientExcluded.has(String(b._id)));
+            unseenCandidates = visibleCandidates.filter(b => !clientExcluded.has(String(b._id)));
         }
 
         // Phase 3: personalize for authenticated non-anonymous users
@@ -3291,12 +3313,13 @@ app.get('/api/explore/promoted', anonymousAuth, async (req, res) => {
         })
             .sort({ exploreScore: -1 })
             .limit(9)
-            .populate('userId', 'username anonymousId avatar')
+            .populate('userId', 'username anonymousId avatar privacy')
             .select(EXPLORE_ROW_SELECT)
             .lean();
 
-        const grabbedSet = await buildGrabbedSet(buckets, req.user?._id);
-        res.json({ buckets: formatExploreRow(buckets, grabbedSet) });
+        const visibleBuckets = buckets.filter(b => !['private', 'unlisted'].includes(b.userId?.privacy?.accountVisibility));
+        const grabbedSet = await buildGrabbedSet(visibleBuckets, req.user?._id);
+        res.json({ buckets: formatExploreRow(visibleBuckets, grabbedSet) });
     } catch (err) {
         console.error('Explore promoted row error:', err);
         res.status(500).json({ error: 'Failed to load promoted row' });
@@ -3317,12 +3340,13 @@ app.get('/api/explore/paywalled', anonymousAuth, async (req, res) => {
         })
             .sort({ exploreScore: -1 })
             .limit(9)
-            .populate('userId', 'username anonymousId avatar')
+            .populate('userId', 'username anonymousId avatar privacy')
             .select(EXPLORE_ROW_SELECT)
             .lean();
 
-        const grabbedSet = await buildGrabbedSet(buckets, req.user?._id);
-        res.json({ buckets: formatExploreRow(buckets, grabbedSet) });
+        const visibleBuckets = buckets.filter(b => !['private', 'unlisted'].includes(b.userId?.privacy?.accountVisibility));
+        const grabbedSet = await buildGrabbedSet(visibleBuckets, req.user?._id);
+        res.json({ buckets: formatExploreRow(visibleBuckets, grabbedSet) });
     } catch (err) {
         console.error('Explore paywalled row error:', err);
         res.status(500).json({ error: 'Failed to load paywalled row' });
@@ -3341,12 +3365,13 @@ app.get('/api/explore/new', anonymousAuth, async (req, res) => {
         })
             .sort({ createdAt: -1 })
             .limit(9)
-            .populate('userId', 'username anonymousId avatar')
+            .populate('userId', 'username anonymousId avatar privacy')
             .select(EXPLORE_ROW_SELECT)
             .lean();
 
-        const grabbedSet = await buildGrabbedSet(buckets, req.user?._id);
-        res.json({ buckets: formatExploreRow(buckets, grabbedSet) });
+        const visibleBuckets = buckets.filter(b => !['private', 'unlisted'].includes(b.userId?.privacy?.accountVisibility));
+        const grabbedSet = await buildGrabbedSet(visibleBuckets, req.user?._id);
+        res.json({ buckets: formatExploreRow(visibleBuckets, grabbedSet) });
     } catch (err) {
         console.error('Explore new row error:', err);
         res.status(500).json({ error: 'Failed to load new row' });
@@ -3387,9 +3412,14 @@ app.get('/api/explore/revisit', anonymousAuth, async (req, res) => {
 // Subscribe to a curator (identified by their anonymousId)
 app.post('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, async (req, res) => {
     try {
+        if (req.user.privacy?.accountVisibility === 'private')
+            return res.status(403).json({ error: 'Private accounts cannot follow others' });
+
         const curator = await User.findOne({ anonymousId: req.params.anonymousId });
         if (!curator) return res.status(404).json({ error: 'Curator not found' });
         if (curator._id.equals(req.user._id)) return res.status(400).json({ error: 'Cannot subscribe to yourself' });
+        if (curator.privacy?.accountVisibility === 'private')
+            return res.status(403).json({ error: 'Cannot follow a private account' });
 
         await Subscription.create({ followerId: req.user._id, followeeId: curator._id });
 
@@ -4203,7 +4233,11 @@ app.get('/api/search', anonymousAuth, async (req, res) => {
                 blockedByIds = blocks.map(b => b.blockerId);
             }
 
-            const userFilter = { username: new RegExp(escaped, 'i'), isAnonymous: false };
+            const userFilter = {
+                username:   new RegExp(escaped, 'i'),
+                isAnonymous: false,
+                'privacy.accountVisibility': { $nin: ['private', 'unlisted'] },
+            };
             if (blockedByIds.length) userFilter._id = { $nin: blockedByIds };
 
             const found  = await User.find(userFilter)
@@ -4255,11 +4289,12 @@ app.get('/api/search', anonymousAuth, async (req, res) => {
             const found = await Bucket.find(bucketFilter)
             .select(BUCKET_SELECT)
             .skip(skip).limit(B_LIMIT + 1)
-            .populate('userId', 'username anonymousId avatar')
+            .populate('userId', 'username anonymousId avatar privacy')
             .lean();
 
-            const hasMore = found.length > B_LIMIT;
-            const buckets = found.slice(0, B_LIMIT);
+            const visible = found.filter(b => !['private', 'unlisted'].includes(b.userId?.privacy?.accountVisibility));
+            const hasMore = visible.length > B_LIMIT;
+            const buckets = visible.slice(0, B_LIMIT);
 
             const grabCounts = buckets.map(b => b.grabbedBy?.length ?? 0);
             let grabbedSet = new Set();
@@ -4589,6 +4624,20 @@ app.get('/search', anonymousAuth, async (req, res) => {
     }
 });
 
+async function resolveCanMessage(viewer, profileUser) {
+    if (!viewer || viewer.isAnonymous) return true; // let auth redirect handle it
+    const rawWcm = profileUser.privacy?.whoCanMessage;
+    const wcm = Array.isArray(rawWcm) ? rawWcm : (rawWcm ? [rawWcm] : ['everyone']);
+    if (wcm.includes('no_one')) return false;
+    if (wcm.includes('everyone')) return true;
+    const [pif, pfm, sc] = await Promise.all([
+        wcm.includes('people_i_follow')      ? Subscription.exists({ followerId: profileUser._id, followeeId: viewer._id }) : false,
+        wcm.includes('people_who_follow_me') ? Subscription.exists({ followerId: viewer._id,    followeeId: profileUser._id }) : false,
+        wcm.includes('same_category')        ? Promise.resolve(!!(viewer.category && viewer.category === profileUser.category)) : false,
+    ]);
+    return !!(pif || pfm || sc);
+}
+
 // Profile page — redirect /v2/profile to the logged-in user's profile route
 app.get('/profile', anonymousAuth, requireAuth, (req, res) => {
     const username = req.user?.username;
@@ -4610,9 +4659,15 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
         const viewer  = req.user ?? null;
         const isOwner = !!(viewer && !viewer.isAnonymous && viewer._id.toString() === profileUser._id.toString());
 
-        if (!isOwner && viewer && !viewer.isAnonymous) {
-            const blocked = await Block.exists({ blockerId: profileUser._id, blockedId: viewer._id });
-            if (blocked) return res.status(404).render('404', { title: 'Not Found', page: '', user: viewer });
+        if (!isOwner) {
+            const visibility = profileUser.privacy?.accountVisibility ?? 'public';
+            if (visibility === 'private')
+                return res.status(404).render('404', { title: 'Not Found', page: '', user: viewer });
+
+            if (viewer && !viewer.isAnonymous) {
+                const blocked = await Block.exists({ blockerId: profileUser._id, blockedId: viewer._id });
+                if (blocked) return res.status(404).render('404', { title: 'Not Found', page: '', user: viewer });
+            }
         }
 
         const addDisplayThumb = (b) => ({
@@ -4625,6 +4680,8 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
             ? { userId: profileUser._id }
             : { userId: profileUser._id, ...FILTER_PUBLIC };
 
+        const canMessage = isOwner ? false : await resolveCanMessage(viewer, profileUser);
+
         const [allBuckets, subscriberCount, followingCount, rawGrabbed, userRepos] = await Promise.all([
             Bucket.find(bucketFilter)
                 .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
@@ -4632,11 +4689,13 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
                 .lean(),
             Subscription.countDocuments({ followeeId: profileUser._id }),
             Subscription.countDocuments({ followerId: profileUser._id }),
-            Bucket.find({ 'grabbedBy.userId': profileUser._id })
-                .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature ratingCount ratingSum createdAt updatedAt')
-                .populate('userId', 'username')
-                .sort({ createdAt: -1 })
-                .lean(),
+            (isOwner || profileUser.privacy?.showGrabbedBuckets !== false)
+                ? Bucket.find({ 'grabbedBy.userId': profileUser._id })
+                    .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature ratingCount ratingSum createdAt updatedAt')
+                    .populate('userId', 'username')
+                    .sort({ createdAt: -1 })
+                    .lean()
+                : Promise.resolve([]),
             UserRepo.find({ userId: profileUser._id }).sort({ name: 1 }).lean(),
         ]);
 
@@ -4671,6 +4730,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
             followingCount,
             memberSince,
             showMatureGate,
+            canMessage,
         });
     } catch (err) {
         console.error('Profile page error:', err);

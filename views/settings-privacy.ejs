@@ -28,11 +28,45 @@
               <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.privacy.messaging.who_can_message') %></span>
               <span class="text-sm text-woodsmoke-400"><%= t('settings.privacy.messaging.who_can_message_hint') %></span>
             </div>
-            <select class="h-9 px-3 text-sm border border-silver-200 rounded-md text-woodsmoke-700 bg-white outline-none focus:border-orchid-400 transition-colors shrink-0 opacity-50 cursor-not-allowed" disabled>
-              <option><%= t('settings.privacy.messaging.everyone') %></option>
-              <option><%= t('settings.privacy.messaging.people_i_follow') %></option>
-              <option><%= t('settings.privacy.messaging.no_one') %></option>
-            </select>
+            <%
+              const rawWcm = user.privacy && user.privacy.whoCanMessage;
+              const wcmSelected = Array.isArray(rawWcm) ? rawWcm : (rawWcm ? [rawWcm] : ['everyone']);
+              const wcmOptions = [
+                { value: 'no_one',               label: t('settings.privacy.messaging.no_one') },
+                { value: 'people_i_follow',       label: t('settings.privacy.messaging.people_i_follow') },
+                { value: 'people_who_follow_me',  label: t('settings.privacy.messaging.people_who_follow_me') },
+                { value: 'same_category',         label: t('settings.privacy.messaging.same_category') },
+                { value: 'everyone',              label: t('settings.privacy.messaging.everyone') },
+              ];
+            %>
+            <div class="relative shrink-0" id="wcm-root">
+              <button id="wcm-trigger" type="button" class="h-9 px-3 text-sm border border-silver-200 rounded-md text-woodsmoke-700 bg-white flex items-center justify-between gap-2 w-48 outline-none focus:border-orchid-400 transition-colors">
+                <span id="wcm-summary" class="truncate text-left"></span>
+                <svg class="w-4 h-4 text-woodsmoke-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div id="wcm-panel" class="hidden absolute right-0 top-full mt-1 w-56 bg-white border border-silver-200 rounded-md shadow-sm z-20 py-1">
+                <% wcmOptions.forEach(opt => { %>
+                <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-silver-50 cursor-pointer select-none">
+                  <input type="checkbox" class="wcm-cb accent-orchid-500 w-4 h-4 rounded" value="<%= opt.value %>" <%= wcmSelected.includes(opt.value) ? 'checked' : '' %> />
+                  <span class="text-sm text-woodsmoke-700"><%= opt.label %></span>
+                </label>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-5 py-4 flex items-center justify-between gap-4">
+            <div class="flex flex-col gap-0.5 min-w-0">
+              <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.privacy.messaging.activity_status') %></span>
+              <span class="text-sm text-woodsmoke-400"><%= t('settings.privacy.messaging.activity_status_hint') %></span>
+            </div>
+            <button
+              id="toggle-activity-status"
+              data-on="<%= (user.privacy && user.privacy.showActivityStatus !== false) ? 'true' : 'false' %>"
+              class="relative w-10 h-6 rounded-full transition-colors shrink-0 <%= (user.privacy && user.privacy.showActivityStatus !== false) ? 'bg-orchid-500' : 'bg-silver-200' %>"
+            >
+              <span class="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform <%= (user.privacy && user.privacy.showActivityStatus !== false) ? 'left-5' : 'left-1' %>"></span>
+            </button>
           </div>
 
         </div>
@@ -49,34 +83,51 @@
               <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.privacy.profile.show_grabbed') %></span>
               <span class="text-sm text-woodsmoke-400"><%= t('settings.privacy.profile.show_grabbed_hint') %></span>
             </div>
-            <button class="relative w-10 h-6 rounded-full bg-silver-200 opacity-50 cursor-not-allowed shrink-0" disabled>
-              <span class="absolute left-1 top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform"></span>
+            <button
+              id="toggle-show-grabbed"
+              data-on="<%= (user.privacy && user.privacy.showGrabbedBuckets !== false) ? 'true' : 'false' %>"
+              class="relative w-10 h-6 rounded-full transition-colors shrink-0 <%= (user.privacy && user.privacy.showGrabbedBuckets !== false) ? 'bg-orchid-500' : 'bg-silver-200' %>"
+            >
+              <span class="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform <%= (user.privacy && user.privacy.showGrabbedBuckets !== false) ? 'left-5' : 'left-1' %>"></span>
             </button>
           </div>
 
-          <div class="px-5 py-4 flex items-center justify-between gap-4">
+          <%
+            const currentVisibility = (user.privacy && user.privacy.accountVisibility) || 'public';
+            const avOptions = [
+              { value: 'public',   label: t('settings.privacy.profile.visibility_public'),   desc: t('settings.privacy.profile.visibility_public_hint') },
+              { value: 'unlisted', label: t('settings.privacy.profile.visibility_unlisted'), desc: t('settings.privacy.profile.visibility_unlisted_hint') },
+              { value: 'private',  label: t('settings.privacy.profile.visibility_private'),  desc: t('settings.privacy.profile.visibility_private_hint') },
+            ];
+            const avCurrent = avOptions.find(o => o.value === currentVisibility) || avOptions[0];
+          %>
+          <div class="px-5 py-4 flex items-start justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.privacy.profile.visibility') %></span>
-              <span class="text-sm text-woodsmoke-400"><%= t('settings.privacy.profile.visibility_hint') %></span>
+              <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.privacy.profile.account_visibility') %></span>
+              <span id="av-hint" class="text-sm text-woodsmoke-400"><%= avCurrent.desc %></span>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <span class="text-xs font-medium text-woodsmoke-300"><%= t('settings.privacy.common.coming_soon') %></span>
-              <button class="relative w-10 h-6 rounded-full bg-silver-200 opacity-50 cursor-not-allowed shrink-0" disabled>
-                <span class="absolute left-1 top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform"></span>
-              </button>
-            </div>
-          </div>
 
-          <div class="px-5 py-4 flex items-center justify-between gap-4">
-            <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900"><%= t('settings.privacy.profile.show_explore') %></span>
-              <span class="text-sm text-woodsmoke-400"><%= t('settings.privacy.profile.show_explore_hint') %></span>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <span class="text-xs font-medium text-woodsmoke-300"><%= t('settings.privacy.common.coming_soon') %></span>
-              <button class="relative w-10 h-6 rounded-full bg-silver-200 opacity-50 cursor-not-allowed shrink-0" disabled>
-                <span class="absolute left-1 top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform"></span>
+            <div class="relative shrink-0" id="av-root">
+              <button id="av-trigger" type="button" class="h-9 px-3 text-sm border border-silver-200 rounded-md text-woodsmoke-700 bg-white flex items-center gap-2 min-w-[120px] justify-between outline-none focus:border-orchid-400 transition-colors">
+                <span id="av-label"><%= avCurrent.label %></span>
+                <svg class="w-4 h-4 text-woodsmoke-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
               </button>
+
+              <div id="av-panel" class="hidden absolute right-0 top-full mt-1 w-72 bg-white border border-silver-200 rounded-md shadow-md z-20 py-1 overflow-hidden">
+                <% avOptions.forEach(opt => { %>
+                <button type="button" class="av-opt w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-silver-50 transition-colors" data-value="<%= opt.value %>" data-label="<%= opt.label %>" data-desc="<%= opt.desc %>">
+                  <span class="mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors av-radio <%= opt.value === currentVisibility ? 'border-orchid-500 bg-orchid-500' : 'border-silver-300 bg-white' %>">
+                    <% if (opt.value === currentVisibility) { %>
+                    <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                    <% } %>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold text-woodsmoke-900"><%= opt.label %></p>
+                    <p class="text-xs text-woodsmoke-400 mt-0.5 leading-relaxed"><%= opt.desc %></p>
+                  </div>
+                </button>
+                <% }) %>
+              </div>
             </div>
           </div>
 
@@ -105,5 +156,122 @@
 
   </div>
 </div>
+
+<script>
+(function () {
+  (function () {
+    const EXCLUSIVE = new Set(['no_one', 'everyone']);
+    const root    = document.getElementById('wcm-root');
+    const trigger = document.getElementById('wcm-trigger');
+    const panel   = document.getElementById('wcm-panel');
+    const summary = document.getElementById('wcm-summary');
+    if (!root) return;
+
+    const cbs = Array.from(root.querySelectorAll('.wcm-cb'));
+
+    function getSelected() { return cbs.filter(c => c.checked).map(c => c.value); }
+
+    function updateSummary() {
+      const sel = getSelected();
+      if (!sel.length) { summary.textContent = 'No one'; return; }
+      const labels = sel.map(v => root.querySelector(`.wcm-cb[value="${v}"]`)?.closest('label')?.querySelector('span')?.textContent?.trim() || v);
+      summary.textContent = labels.length <= 2 ? labels.join(', ') : `${labels.length} groups selected`;
+    }
+
+    async function save() {
+      const sel = getSelected();
+      await fetch('/api/user/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ whoCanMessage: sel.length ? sel : ['no_one'] })
+      });
+    }
+
+    cbs.forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) {
+          if (EXCLUSIVE.has(cb.value)) {
+            cbs.forEach(o => { if (o !== cb) o.checked = false; });
+          } else {
+            cbs.forEach(o => { if (EXCLUSIVE.has(o.value)) o.checked = false; });
+          }
+        }
+        updateSummary();
+        save();
+      });
+    });
+
+    trigger.addEventListener('click', e => { e.stopPropagation(); panel.classList.toggle('hidden'); });
+    document.addEventListener('click', e => { if (!root.contains(e.target)) panel.classList.add('hidden'); });
+
+    updateSummary();
+  })();
+
+  function wireToggle(id, settingKey) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      const next = btn.dataset.on !== 'true';
+      btn.dataset.on = String(next);
+      btn.classList.toggle('bg-orchid-500', next);
+      btn.classList.toggle('bg-silver-200', !next);
+      const dot = btn.querySelector('span');
+      dot.classList.toggle('left-5', next);
+      dot.classList.toggle('left-1', !next);
+      await fetch('/api/user/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [settingKey]: next })
+      });
+    });
+  }
+
+  wireToggle('toggle-activity-status', 'showActivityStatus');
+  wireToggle('toggle-show-grabbed',    'showGrabbedBuckets');
+
+  (function () {
+    const root    = document.getElementById('av-root');
+    const trigger = document.getElementById('av-trigger');
+    const panel   = document.getElementById('av-panel');
+    const label   = document.getElementById('av-label');
+    const hint    = document.getElementById('av-hint');
+    if (!root) return;
+
+    trigger.addEventListener('click', e => { e.stopPropagation(); panel.classList.toggle('hidden'); });
+    document.addEventListener('click', e => { if (!root.contains(e.target)) panel.classList.add('hidden'); });
+
+    root.querySelectorAll('.av-opt').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const val     = btn.dataset.value;
+        const optLabel = btn.dataset.label;
+        const optDesc  = btn.dataset.desc;
+
+        // Update radios
+        root.querySelectorAll('.av-radio').forEach(r => {
+          r.classList.remove('border-orchid-500', 'bg-orchid-500');
+          r.classList.add('border-silver-300', 'bg-white');
+          r.innerHTML = '';
+        });
+        const radio = btn.querySelector('.av-radio');
+        radio.classList.remove('border-silver-300', 'bg-white');
+        radio.classList.add('border-orchid-500', 'bg-orchid-500');
+        radio.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-white"></span>';
+
+        // Update trigger label + left-side hint
+        label.textContent = optLabel;
+        if (hint) hint.textContent = optDesc;
+
+        panel.classList.add('hidden');
+
+        await fetch('/api/user/settings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountVisibility: val })
+        });
+      });
+    });
+  })();
+})();
+</script>
 
 <%- include('partials/layout-end') %>

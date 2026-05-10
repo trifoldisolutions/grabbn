@@ -144,6 +144,12 @@
                 </div>
             </div>
 
+            <!-- Locked notice (shown when recipient has restricted messaging) -->
+            <div id="msgLockedBar" class="hidden shrink-0 border-t border-silver-100 px-4 md:px-6 py-4 bg-white flex items-center justify-center gap-2 text-sm text-woodsmoke-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" class="shrink-0"><path fill="currentColor" d="M12 1a5 5 0 0 1 5 5v2h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h1V6a5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3v2h6V6a3 3 0 0 0-3-3"/></svg>
+                <span id="msgLockedText">This user isn't accepting messages</span>
+            </div>
+
             <!-- Input bar -->
             <div id="msgInputBar" class="shrink-0 border-t border-silver-100 px-4 md:px-6 py-3 bg-white">
                 <!-- Context badge (shown when DM started from a comment) -->
@@ -479,6 +485,12 @@
                 if (!data) return;
                 const el = document.getElementById('chatStatusText');
                 if (!el) return;
+                if (data.hidden) {
+                    el.textContent = '';
+                    delete el.dataset.liveTime;
+                    delete el.dataset.livePrefix;
+                    return;
+                }
                 if (data.online) {
                     el.textContent = 'Online';
                     el.className = 'text-[11px] text-emerald-500 leading-none';
@@ -849,6 +861,31 @@
             });
     }
 
+    // ── Messaging restriction helpers ────────────────────────────────────────
+
+    const msgInputBar  = document.getElementById('msgInputBar');
+    const msgLockedBar = document.getElementById('msgLockedBar');
+    const msgLockedText = document.getElementById('msgLockedText');
+
+    function lockInput(reason) {
+        msgLockedText.textContent = reason || "This user isn't accepting messages";
+        msgInputBar.classList.add('hidden');
+        msgLockedBar.classList.remove('hidden');
+    }
+
+    function unlockInput() {
+        msgLockedBar.classList.add('hidden');
+        msgInputBar.classList.remove('hidden');
+    }
+
+    async function checkAndApplyRestriction(userId) {
+        try {
+            const r = await fetch(`/api/dm/can-message/${userId}`);
+            const { allowed } = await r.json();
+            allowed ? unlockInput() : lockInput("This user isn't accepting messages");
+        } catch (_) { unlockInput(); }
+    }
+
     // ── Open a conversation ───────────────────────────────────────────────────
 
     function openConversation(convId, other, ctx) {
@@ -918,6 +955,7 @@
             renderConvList();
         });
 
+        checkAndApplyRestriction(other._id);
         msgInput.focus();
     }
 
@@ -1571,7 +1609,7 @@
 
     // ── Compose panel (new conversation, no existing conv) ───────────────────
 
-    function showComposePanel() {
+    async function showComposePanel() {
         const panel   = document.getElementById('composePanel');
         const toEl    = document.getElementById('composeTo');
         const input   = document.getElementById('composeInput');
@@ -1581,6 +1619,22 @@
 
         toEl.textContent = `New message to @${recipientUsername || recipientId}`;
         panel.classList.remove('hidden');
+
+        // Check restrictions before letting the user compose
+        try {
+            const r = await fetch(`/api/dm/can-message/${recipientId}`);
+            const { allowed } = await r.json();
+            if (!allowed) {
+                input.classList.add('hidden');
+                sendB.classList.add('hidden');
+                const notice = document.createElement('p');
+                notice.className = 'text-sm text-center text-woodsmoke-400 py-2';
+                notice.textContent = "This user isn't accepting messages";
+                input.parentNode.insertBefore(notice, input);
+                return;
+            }
+        } catch (_) {}
+
         input.focus();
 
         function hide() { panel.classList.add('hidden'); }

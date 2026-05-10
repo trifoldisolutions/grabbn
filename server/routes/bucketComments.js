@@ -199,10 +199,27 @@ router.get('/', async (req, res) => {
             agreedSet = new Set(agreements.map(a => String(a.commentId)));
         }
 
-        const annotated = comments.map(c => ({
-            ...c,
-            userAgreed: agreedSet.has(String(c._id)),
-        }));
+        // Batch-fetch current avatars + filter private accounts in one query
+        const commenterIds = [...new Set(comments.map(c => String(c.userId)))];
+        let privateSet = new Set();
+        let avatarMap  = new Map();
+        if (commenterIds.length) {
+            const users = await User.find({ _id: { $in: commenterIds } })
+                .select('_id avatar privacy')
+                .lean();
+            for (const u of users) {
+                if (['private', 'unlisted'].includes(u.privacy?.accountVisibility)) privateSet.add(String(u._id));
+                avatarMap.set(String(u._id), u.avatar || '');
+            }
+        }
+
+        const annotated = comments
+            .filter(c => !privateSet.has(String(c.userId)))
+            .map(c => ({
+                ...c,
+                avatar:     avatarMap.get(String(c.userId)) ?? c.avatar,
+                userAgreed: agreedSet.has(String(c._id)),
+            }));
 
         return res.json({
             comments:          annotated,
@@ -224,6 +241,9 @@ router.post('/', requireRegistered, requireVerification, async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(bucketId)) {
             return res.status(400).json({ error: 'Invalid bucket ID' });
         }
+
+        if (req.user.privacy?.accountVisibility === 'private')
+            return res.status(403).json({ error: 'Private accounts cannot post comments' });
 
         const bucket = await Bucket.findById(bucketId).select('_id name userId').lean();
         if (!bucket) return res.status(404).json({ error: 'Bucket not found' });

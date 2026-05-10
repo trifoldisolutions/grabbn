@@ -5,6 +5,7 @@ import Conversation from '../models/conversation.js';
 import DirectMessage from '../models/directMessage.js';
 import Block from '../models/block.js';
 import User from '../models/user.js';
+import Subscription from '../models/subscription.js';
 import BucketComment from '../models/bucketComment.js';
 import Notification from '../models/notification.js';
 import { anonymousAuth, requireVerification } from '../middleware/anonymousAuth.js';
@@ -35,6 +36,35 @@ async function isBlockedBy(viewerId, targetUserId) {
 function sortedParticipants(a, b) {
     return [a, b].map(String).sort();
 }
+
+// ── GET /api/dm/can-message/:userId ─────────────────────────────────────────
+router.get('/can-message/:userId', requireRegistered, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(userId)) return res.json({ allowed: false });
+
+        const target = await User.findById(userId).select('privacy isAnonymous category').lean();
+        if (!target || target.isAnonymous) return res.json({ allowed: false });
+
+        const senderId = req.user._id;
+        const rawWcm = target.privacy?.whoCanMessage;
+        const wcm = Array.isArray(rawWcm) ? rawWcm : (rawWcm ? [rawWcm] : ['everyone']);
+
+        if (wcm.includes('no_one')) return res.json({ allowed: false });
+        if (wcm.includes('everyone')) return res.json({ allowed: true });
+
+        const sender = await User.findById(senderId).select('category').lean();
+        const [pif, pfm, sc] = await Promise.all([
+            wcm.includes('people_i_follow')      ? Subscription.exists({ followerId: target._id, followeeId: senderId }) : false,
+            wcm.includes('people_who_follow_me') ? Subscription.exists({ followerId: senderId,   followeeId: target._id }) : false,
+            wcm.includes('same_category')        ? Promise.resolve(!!(sender?.category && sender.category === target.category)) : false,
+        ]);
+        return res.json({ allowed: !!(pif || pfm || sc) });
+    } catch (err) {
+        console.error('[dm] GET /can-message:', err);
+        res.json({ allowed: true });
+    }
+});
 
 // ── GET /api/dm/conversations — inbox list ───────────────────────────────────
 router.get('/conversations', requireRegistered, async (req, res) => {
@@ -182,14 +212,38 @@ router.post('/send', requireRegistered, requireVerification, async (req, res) =>
             return res.status(400).json({ error: 'Cannot message yourself' });
         }
 
-        const recipient = await User.findById(recipientId).select('_id username avatar isAnonymous').lean();
+        if (req.user.privacy?.accountVisibility === 'private')
+            return res.status(403).json({ error: 'Private accounts cannot send messages' });
+
+        const recipient = await User.findById(recipientId).select('_id username avatar isAnonymous privacy category').lean();
         if (!recipient || recipient.isAnonymous) {
             return res.status(404).json({ error: 'Recipient not found' });
         }
 
+        if (recipient.privacy?.accountVisibility === 'private')
+            return res.status(403).json({ error: 'This account is private' });
+
         // Block check: has recipient blocked sender?
         if (await isBlockedBy(senderId, recipientId)) {
             return res.status(403).json({ error: 'Unable to send message' });
+        }
+
+        // Messaging preference check
+        const rawWcm = recipient.privacy?.whoCanMessage;
+        const wcm = Array.isArray(rawWcm) ? rawWcm : (rawWcm ? [rawWcm] : ['everyone']);
+
+        if (wcm.includes('no_one')) {
+            return res.status(403).json({ error: 'This user is not accepting messages' });
+        }
+        if (!wcm.includes('everyone')) {
+            const sender = await User.findById(senderId).select('category').lean();
+            const checks = await Promise.all([
+                wcm.includes('people_i_follow')      ? Subscription.exists({ followerId: recipientId, followeeId: senderId }) : false,
+                wcm.includes('people_who_follow_me') ? Subscription.exists({ followerId: senderId, followeeId: recipientId }) : false,
+                wcm.includes('same_category')        ? Promise.resolve(!!(sender?.category && sender.category === recipient.category)) : false,
+            ]);
+            if (!checks.some(Boolean))
+                return res.status(403).json({ error: 'This user has restricted who can message them' });
         }
 
         // Validate body
