@@ -22,10 +22,10 @@ import Subscription from './server/models/subscription.js';
 import { buildRepositories } from './server/jobs/buildRepositories.js';
 import { buildExploreScores } from './server/jobs/buildExploreScores.js';
 import { FILTER_PUBLIC } from './server/utils/filters.js';
-import { sendOtpEmail } from './server/utils/email.js';
+import { sendOtpEmail, sendDataExportEmail, sendAccountDeletionEmail } from './server/utils/email.js';
 import { translate } from './server/i18n.js';
 import { validateLinks } from './server/utils/urlSafety.js';
-import { fetchAndStoreImage, deleteR2Images, uploadImageToR2 } from './server/utils/r2.js';
+import { fetchAndStoreImage, deleteR2Images, uploadImageToR2, uploadFileToR2 } from './server/utils/r2.js';
 import bucketShareRouter from './server/routes/bucketShare.js';
 import authRouter from './server/routes/auth.js';
 import creditsRouter, { handleWebhook } from './server/routes/credits.js';
@@ -54,6 +54,8 @@ import RepoSkip     from './server/models/repoSkip.js';
 import ShareVisit   from './server/models/shareVisit.js';
 import BucketRating from './server/models/bucketRating.js';
 import UserRepo     from './server/models/userRepo.js';
+import CommentAgreement from './server/models/commentAgreement.js';
+import Link from './server/models/link.js';
 import { wsClients, pushNotification } from './server/ws.js';
 
 dotenv.config();
@@ -1441,6 +1443,186 @@ app.get('/api/user', requireAuth, requireVerification, (req, res) => {
     });
 });
 
+app.post('/api/user/export', requireAuth, requireVerification, async (req, res) => {
+    if (req.user.isAnonymous) return res.status(403).json({ error: 'Account required' });
+    if (!req.user.email) return res.status(400).json({ error: 'No email address on file' });
+
+    const EXPORT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+    const EXPORT_LIMIT = 2;
+    const history = (req.user.preferences?.get?.('exportHistory') || [])
+        .map(d => new Date(d).getTime())
+        .filter(t => Date.now() - t < EXPORT_WINDOW_MS);
+    if (history.length >= EXPORT_LIMIT) {
+        return res.status(429).json({ error: 'You can request up to 2 exports per 7 days' });
+    }
+
+    history.push(Date.now());
+    await User.updateOne({ _id: req.user._id }, { $set: { 'preferences.exportHistory': history } });
+    res.json({ ok: true });
+
+    // Background — no await
+    (async () => {
+        try {
+            const [buckets, grabs, following] = await Promise.all([
+                Bucket.find({ userId: req.user._id }).lean(),
+                BucketAccess.find({ userId: req.user._id }).populate('bucketId', 'name description hashtags visibility createdAt').lean(),
+                Subscription.find({ followerId: req.user._id }).populate('followeeId', 'username displayName').lean(),
+            ]);
+
+            const payload = {
+                exportedAt: new Date().toISOString(),
+                account: {
+                    username:     req.user.username,
+                    email:        req.user.email,
+                    displayName:  req.user.displayName,
+                    bio:          req.user.bio,
+                    website:      req.user.website,
+                    socialLinks:  req.user.socialLinks,
+                    category:     req.user.category,
+                    language:     req.user.language,
+                    credits:      req.user.credits,
+                    privacy:      req.user.privacy,
+                    createdAt:    req.user.createdAt,
+                },
+                buckets: buckets.map(b => ({
+                    name:        b.name,
+                    description: b.description,
+                    hashtags:    b.hashtags,
+                    visibility:  b.visibility,
+                    links:       b.links.map(l => ({ href: l.href, text: l.text, addedAt: l.addedAt })),
+                    createdAt:   b.createdAt,
+                })),
+                grabs: grabs
+                    .filter(g => g.bucketId)
+                    .map(g => ({
+                        bucketName:  g.bucketId.name,
+                        description: g.bucketId.description,
+                        hashtags:    g.bucketId.hashtags,
+                        grabbedAt:   g.grantedAt,
+                    })),
+                following: following
+                    .filter(s => s.followeeId)
+                    .map(s => ({
+                        username:    s.followeeId.username,
+                        displayName: s.followeeId.displayName,
+                    })),
+            };
+
+            const buffer = Buffer.from(JSON.stringify(payload, null, 2));
+            const key = `exports/${req.user._id}-${Date.now()}.json`;
+            const url = await uploadFileToR2(buffer, key, 'application/json');
+            await sendDataExportEmail(req.user.email, url);
+        } catch (err) {
+            console.error('[export] failed for user', req.user._id, err.message);
+        }
+    })();
+});
+
+// Cascade-erase all personal data for a user. Called by both the GDPR erasure
+// and full account deletion routes.
+async function eraseUserData(userId) {
+    const convs = await Conversation.find({ participants: userId }, '_id').lean();
+    const convIds = convs.map(c => c._id);
+
+    await Promise.all([
+        // Content
+        Bucket.deleteMany({ userId }),
+        Link.deleteMany({ userId }),
+        BucketAccess.deleteMany({ userId }),
+        // Social
+        Subscription.deleteMany({ $or: [{ followerId: userId }, { followeeId: userId }] }),
+        Block.deleteMany({ $or: [{ blockerId: userId }, { blockedId: userId }] }),
+        // Comments & agreements
+        BucketComment.updateMany({ userId }, { $set: { deletedAt: new Date(), body: '[deleted]', username: '', avatar: '' } }),
+        CommentAgreement.deleteMany({ userId }),
+        // Messaging
+        DirectMessage.deleteMany({ conversationId: { $in: convIds } }),
+        Conversation.deleteMany({ participants: userId }),
+        // Notifications
+        Notification.deleteMany({ userId }),
+        // Activity / analytics
+        BucketView.deleteMany({ userId }),
+        BucketSkip.deleteMany({ userId }),
+        BucketRating.deleteMany({ userId }),
+        BucketShare.deleteMany({ userId }),
+        FeedImpression.deleteMany({ userId }),
+        LinkClick.deleteMany({ userId }),
+        UserRepo.deleteMany({ userId }),
+        RepoSkip.deleteMany({ userId }),
+        // Admin / misc
+        Report.deleteMany({ reporterId: userId }),
+        PartnerApplication.deleteMany({ userId }),
+    ]);
+}
+
+// DELETE /api/user/data — GDPR right to erasure.
+// Deletes all personal data and content then anonymises the account shell.
+// The user document is kept but stripped of all PII so it cannot be linked back.
+app.delete('/api/user/data', requireAuth, async (req, res) => {
+    if (req.user.isAnonymous) return res.status(403).json({ error: 'Account required' });
+    const { confirm } = req.body;
+    if (confirm !== 'DELETE') return res.status(400).json({ error: 'Confirmation required' });
+
+    try {
+        await eraseUserData(req.user._id);
+
+        await User.updateOne({ _id: req.user._id }, {
+            $set: {
+                isAnonymous:   true,
+                email:         undefined,
+                googleId:      undefined,
+                password:      undefined,
+                username:      undefined,
+                displayName:   '',
+                bio:           '',
+                avatar:        '',
+                website:       '',
+                socialLinks:   [],
+                bookmarkletToken: undefined,
+                preferences:   {},
+                credits:       0,
+            },
+            $unset: {
+                email: '', googleId: '', password: '', username: '', bookmarkletToken: '',
+                resetPasswordToken: '', resetPasswordExpires: '',
+                otpCode: '', otpExpires: '', otpSentAt: '',
+            },
+        });
+
+        res.clearCookie('sessionId');
+        res.clearCookie('_accts');
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('[delete-data] error:', err);
+        res.status(500).json({ error: 'Something went wrong' });
+    }
+});
+
+// DELETE /api/user/account — soft-delete with 90-day reactivation window.
+// Data is preserved until the user explicitly requests erasure (GDPR).
+app.delete('/api/user/account', requireAuth, async (req, res) => {
+    if (req.user.isAnonymous) return res.status(403).json({ error: 'Account required' });
+    const { confirm } = req.body;
+    if (confirm !== 'DELETE') return res.status(400).json({ error: 'Confirmation required' });
+
+    try {
+        const email = req.user.email;
+        await User.updateOne({ _id: req.user._id }, { $set: { deletedAt: new Date() } });
+
+        res.clearCookie('sessionId');
+        res.clearCookie('_accts');
+        res.json({ ok: true });
+
+        // Send final email in background
+        sendAccountDeletionEmail(email).catch(err =>
+            console.error('[delete-account] email failed:', err.message)
+        );
+    } catch (err) {
+        console.error('[delete-account] error:', err);
+        res.status(500).json({ error: 'Something went wrong' });
+    }
+});
+
 app.patch('/api/user/settings', requireAuth, requireVerification, async (req, res) => {
     try {
         const { isMatureGated, showActivityStatus, showGrabbedBuckets, whoCanMessage, accountVisibility } = req.body;
@@ -2600,6 +2782,38 @@ app.post('/api/buckets/:id/report', requireAuth, requireVerification, async (req
             return res.status(409).json({ error: 'You have already reported this bucket' });
         }
         console.error('Error reporting bucket:', error);
+        res.status(500).json({ error: 'Failed to submit report' });
+    }
+});
+
+// Report a user
+app.post('/api/users/:userId/report', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { reason, detail } = req.body;
+        const validReasons = ['spam', 'malicious', 'inappropriate', 'harassment', 'other'];
+        if (!reason || !validReasons.includes(reason))
+            return res.status(400).json({ error: 'Invalid report reason' });
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.userId))
+            return res.status(400).json({ error: 'Invalid user ID' });
+
+        const target = await User.findById(req.params.userId);
+        if (!target) return res.status(404).json({ error: 'User not found' });
+        if (target._id.equals(req.user._id))
+            return res.status(403).json({ error: 'Cannot report yourself' });
+
+        await Report.create({
+            reporterId:     req.user._id,
+            reportedUserId: target._id,
+            reason,
+            detail: detail ? String(detail).slice(0, 500) : '',
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        if (err.code === 11000)
+            return res.status(409).json({ error: 'You have already reported this user' });
+        console.error('Error reporting user:', err);
         res.status(500).json({ error: 'Failed to submit report' });
     }
 });
@@ -4410,7 +4624,7 @@ app.get('/search', anonymousAuth, async (req, res) => {
             }
 
         } else if (profileUrlMatch) {
-            const found = await User.findOne({ username: profileUrlMatch[1], isAnonymous: false }).lean();
+            const found = await User.findOne({ username: profileUrlMatch[1], isAnonymous: false, 'privacy.accountVisibility': { $nin: ['private', 'unlisted'] } }).lean();
             if (found) users = [found];
 
         } else if (isObjectId) {
@@ -4419,7 +4633,7 @@ app.get('/search', anonymousAuth, async (req, res) => {
                     .select(BUCKET_SELECT)
                     .populate('userId', 'username anonymousId avatar')
                     .lean(),
-                User.findOne({ anonymousId: q, isAnonymous: false }).lean(),
+                User.findOne({ anonymousId: q, isAnonymous: false, 'privacy.accountVisibility': { $nin: ['private', 'unlisted'] } }).lean(),
             ]);
             if (bucket && bucketVisibility(bucket) === 'public' && !bucket.isDraft) buckets = [bucket];
             if (userByAnonId) users = [userByAnonId];
@@ -4435,7 +4649,7 @@ app.get('/search', anonymousAuth, async (req, res) => {
             const [foundUsers, foundBuckets] = await Promise.all([
                 skipUsers
                     ? Promise.resolve([])
-                    : User.find({ username: new RegExp(escaped, 'i'), isAnonymous: false })
+                    : User.find({ username: new RegExp(escaped, 'i'), isAnonymous: false, 'privacy.accountVisibility': { $nin: ['private', 'unlisted'] } })
                         .limit(U_LIMIT + 1).lean(),
                 skipBuckets
                     ? Promise.resolve([])
@@ -4682,6 +4896,10 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
 
         const canMessage = isOwner ? false : await resolveCanMessage(viewer, profileUser);
 
+        const isBlocked = (!isOwner && viewer && !viewer.isAnonymous)
+            ? !!(await Block.exists({ blockerId: viewer._id, blockedId: profileUser._id }))
+            : false;
+
         const [allBuckets, subscriberCount, followingCount, rawGrabbed, userRepos] = await Promise.all([
             Bucket.find(bucketFilter)
                 .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
@@ -4731,6 +4949,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
             memberSince,
             showMatureGate,
             canMessage,
+            isBlocked,
         });
     } catch (err) {
         console.error('Profile page error:', err);

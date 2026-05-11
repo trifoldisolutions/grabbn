@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       select: false // Don't include password in queries by default
     },
+    googleId: {
+      type: String,
+      sparse: true,
+      unique: true
+    },
     username: {
       type: String,
       sparse: true,
@@ -138,6 +143,8 @@ const userSchema = new mongoose.Schema(
       comment_agreed:         { type: Boolean, default: true },
       new_dm:                 { type: Boolean, default: true },
     },
+    // Account deletion grace period — set on voluntary deletion, cleared on reactivation
+    deletedAt: { type: Date, default: null },
     // Rate-limiting for comment posts (1 comment per minute per user)
     lastCommentAt: { type: Date, default: null },
     passwordChangedAt: { type: Date, default: null },

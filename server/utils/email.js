@@ -145,6 +145,37 @@ export async function sendPartnerRejectedEmail(toEmail, reason) {
     });
 }
 
+export async function sendDataExportEmail(toEmail, downloadUrl) {
+    const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+        <h2 style="color: #1f2937; margin-bottom: 16px;">Your Grabbn data export is ready</h2>
+        <p style="color: #4b5563; line-height: 1.6;">
+            Your data export has been prepared. Click the button below to download your archive.
+            This link expires in 7 days.
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${downloadUrl}"
+               style="background-color: #a21caf; color: white; padding: 12px 32px;
+                      text-decoration: none; border-radius: 6px; font-weight: 600;
+                      display: inline-block;">
+                Download your data
+            </a>
+        </div>
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+            The archive contains your account information, buckets, grabs, and followers.
+        </p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+        <p style="color: #9ca3af; font-size: 12px;">Grabbn &bull; Link Grabber</p>
+    </div>`;
+
+    await resend.emails.send({
+        from: process.env.RESEND_FROM,
+        to: toEmail,
+        subject: 'Your Grabbn data export is ready',
+        html
+    });
+}
+
 export async function sendPasswordResetEmail(toEmail, resetUrl) {
     const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
@@ -172,6 +203,47 @@ export async function sendPasswordResetEmail(toEmail, resetUrl) {
         from: process.env.RESEND_FROM,
         to: toEmail,
         subject: 'Reset your Grabbn password',
+        html
+    });
+}
+
+export async function sendAccountDeletionEmail(toEmail) {
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+        <h2 style="color: #1f2937; margin-bottom: 16px;">Your Grabbn account has been deleted</h2>
+        <p style="color: #4b5563; line-height: 1.6;">
+            We've received your request to delete your Grabbn account. Your account is now closed.
+        </p>
+        <p style="color: #4b5563; line-height: 1.6;">
+            <strong>Changed your mind?</strong> You can log back in within <strong>90 days</strong> to
+            fully recover your account and all your data.
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${appUrl}/login"
+               style="background-color: #a21caf; color: white; padding: 12px 32px;
+                      text-decoration: none; border-radius: 6px; font-weight: 600;
+                      display: inline-block;">
+                Recover My Account
+            </a>
+        </div>
+        <p style="color: #4b5563; line-height: 1.6;">
+            You also have the right to request permanent deletion of your personal data at any time
+            under GDPR Article 17. To exercise this right, visit your account settings after logging back in,
+            or <a href="${appUrl}/contact" style="color: #a21caf;">contact us</a> directly.
+        </p>
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+            If you do not log back in within 90 days, your account will be permanently closed.
+            Your data will be retained until you request its deletion.
+        </p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+        <p style="color: #9ca3af; font-size: 12px;">Grabbn &bull; Link Grabber</p>
+    </div>`;
+
+    await resend.emails.send({
+        from: process.env.RESEND_FROM,
+        to: toEmail,
+        subject: 'Your Grabbn account has been deleted',
         html
     });
 }

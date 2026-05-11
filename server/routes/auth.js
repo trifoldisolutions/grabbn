@@ -8,6 +8,29 @@ import { sendPasswordResetEmail, sendOtpEmail, sendAccountSuspendedEmail, sendAc
 
 const router = express.Router();
 
+// ── Multi-account helpers ─────────────────────────────────────────────────────
+
+const ACCTS_KEY   = '_accts';
+const ADDING_KEY  = '_adding';
+const MAX_ACCOUNTS = 5;
+
+function getLinkedIds(req) {
+    const raw = req.cookies?.[ACCTS_KEY] || '';
+    return raw ? raw.split(',').filter(Boolean) : [];
+}
+
+function setLinkedCookie(res, ids) {
+    if (!ids.length) {
+        res.clearCookie(ACCTS_KEY);
+    } else {
+        res.cookie(ACCTS_KEY, ids.join(','), {
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+            sameSite: 'lax',
+        });
+    }
+}
+
 // ========== VALIDATION HELPERS ==========
 
 function validateEmail(email) {
@@ -136,7 +159,174 @@ async function applyVerificationGate(user, res) {
     }), true;
 }
 
+// ========== GOOGLE OAUTH HELPERS ==========
+
+async function generateGoogleUsername(email, name) {
+    let base = (email.split('@')[0] || name || 'user')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .slice(0, 20);
+    if (base.length < 2) base = 'user' + base;
+    let candidate = base;
+    while (await User.findOne({ username: candidate })) {
+        candidate = base.slice(0, 16) + Math.floor(1000 + Math.random() * 9000);
+    }
+    return candidate;
+}
+
+function getBaseUrl(req) {
+    return process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
+}
+
 // ========== ROUTES ==========
+
+// Initiate Google OAuth
+router.get('/google', (req, res) => {
+    if (req.user && !req.user.isAnonymous) {
+        return res.redirect('/');
+    }
+
+    if (!process.env.GOOGLE_CLIENT_ID) {
+        return res.redirect('/login?error=google_not_configured');
+    }
+
+    const state = crypto.randomBytes(16).toString('hex');
+    res.cookie('_goauth_state', state, {
+        maxAge: 10 * 60 * 1000,
+        httpOnly: true,
+        sameSite: 'lax'
+    });
+
+    const params = new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        redirect_uri: `${getBaseUrl(req)}/api/auth/google/callback`,
+        response_type: 'code',
+        scope: 'openid email profile',
+        state,
+        access_type: 'online',
+        prompt: 'select_account'
+    });
+
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+// Google OAuth callback
+router.get('/google/callback', async (req, res) => {
+    const { code, state, error } = req.query;
+
+    if (error || !code || !state) {
+        return res.redirect('/login?error=google_cancelled');
+    }
+
+    const savedState = req.cookies._goauth_state;
+    res.clearCookie('_goauth_state');
+    if (!savedState || savedState !== state) {
+        return res.redirect('/login?error=google_failed');
+    }
+
+    try {
+        const redirectUri = `${getBaseUrl(req)}/api/auth/google/callback`;
+
+        // Exchange code for tokens
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                code,
+                client_id: process.env.GOOGLE_CLIENT_ID,
+                client_secret: process.env.GOOGLE_CLIENT_SECRET,
+                redirect_uri: redirectUri,
+                grant_type: 'authorization_code'
+            })
+        });
+        const tokenData = await tokenRes.json();
+
+        if (!tokenData.access_token) {
+            console.error('Google token exchange failed:', tokenData);
+            return res.redirect('/login?error=google_failed');
+        }
+
+        // Get profile
+        const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` }
+        });
+        const profile = await profileRes.json();
+        const { id: googleId, email, name, given_name, picture } = profile;
+
+        if (!googleId || !email) {
+            return res.redirect('/login?error=google_failed');
+        }
+
+        const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+
+        const setCookieAndRedirect = (user) => {
+            res.cookie('anonymousId', user.anonymousId, {
+                maxAge: 30 * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+                sameSite: 'lax'
+            });
+            res.redirect('/');
+        };
+
+        const reactivateIfNeeded = async (user) => {
+            if (!user.deletedAt) return true;
+            if (Date.now() - user.deletedAt.getTime() > NINETY_DAYS_MS) {
+                return res.redirect('/login?error=account_closed'), false;
+            }
+            await User.updateOne({ _id: user._id }, { $unset: { deletedAt: '' } });
+            return true;
+        };
+
+        // Case 1: existing Google account
+        const existingGoogle = await User.findOne({ googleId });
+        if (existingGoogle) {
+            if (!await reactivateIfNeeded(existingGoogle)) return;
+            return setCookieAndRedirect(existingGoogle);
+        }
+
+        // Case 2: email matches an existing registered account → link
+        const existingEmail = await User.findOne({ email: email.toLowerCase(), isAnonymous: false });
+        if (existingEmail) {
+            if (!await reactivateIfNeeded(existingEmail)) return;
+            existingEmail.googleId = googleId;
+            await existingEmail.save();
+            return setCookieAndRedirect(existingEmail);
+        }
+
+        // Case 3: convert the current anonymous session
+        if (req.user && req.user.isAnonymous) {
+            const username = await generateGoogleUsername(email, given_name || name);
+            req.user.email = email.toLowerCase();
+            req.user.username = username;
+            req.user.googleId = googleId;
+            req.user.isAnonymous = false;
+            req.user.isEmailVerified = true;
+            if (picture) req.user.avatar = picture;
+            if (name) req.user.displayName = name.slice(0, 30);
+            await req.user.save();
+            return setCookieAndRedirect(req.user);
+        }
+
+        // Case 4: no anonymous session (rare) — create a fresh user
+        const username = await generateGoogleUsername(email, given_name || name);
+        const newUser = new User({
+            anonymousId: crypto.randomUUID(),
+            email: email.toLowerCase(),
+            username,
+            googleId,
+            isAnonymous: false,
+            isEmailVerified: true,
+            displayName: name ? name.slice(0, 30) : '',
+            avatar: picture || ''
+        });
+        await newUser.save();
+        return setCookieAndRedirect(newUser);
+
+    } catch (err) {
+        console.error('Google OAuth callback error:', err);
+        res.redirect('/login?error=google_failed');
+    }
+});
 
 // Signup - Convert anonymous user or create new registered user
 router.post('/signup', async (req, res) => {
@@ -278,11 +468,29 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Account not registered. Please sign up first.' });
         }
 
+        // Block Google-only accounts from password login
+        if (!user.password) {
+            return res.status(401).json({ error: 'This account uses Google sign-in. Please use "Continue with Google" to log in.' });
+        }
+
         // Verify password
         const isPasswordValid = await user.comparePassword(password);
 
         if (!isPasswordValid) {
             return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
+        // Reactivate account if within 90-day deletion window
+        if (user.deletedAt) {
+            const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
+            if (Date.now() - user.deletedAt.getTime() > NINETY_DAYS_MS) {
+                return res.status(403).json({
+                    code: 'ACCOUNT_CLOSED',
+                    error: 'This account has been permanently closed. You can sign up again with a new account.'
+                });
+            }
+            await User.updateOne({ _id: user._id }, { $unset: { deletedAt: '' } });
+            user.deletedAt = null;
         }
 
         // Block unverified accounts — applies suspension/deletion logic lazily
@@ -331,6 +539,15 @@ router.post('/verify-otp', async (req, res) => {
         user.isEmailVerified = true;
         await user.save();
 
+        // Handle add-account flow: carry forward the previous session into _accts
+        const addingId = req.cookies?.[ADDING_KEY];
+        if (addingId && addingId !== user.anonymousId) {
+            const existing = getLinkedIds(req);
+            const merged = [...new Set([addingId, ...existing])].slice(0, MAX_ACCOUNTS - 1);
+            setLinkedCookie(res, merged);
+            res.clearCookie(ADDING_KEY);
+        }
+
         // Set session cookie
         res.cookie('anonymousId', user.anonymousId, {
             maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -342,6 +559,7 @@ router.post('/verify-otp', async (req, res) => {
         res.json({
             success: true,
             anonymousId: user.anonymousId,
+            addedAccount: !!(addingId && addingId !== user.anonymousId),
             user: {
                 id: user._id,
                 email: user.email,
@@ -391,13 +609,21 @@ router.post('/resend-otp', async (req, res) => {
 // Logout
 router.post('/logout', requireAuth, (req, res) => {
     try {
-        // Clear the session cookie
-        res.clearCookie('anonymousId');
+        const linked = getLinkedIds(req);
+        if (linked.length) {
+            // Switch to the next linked account instead of dropping to anonymous
+            const [next, ...rest] = linked;
+            res.cookie('anonymousId', next, {
+                maxAge: 30 * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+                sameSite: 'lax',
+            });
+            setLinkedCookie(res, rest);
+            return res.json({ success: true, switched: true });
+        }
 
-        res.json({
-            success: true,
-            message: 'Logged out successfully'
-        });
+        res.clearCookie('anonymousId');
+        res.json({ success: true, switched: false });
     } catch (error) {
         console.error('Logout error:', error);
         res.status(500).json({ error: 'Logout failed' });
@@ -501,12 +727,125 @@ router.post('/reset-password', async (req, res) => {
         user.password = password; // Hashed by pre-save hook
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
+        user.passwordChangedAt = new Date();
         await user.save();
 
         res.json({ success: true, message: 'Password has been reset successfully.' });
     } catch (error) {
         console.error('Reset password error:', error);
         res.status(500).json({ error: 'Something went wrong. Please try again later.' });
+    }
+});
+
+// ── Multi-account management ─────────────────────────────────────────────────
+
+// GET /api/auth/accounts — list all currently linked accounts
+router.get('/accounts', async (req, res) => {
+    try {
+        const activeId  = req.cookies?.anonymousId;
+        const linkedIds = getLinkedIds(req);
+        const allIds    = [...new Set([activeId, ...linkedIds].filter(Boolean))];
+
+        if (!allIds.length) return res.json({ accounts: [] });
+
+        const users = await User.find({ anonymousId: { $in: allIds }, isAnonymous: false })
+            .select('anonymousId username displayName avatar');
+
+        const accounts = allIds.map(id => {
+            const u = users.find(u => u.anonymousId === id);
+            if (!u) return null;
+            return {
+                anonymousId: id,
+                username:    u.username,
+                displayName: u.displayName || '',
+                avatar:      u.avatar || '',
+                isActive:    id === activeId,
+            };
+        }).filter(Boolean);
+
+        res.json({ accounts });
+    } catch (err) {
+        console.error('List accounts error:', err);
+        res.status(500).json({ error: 'Failed to load accounts' });
+    }
+});
+
+// POST /api/auth/accounts/switch — make a linked account active
+router.post('/accounts/switch', async (req, res) => {
+    try {
+        const { anonymousId: targetId } = req.body;
+        if (!targetId) return res.status(400).json({ error: 'anonymousId is required' });
+
+        const activeId  = req.cookies?.anonymousId;
+        const linkedIds = getLinkedIds(req);
+
+        if (!linkedIds.includes(targetId)) {
+            return res.status(400).json({ error: 'Account not in linked list' });
+        }
+
+        const target = await User.findOne({ anonymousId: targetId, isAnonymous: false });
+        if (!target) return res.status(404).json({ error: 'Account not found' });
+
+        const newLinked = linkedIds.filter(id => id !== targetId);
+        if (activeId) newLinked.push(activeId);
+
+        res.cookie('anonymousId', targetId, {
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+            sameSite: 'lax',
+        });
+        setLinkedCookie(res, newLinked);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Switch account error:', err);
+        res.status(500).json({ error: 'Failed to switch account' });
+    }
+});
+
+// DELETE /api/auth/accounts/remove — remove a non-active linked account
+router.delete('/accounts/remove', async (req, res) => {
+    try {
+        const { anonymousId: targetId } = req.body;
+        if (!targetId) return res.status(400).json({ error: 'anonymousId is required' });
+
+        const activeId  = req.cookies?.anonymousId;
+        if (targetId === activeId) {
+            return res.status(400).json({ error: 'Switch to another account before removing this one' });
+        }
+
+        const linkedIds = getLinkedIds(req);
+        if (!linkedIds.includes(targetId)) {
+            return res.status(400).json({ error: 'Account not in linked list' });
+        }
+
+        setLinkedCookie(res, linkedIds.filter(id => id !== targetId));
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Remove account error:', err);
+        res.status(500).json({ error: 'Failed to remove account' });
+    }
+});
+
+// POST /api/auth/accounts/begin-add — set up _adding cookie and return login URL
+router.post('/accounts/begin-add', requireAuth, (req, res) => {
+    try {
+        const activeId  = req.cookies?.anonymousId;
+        const linkedIds = getLinkedIds(req);
+        if (1 + linkedIds.length >= MAX_ACCOUNTS) {
+            return res.status(400).json({ error: `You can have at most ${MAX_ACCOUNTS} accounts logged in at once` });
+        }
+
+        res.cookie(ADDING_KEY, activeId, {
+            maxAge: 10 * 60 * 1000,
+            httpOnly: true,
+            sameSite: 'lax',
+        });
+
+        res.json({ url: '/login?addAccount=1' });
+    } catch (err) {
+        console.error('Begin add account error:', err);
+        res.status(500).json({ error: 'Failed to start account add flow' });
     }
 });
 

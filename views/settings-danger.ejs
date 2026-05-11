@@ -23,45 +23,51 @@
             <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Your data</p>
           </div>
 
-          <div class="px-5 py-4 flex items-center justify-between gap-4">
-            <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Export your data</span>
-              <span class="text-sm text-woodsmoke-400">Download a copy of your buckets, grabs and account information</span>
+          <div class="px-5 py-4 flex flex-col gap-3">
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex flex-col gap-0.5 min-w-0">
+                <span class="text-sm font-semibold text-woodsmoke-900">Export your data</span>
+                <span class="text-sm text-woodsmoke-400">Download a copy of your buckets, grabs and account information.</span>
+              </div>
+              <button id="exportBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-silver-200">
+                <span id="exportBtnLabel">Export</span>
+                <span id="exportBtnDots" class="hidden">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><circle cx="4" cy="12" r="3" fill="currentColor"><animate id="SVG9IgbRbsl" attributeName="r" begin="0;SVGFUNpCWdG.end-0.25s" dur="0.75s" values="3;.2;3"/></circle><circle cx="12" cy="12" r="3" fill="currentColor"><animate attributeName="r" begin="SVG9IgbRbsl.end-0.6s" dur="0.75s" values="3;.2;3"/></circle><circle cx="20" cy="12" r="3" fill="currentColor"><animate id="SVGFUNpCWdG" attributeName="r" begin="SVG9IgbRbsl.end-0.45s" dur="0.75s" values="3;.2;3"/></circle></svg>
+                </span>
+              </button>
             </div>
-            <button id="exportBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0 opacity-50 cursor-not-allowed" disabled>
-              Export
-            </button>
+            <div id="exportMsg" class="hidden text-sm text-woodsmoke-500 leading-relaxed"></div>
           </div>
 
         </div>
 
-        <!-- ── Delete Account ─────────────────────────────────────────────────── -->
+        <!-- ── Danger zone ────────────────────────────────────────────────────── -->
         <div class="border border-red-200 rounded-md divide-y divide-red-100 mb-6">
 
           <div class="px-5 py-4">
             <p class="text-sm font-semibold uppercase tracking-wide text-red-400">Danger zone</p>
           </div>
 
+          <!-- Delete account -->
           <div class="px-5 py-4">
             <div class="flex items-start justify-between gap-4" id="deleteDisplay">
               <div class="flex flex-col gap-0.5 min-w-0">
                 <span class="text-sm font-semibold text-woodsmoke-900">Delete account</span>
-                <span class="text-sm text-woodsmoke-400">Permanently delete your account and all associated data. This cannot be undone.</span>
+                <span class="text-sm text-woodsmoke-400">On deletion of your account, you will have 90 days to log back in and recover your datas. Passed this period, your account is permanently closed.</span>
               </div>
               <button id="deleteShowBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-red-200 rounded-md text-red-500 hover:bg-red-50 transition-colors shrink-0">
                 Delete account
               </button>
             </div>
 
-            <!-- Confirm form (hidden by default) -->
-            <div id="deleteConfirm" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-lg flex flex-col gap-3">
-              <p class="text-sm text-red-700 font-medium">This will permanently delete your account, all your buckets, grabs and data. Type <strong>DELETE</strong> to confirm.</p>
+            <div id="deleteConfirm" class="hidden mt-4 p-4 bg-red-50 border border-red-100 rounded-md flex flex-col gap-3">
+              <p class="text-sm text-red-700 font-medium">Your account will be closed and you will be signed out. You can recover it by logging back in within <strong>90 days</strong>. Your data is kept until you explicitly request its deletion. Type <strong>DELETE</strong> to confirm.</p>
               <input id="deleteConfirmInput" type="text" placeholder="Type DELETE to confirm"
-                class="w-full h-10 px-3 text-sm border border-red-200 rounded-lg outline-none focus:border-red-400 bg-white transition-colors">
+                class="w-full h-10 px-3 text-sm border border-red-200 rounded-md outline-none focus:border-red-400 bg-white transition-colors">
               <p id="deleteError" class="hidden text-sm text-red-500"></p>
               <div class="flex gap-2">
                 <button id="deleteConfirmBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                  Permanently delete
+                  Delete account
                 </button>
                 <button id="deleteCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">
                   Cancel
@@ -84,55 +90,136 @@
 
 <script>
 (function () {
-  const showBtn      = document.getElementById('deleteShowBtn');
-  const confirmBox   = document.getElementById('deleteConfirm');
-  const cancelBtn    = document.getElementById('deleteCancelBtn');
-  const confirmInput = document.getElementById('deleteConfirmInput');
-  const confirmBtn   = document.getElementById('deleteConfirmBtn');
-  const deleteError  = document.getElementById('deleteError');
-  if (!showBtn) return;
+  // ── Export ─────────────────────────────────────────────────────────────────
+  const exportBtn     = document.getElementById('exportBtn');
+  const exportBtnLabel = document.getElementById('exportBtnLabel');
+  const exportBtnDots  = document.getElementById('exportBtnDots');
+  const exportMsg      = document.getElementById('exportMsg');
 
-  showBtn.addEventListener('click', () => {
-    confirmBox.classList.remove('hidden');
-    showBtn.classList.add('hidden');
-    confirmInput.focus();
-  });
-
-  cancelBtn.addEventListener('click', () => {
-    confirmBox.classList.add('hidden');
-    showBtn.classList.remove('hidden');
-    confirmInput.value = '';
-    deleteError.classList.add('hidden');
-  });
-
-  confirmBtn.addEventListener('click', async () => {
-    deleteError.classList.add('hidden');
-    if (confirmInput.value.trim() !== 'DELETE') {
-      deleteError.textContent = 'Please type DELETE exactly to confirm.';
-      deleteError.classList.remove('hidden');
-      return;
+  if (exportBtn) {
+    function setExportProcessing() {
+      exportBtn.disabled = true;
+      exportBtnLabel.classList.add('hidden');
+      exportBtnDots.classList.remove('hidden');
     }
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = 'Deleting…';
-    try {
-      const res = await fetch('/api/user/account', {
-        method: 'DELETE', credentials: 'include',
-      });
-      if (res.ok) {
-        window.location.href = '/';
-      } else {
+
+    function setExportIdle() {
+      exportBtn.disabled = false;
+      exportBtnLabel.classList.remove('hidden');
+      exportBtnDots.classList.add('hidden');
+    }
+
+    function showExportInfo(html) {
+      exportMsg.innerHTML = html;
+      exportMsg.classList.remove('hidden');
+    }
+
+    exportBtn.addEventListener('click', async () => {
+      setExportProcessing();
+      exportMsg.classList.add('hidden');
+      try {
+        const res  = await fetch('/api/user/export', { method: 'POST', credentials: 'include' });
         const data = await res.json().catch(() => ({}));
-        deleteError.textContent = data.error || 'Something went wrong. Try again.';
-        deleteError.classList.remove('hidden');
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Permanently delete';
+
+        if (res.ok) {
+          setExportIdle();
+          showExportInfo('We are preparing your data for export. Please come back here later for updates.');
+          // Transition to "email sent" message once background job has had time to complete
+          setTimeout(() => {
+            showExportInfo(
+              'We have sent a link to download your data at the email address registered for your account. ' +
+              '<a href="/contact" class="text-orchid-600 underline font-medium">Learn more about our data protction policy</a>.'
+            );
+          }, 15000);
+
+        } else if (res.status === 429) {
+          setExportIdle();
+          exportBtn.disabled = true;
+          showExportInfo(
+            'You have reached the maximum of 2 export requests per 7 days. Please try again later. ' +
+            'Need help? <a href="/contact" class="text-orchid-600 hover:underline font-medium">Contact us</a>.'
+          );
+
+        } else {
+          setExportIdle();
+          showExportInfo(data.error || 'Something went wrong. Please try again.');
+          setTimeout(() => exportMsg.classList.add('hidden'), 6000);
+        }
+      } catch {
+        setExportIdle();
+        showExportInfo('Something went wrong. Please try again.');
+        setTimeout(() => exportMsg.classList.add('hidden'), 6000);
       }
-    } catch {
-      deleteError.textContent = 'Something went wrong. Try again.';
-      deleteError.classList.remove('hidden');
-      confirmBtn.disabled = false;
-      confirmBtn.textContent = 'Permanently delete';
-    }
+    });
+  }
+
+  // ── Generic confirm-flow factory ───────────────────────────────────────────
+  function initConfirmFlow({ showBtnId, confirmBoxId, cancelBtnId, inputId, errorId, confirmBtnId, endpoint, confirmLabel, busyLabel }) {
+    const showBtn    = document.getElementById(showBtnId);
+    const confirmBox = document.getElementById(confirmBoxId);
+    const cancelBtn  = document.getElementById(cancelBtnId);
+    const input      = document.getElementById(inputId);
+    const error      = document.getElementById(errorId);
+    const confirmBtn = document.getElementById(confirmBtnId);
+    if (!showBtn) return;
+
+    showBtn.addEventListener('click', () => {
+      confirmBox.classList.remove('hidden');
+      showBtn.classList.add('hidden');
+      input.focus();
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      confirmBox.classList.add('hidden');
+      showBtn.classList.remove('hidden');
+      input.value = '';
+      error.classList.add('hidden');
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+      error.classList.add('hidden');
+      if (input.value.trim() !== 'DELETE') {
+        error.textContent = 'Please type DELETE exactly to confirm.';
+        error.classList.remove('hidden');
+        return;
+      }
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = busyLabel;
+      try {
+        const res = await fetch(endpoint, {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirm: 'DELETE' }),
+        });
+        if (res.ok) {
+          window.location.href = '/';
+        } else {
+          const data = await res.json().catch(() => ({}));
+          error.textContent = data.error || 'Something went wrong. Try again.';
+          error.classList.remove('hidden');
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = confirmLabel;
+        }
+      } catch {
+        error.textContent = 'Something went wrong. Try again.';
+        error.classList.remove('hidden');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = confirmLabel;
+      }
+    });
+  }
+
+  initConfirmFlow({
+    showBtnId:    'deleteShowBtn',
+    confirmBoxId: 'deleteConfirm',
+    cancelBtnId:  'deleteCancelBtn',
+    inputId:      'deleteConfirmInput',
+    errorId:      'deleteError',
+    confirmBtnId: 'deleteConfirmBtn',
+    endpoint:     '/api/user/account',
+    confirmLabel: 'Delete account',
+    busyLabel:    'Deleting…',
   });
 })();
 </script>
