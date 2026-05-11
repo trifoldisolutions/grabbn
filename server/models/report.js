@@ -10,11 +10,16 @@ const reportSchema = new mongoose.Schema(
     bucketId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Bucket',
-      required: true
+      default: null
+    },
+    reportedUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
     },
     reason: {
       type: String,
-      enum: ['spam', 'malicious', 'inappropriate', 'copyright', 'other'],
+      enum: ['spam', 'malicious', 'inappropriate', 'copyright', 'harassment', 'other'],
       required: true
     },
     detail: {
@@ -31,7 +36,8 @@ const reportSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// One report per user per bucket
-reportSchema.index({ reporterId: 1, bucketId: 1 }, { unique: true });
+// One report per reporter per target
+reportSchema.index({ reporterId: 1, bucketId: 1 }, { unique: true, sparse: true });
+reportSchema.index({ reporterId: 1, reportedUserId: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model('Report', reportSchema);

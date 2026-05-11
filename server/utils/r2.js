@@ -104,6 +104,16 @@ export async function fetchAndStoreImage(url, { referer, minBytes = 0, folder = 
     }
 }
 
+export async function uploadFileToR2(buffer, key, contentType) {
+    await getClient().send(new PutObjectCommand({
+        Bucket:      process.env.R2_BUCKET_NAME,
+        Key:         key,
+        Body:        buffer,
+        ContentType: contentType,
+    }));
+    return `${process.env.R2_PUBLIC_URL}/${key}`;
+}
+
 // Delete one or more R2 objects by their CDN URLs. Silently skips non-R2 URLs.
 export async function deleteR2Images(urls) {
     const base = process.env.R2_PUBLIC_URL;

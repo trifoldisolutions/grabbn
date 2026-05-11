@@ -151,6 +151,30 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
                 Share
             </button>
+            <% if (!isOwner && user && !user.isAnonymous) { %>
+            <div class="relative" id="profileMoreWrap">
+              <button id="profileMoreBtn" class="flex items-center justify-center w-9 h-9 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors" aria-label="More options">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 3a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3m0 7.5a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3M12 18a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>
+              </button>
+              <div id="profileMoreMenu" class="hidden absolute right-0 top-full mt-1 bg-white border border-silver-200 rounded-md shadow-md z-30 py-1" style="min-width:max-content">
+                <button id="profileReportBtn"
+                  data-userid="<%= profileUser._id %>"
+                  data-username="<%= profileUser.username %>"
+                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm whitespace-nowrap text-woodsmoke-600 hover:bg-silver-50 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10S22 17.523 22 12S17.523 2 12 2m0 2a8 8 0 1 1 0 16A8 8 0 0 1 12 4m0 3a1 1 0 0 0-1 1v5a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1m0 9a1 1 0 1 0 0 2a1 1 0 0 0 0-2"/></g></svg>
+                  Report @<%= profileUser.username %>
+                </button>
+                <button id="profileBlockBtn"
+                  data-userid="<%= profileUser._id %>"
+                  data-username="<%= profileUser.username %>"
+                  data-blocked="<%= isBlocked ? 'true' : 'false' %>"
+                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm whitespace-nowrap hover:bg-red-50 text-red-500 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10S22 17.523 22 12S17.523 2 12 2M4 12a8 8 0 0 1 12.906-6.32L5.68 16.907A7.96 7.96 0 0 1 4 12m8 8a7.96 7.96 0 0 1-4.906-1.68L18.32 7.094A7.96 7.96 0 0 1 20 12a8 8 0 0 1-8 8"/></g></svg>
+                  <span id="profileBlockLabel"><%= isBlocked ? 'Unblock' : 'Block' %> @<%= profileUser.username %></span>
+                </button>
+              </div>
+            </div>
+            <% } %>
         </div>
 
     </div>
@@ -914,5 +938,124 @@
 
 })();
 </script>
+
+<!-- Report modal -->
+<div id="reportModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/40" id="reportModalBackdrop"></div>
+  <div class="relative bg-white rounded-md shadow-xl w-full max-w-sm p-6 flex flex-col gap-4">
+    <div>
+      <p class="font-semibold text-woodsmoke-900">Report @<%= profileUser.username %></p>
+      <p class="text-sm text-woodsmoke-400 mt-0.5">What's the issue?</p>
+    </div>
+    <div class="flex flex-col gap-1" id="reportReasons">
+      <% [['spam','Spam or fake account'],['inappropriate','Inappropriate content'],['harassment','Harassment or hate speech'],['malicious','Malicious links or phishing'],['other','Other']].forEach(([val,label]) => { %>
+      <label class="flex items-center gap-2.5 px-3 py-2 rounded-md hover:bg-silver-50 cursor-pointer select-none">
+        <input type="radio" name="reportReason" value="<%= val %>" class="accent-orchid-600">
+        <span class="text-sm text-woodsmoke-700"><%= label %></span>
+      </label>
+      <% }) %>
+    </div>
+    <textarea id="reportDetail" rows="2" maxlength="500" placeholder="Additional detail (optional)" class="w-full px-3 py-2 text-sm border border-silver-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-orchid-300 focus:border-orchid-400 transition"></textarea>
+    <p id="reportModalError" class="hidden text-sm text-red-500"></p>
+    <div class="flex gap-2">
+      <button id="reportSubmitBtn" class="flex items-center justify-center flex-1 h-9 px-5 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Submit report</button>
+      <button id="reportCancelBtn" class="flex items-center justify-center flex-1 h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<% if (!isOwner && user && !user.isAnonymous) { %>
+<script>
+(function () {
+  const moreBtn    = document.getElementById('profileMoreBtn');
+  const moreMenu   = document.getElementById('profileMoreMenu');
+  const blockBtn   = document.getElementById('profileBlockBtn');
+  const blockLabel = document.getElementById('profileBlockLabel');
+  const reportBtn  = document.getElementById('profileReportBtn');
+
+  const reportModal    = document.getElementById('reportModal');
+  const reportBackdrop = document.getElementById('reportModalBackdrop');
+  const reportSubmit   = document.getElementById('reportSubmitBtn');
+  const reportCancel   = document.getElementById('reportCancelBtn');
+  const reportError    = document.getElementById('reportModalError');
+
+  moreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    moreMenu.classList.toggle('hidden');
+  });
+  document.addEventListener('click', () => moreMenu.classList.add('hidden'));
+
+  // ── Report ────────────────────────────────────────────────────────────────
+  reportBtn.addEventListener('click', () => {
+    moreMenu.classList.add('hidden');
+    document.querySelectorAll('[name="reportReason"]').forEach(r => r.checked = false);
+    document.getElementById('reportDetail').value = '';
+    reportError.classList.add('hidden');
+    reportModal.classList.remove('hidden');
+  });
+
+  function closeReport() { reportModal.classList.add('hidden'); }
+  reportCancel.addEventListener('click', closeReport);
+  reportBackdrop.addEventListener('click', closeReport);
+
+  reportSubmit.addEventListener('click', async () => {
+    const reason = document.querySelector('[name="reportReason"]:checked')?.value;
+    if (!reason) {
+      reportError.textContent = 'Please select a reason.';
+      reportError.classList.remove('hidden');
+      return;
+    }
+    reportError.classList.add('hidden');
+    reportSubmit.disabled = true;
+    reportSubmit.textContent = 'Submitting…';
+    try {
+      const r = await fetch(`/api/users/${reportBtn.dataset.userid}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason, detail: document.getElementById('reportDetail').value }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed');
+      closeReport();
+    } catch (err) {
+      reportError.textContent = err.message;
+      reportError.classList.remove('hidden');
+      reportSubmit.disabled = false;
+      reportSubmit.textContent = 'Submit report';
+    }
+  });
+
+  // ── Block ─────────────────────────────────────────────────────────────────
+  blockBtn.addEventListener('click', async () => {
+    const userId   = blockBtn.dataset.userid;
+    const username = blockBtn.dataset.username;
+    const blocking = blockBtn.dataset.blocked !== 'true';
+
+    if (blocking && !confirm(`Block @${username}? Their profile and content will be hidden from you.`)) return;
+
+    blockBtn.disabled = true;
+    try {
+      const r = await fetch(`/api/users/${userId}/block`, {
+        method: blocking ? 'POST' : 'DELETE',
+        credentials: 'include',
+      });
+      if (!r.ok) throw new Error();
+      if (blocking) {
+        window.location.href = '/explore';
+      } else {
+        blockBtn.dataset.blocked = 'false';
+        blockLabel.textContent = `Block @${username}`;
+        blockBtn.disabled = false;
+        moreMenu.classList.add('hidden');
+      }
+    } catch {
+      blockBtn.disabled = false;
+      moreMenu.classList.add('hidden');
+    }
+  });
+})();
+</script>
+<% } %>
 
 <%- include('partials/layout-end') %>

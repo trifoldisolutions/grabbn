@@ -154,7 +154,7 @@
             <button id="categoryPickerBtn" type="button"
               class="flex items-center gap-2 h-9 px-3 text-sm font-semibold border border-silver-200 rounded-md text-woodsmoke-700 hover:border-woodsmoke-300 transition-colors w-44">
               <span id="categoryPickerLabel" class="flex-1 text-left truncate"><%= user.category ? user.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : t('settings.account.category.not_set') %></span>
-              <svg id="categoryChevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="shrink-0 transition-transform duration-150"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.536 13.707a1 1 0 0 1-1.415 0L12 11.586l-2.121 2.121a1 1 0 0 1-1.415-1.414l2.829-2.828a1 1 0 0 1 1.414 0l2.829 2.828a1 1 0 0 1 0 1.414"/></g></svg>
+              <svg id="categoryChevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" class="shrink-0 transition-transform duration-150"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
             </button>
             <div id="categoryDropdown" class="hidden absolute top-full right-0 mt-1 w-72 bg-white border border-silver-200 rounded-md shadow-lg z-50 py-1 max-h-72 overflow-y-auto"></div>
           </div>
@@ -211,7 +211,7 @@
                 <button id="platformPickerBtn" type="button"
                   class="flex items-center gap-2 h-9 px-3 text-sm font-semibold border border-silver-200 rounded-md text-woodsmoke-400 hover:border-woodsmoke-300 transition-colors w-36">
                   <span id="platformPickerLabel" class="flex-1 text-left truncate"><%= t('settings.account.socials.platform') %></span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0"><path d="m6 9 6 6 6-6"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" class="shrink-0"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
                 </button>
                 <div id="platformDropdown" class="hidden absolute top-full left-0 mt-1 w-44 bg-white border border-silver-200 rounded-md shadow-lg z-50 py-1 max-h-52 overflow-y-auto"></div>
               </div>
@@ -337,10 +337,38 @@
             <button id="languagePickerBtn" type="button"
               class="flex items-center gap-2 h-9 px-3 text-sm font-semibold border border-silver-200 rounded-md text-woodsmoke-700 hover:border-woodsmoke-300 transition-colors w-40">
               <span id="languagePickerLabel" class="flex-1 text-left truncate"><%= ({en:'English',es:'Spanish',fr:'French',de:'German',pt:'Portuguese',it:'Italian',nl:'Dutch',ru:'Russian',ja:'Japanese',zh:'Chinese',ko:'Korean',ar:'Arabic',hi:'Hindi',tr:'Turkish',pl:'Polish',sv:'Swedish',no:'Norwegian',da:'Danish',fi:'Finnish',id:'Indonesian'})[user.language || 'en'] || 'English' %></span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" id="languageChevron" class="shrink-0 transition-transform duration-150"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M15.536 13.707a1 1 0 0 1-1.415 0L12 11.586l-2.121 2.121a1 1 0 0 1-1.415-1.414l2.829-2.828a1 1 0 0 1 1.414 0l2.829 2.828a1 1 0 0 1 0 1.414"/></g></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" id="languageChevron" class="shrink-0 transition-transform duration-150"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
             </button>
             <div id="languageDropdown" class="hidden absolute top-full right-0 mt-1 w-48 bg-white border border-silver-200 rounded-md shadow-lg z-50 py-1 max-h-64 overflow-y-auto"></div>
           </div>
+        </div>
+
+      </div>
+
+      <!-- ── Sessions ──────────────────────────────────────────────────────── -->
+      <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
+
+        <div class="px-5 py-4 flex items-center justify-between gap-4">
+          <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Sessions</p>
+          <button id="addAccountBtn"
+            class="flex items-center justify-center gap-1.5 text-sm font-semibold px-4 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M11 13H6a1 1 0 1 1 0-2h5V6a1 1 0 1 1 2 0v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0z"/></g></svg>
+            Add account
+          </button>
+        </div>
+
+        <div id="accountsList" class="divide-y divide-silver-100 min-h-[56px] flex flex-col">
+          <div class="px-5 py-4 flex items-center justify-center">
+            <span class="text-sm text-woodsmoke-400">Loading…</span>
+          </div>
+        </div>
+
+        <div class="px-5 py-4">
+          <button id="logoutBtn"
+            class="flex items-center justify-center gap-2 text-sm font-semibold px-4 h-9 border border-silver-200 rounded-md text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M5 3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6a1 1 0 1 0 0-2H5V5h6a1 1 0 1 0 0-2zm11.293 4.293a1 1 0 0 1 1.414 0l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L18.586 13H10a1 1 0 1 1 0-2h8.586l-2.293-2.293a1 1 0 0 1 0-1.414"/></g></svg>
+            Log out
+          </button>
         </div>
 
       </div>
@@ -1195,6 +1223,140 @@
     }
   });
 
+})();
+
+// ── Sessions ──────────────────────────────────────────────────────────────────
+(function () {
+  const USER_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>`;
+
+  const list        = document.getElementById('accountsList');
+  const addBtn      = document.getElementById('addAccountBtn');
+  const logoutBtn   = document.getElementById('logoutBtn');
+  const feedback    = document.getElementById('accountFeedback');
+
+  function showFeedback(msg, ok) {
+    feedback.textContent = msg;
+    feedback.className = `mt-2 text-sm text-center ${ok ? 'text-emerald-600' : 'text-red-500'}`;
+    clearTimeout(feedback._t);
+    feedback._t = setTimeout(() => { feedback.className = 'hidden text-sm text-center'; }, 4000);
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function avatarHtml(acct) {
+    if (acct.avatar) {
+      return `<img src="${esc(acct.avatar)}" class="w-9 h-9 rounded-md object-cover shrink-0" alt="">`;
+    }
+    return `<div class="w-9 h-9 rounded-md bg-orchid-100 text-orchid-600 shrink-0 flex items-center justify-center">${USER_ICON}</div>`;
+  }
+
+  async function loadAccounts() {
+    try {
+      const r = await fetch('/api/auth/accounts', { credentials: 'include' });
+      const { accounts } = await r.json();
+
+      addBtn.disabled = accounts.length >= 5;
+
+      list.innerHTML = accounts.map(a => `
+        <div class="px-5 py-3.5 flex items-center gap-3" data-aid="${esc(a.anonymousId)}">
+          ${avatarHtml(a)}
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-woodsmoke-900 truncate">@${esc(a.username)}</p>
+            ${a.displayName ? `<p class="text-xs text-woodsmoke-400 truncate">${esc(a.displayName)}</p>` : ''}
+          </div>
+          ${a.isActive
+            ? `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-orchid-100 text-orchid-700 shrink-0">Active</span>`
+            : `<div class="flex items-center gap-2 shrink-0">
+                <button class="switch-btn text-xs font-semibold px-3 h-7 rounded-md border border-silver-200 text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors flex items-center justify-center" data-aid="${esc(a.anonymousId)}">Switch</button>
+                <button class="remove-btn text-xs font-semibold px-2 h-7 rounded-md border border-silver-200 text-red-500 hover:bg-red-50 hover:border-red-200 transition-colors flex items-center justify-center" data-aid="${esc(a.anonymousId)}" title="Remove account">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12S6.477 2 12 2m3.536 6.464a1 1 0 0 0-1.414 0L12 10.586L9.879 8.464a1 1 0 1 0-1.415 1.414L10.586 12l-2.122 2.121a1 1 0 1 0 1.415 1.415L12 13.414l2.121 2.122a1 1 0 1 0 1.415-1.415L13.414 12l2.122-2.121a1 1 0 0 0 0-1.415"/></g></svg>
+                </button>
+              </div>`
+          }
+        </div>
+      `).join('');
+
+      list.querySelectorAll('.switch-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          btn.textContent = '…';
+          try {
+            const r = await fetch('/api/auth/accounts/switch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ anonymousId: btn.dataset.aid }),
+            });
+            if (!r.ok) throw new Error((await r.json()).error);
+            window.location.reload();
+          } catch (err) {
+            showFeedback(err.message || 'Failed to switch account', false);
+            btn.disabled = false;
+            btn.textContent = 'Switch';
+          }
+        });
+      });
+
+      list.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          try {
+            const r = await fetch('/api/auth/accounts/remove', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ anonymousId: btn.dataset.aid }),
+            });
+            if (!r.ok) throw new Error((await r.json()).error);
+            btn.closest('[data-aid]').remove();
+            addBtn.disabled = false;
+          } catch (err) {
+            showFeedback(err.message || 'Failed to remove account', false);
+            btn.disabled = false;
+          }
+        });
+      });
+
+    } catch {
+      list.innerHTML = '<div class="px-5 py-4 text-sm text-woodsmoke-400">Could not load accounts.</div>';
+    }
+  }
+
+  addBtn.addEventListener('click', async () => {
+    addBtn.disabled = true;
+    try {
+      const r = await fetch('/api/auth/accounts/begin-add', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+      window.location.href = data.url;
+    } catch (err) {
+      showFeedback(err.message || 'Could not start add-account flow', false);
+      addBtn.disabled = false;
+    }
+  });
+
+  logoutBtn.addEventListener('click', async () => {
+    logoutBtn.disabled = true;
+    try {
+      const r = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+      window.location.href = data.switched ? '/settings/account' : '/login';
+    } catch (err) {
+      showFeedback(err.message || 'Logout failed', false);
+      logoutBtn.disabled = false;
+    }
+  });
+
+  loadAccounts();
 })();
 </script>
 
