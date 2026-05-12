@@ -98,6 +98,10 @@ const bucketSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    authViewCount: {
+      type: Number,
+      default: 0
+    },
     shareCount: {
       type: Number,
       default: 0

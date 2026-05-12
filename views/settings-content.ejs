@@ -39,32 +39,126 @@
 
         </div>
 
-        <!-- ── Bucket Defaults ───────────────────────────────────────────────── -->
+
+        <!-- ── Muted Tags ────────────────────────────────────────────────────── -->
+        <%
+          const initialTags = (user.mutedTags || []);
+        %>
         <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
           <div class="px-5 py-4">
-            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">New bucket defaults</p>
+            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Muted tags</p>
+          </div>
+
+          <div class="px-5 py-4 flex items-center gap-3">
+            <span class="text-woodsmoke-400 text-sm select-none">#</span>
+            <input
+              id="mutedTagInput"
+              type="text"
+              placeholder="e.g. javascript"
+              maxlength="30"
+              class="flex-1 h-9 px-3 text-sm border border-silver-200 rounded-md text-woodsmoke-900 placeholder-woodsmoke-300 outline-none focus:border-orchid-400 transition-colors"
+            />
+            <button
+              id="mutedTagAdd"
+              class="flex items-center justify-center h-9 px-4 text-sm font-semibold rounded-md bg-orchid-500 text-white hover:bg-orchid-600 transition-colors shrink-0"
+            >Add</button>
+          </div>
+
+          <div id="mutedTagList" class="px-5 py-4 flex flex-wrap gap-2 min-h-[56px]">
+            <% if (!initialTags.length) { %>
+              <span id="mutedTagEmpty" class="text-sm text-woodsmoke-400">No muted tags yet.</span>
+            <% } else { %>
+              <% initialTags.forEach(tag => { %>
+                <span class="muted-tag-chip flex items-center gap-1.5 h-7 pl-2.5 pr-2 text-sm rounded-md bg-silver-100 text-woodsmoke-700 border border-silver-200" data-tag="<%= tag %>">
+                  #<%= tag %>
+                  <button class="muted-tag-remove flex items-center justify-center w-4 h-4 rounded text-woodsmoke-400 hover:text-red-500 transition-colors" aria-label="Remove">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59L7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12L5.7 16.89a1 1 0 0 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4"/></svg>
+                  </button>
+                </span>
+              <% }) %>
+            <% } %>
+          </div>
+
+          <div class="px-5 py-3">
+            <p id="mutedTagFeedback" class="hidden text-xs"></p>
+            <p class="text-xs text-woodsmoke-400">Buckets tagged with these will be hidden from your feed and search. Up to 50 tags.</p>
+          </div>
+
+        </div>
+
+        <!-- ── Hidden Categories ────────────────────────────────────────────── -->
+        <%
+          const mutedTopics = (user.mutedTopics || []);
+        %>
+        <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
+
+          <div class="px-5 py-4">
+            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Hidden categories</p>
+          </div>
+
+          <div class="px-5 py-5 flex flex-wrap gap-2">
+            <% categories.forEach(cat => { %>
+              <%
+                const isHidden = mutedTopics.includes(cat.value);
+              %>
+              <button
+                class="topic-pill flex items-center gap-1.5 h-8 px-3 text-sm rounded-md border border-silver-200 bg-white hover:border-woodsmoke-300 transition-colors"
+                data-value="<%= cat.value %>"
+                data-hidden="<%= isHidden ? 'true' : 'false' %>"
+              >
+                <!-- open eye (visible) -->
+                <svg class="topic-eye-open shrink-0 text-woodsmoke-400 <%= isHidden ? 'hidden' : '' %>" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 5c3.679 0 8.162 2.417 9.73 5.901c.146.328.27.71.27 1.099c0 .388-.123.771-.27 1.099C20.161 16.583 15.678 19 12 19s-8.162-2.417-9.73-5.901C2.124 12.77 2 12.389 2 12c0-.388.123-.771.27-1.099C3.839 7.417 8.322 5 12 5m0 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8m0 2a2 2 0 1 1 0 4a2 2 0 0 1 0-4"/></g></svg>
+                <!-- closed eye (hidden) -->
+                <svg class="topic-eye-off shrink-0 text-woodsmoke-400 <%= isHidden ? '' : 'hidden' %>" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M2.5 9a1.5 1.5 0 0 1 2.945-.404c1.947 6.502 11.158 6.503 13.109.005a1.5 1.5 0 1 1 2.877.85a10.1 10.1 0 0 1-1.623 3.236l.96.96a1.5 1.5 0 1 1-2.122 2.12l-1.01-1.01a9.6 9.6 0 0 1-1.67.915l.243.906a1.5 1.5 0 0 1-2.897.776l-.251-.935c-.705.073-1.417.073-2.122 0l-.25.935a1.5 1.5 0 0 1-2.898-.776l.242-.907a9.6 9.6 0 0 1-1.669-.914l-1.01 1.01a1.5 1.5 0 1 1-2.122-2.12l.96-.96a10.1 10.1 0 0 1-1.62-3.23A1.5 1.5 0 0 1 2.5 9"/></g></svg>
+                <span class="topic-label <%= isHidden ? 'text-woodsmoke-300' : 'text-woodsmoke-700' %>"><%= cat.label %></span>
+              </button>
+            <% }) %>
+          </div>
+
+          <div class="px-5 py-3">
+            <p id="mutedTopicFeedback" class="hidden text-xs"></p>
+            <p class="text-xs text-woodsmoke-400">Buckets from curators within selected categories won't show up in your feed. Click a category to toggle visibility.</p>
+          </div>
+
+        </div>
+
+        <!-- ── Comment Defaults ──────────────────────────────────────────────── -->
+        <%
+          const allowComments = user.commentDefaults ? user.commentDefaults.allowComments !== false : true;
+          const allowGrabs    = user.commentDefaults ? user.commentDefaults.allowGrabs    !== false : true;
+        %>
+        <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
+
+          <div class="px-5 py-4">
+            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Comment defaults</p>
           </div>
 
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Default visibility</span>
-              <span class="text-sm text-woodsmoke-400">Visibility applied to new buckets you create</span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Allow comments by default</span>
+              <span class="text-sm text-woodsmoke-400">New buckets you create will have comments enabled</span>
             </div>
-            <select class="h-9 px-3 text-sm border border-silver-200 rounded-md text-woodsmoke-700 bg-white outline-none focus:border-orchid-400 transition-colors shrink-0 opacity-50 cursor-not-allowed" disabled>
-              <option>Public</option>
-              <option>Unlisted</option>
-              <option>Private</option>
-            </select>
+            <button
+              id="toggleAllowComments"
+              data-on="<%= allowComments ? 'true' : 'false' %>"
+              class="relative w-10 h-6 rounded-full transition-colors shrink-0 <%= allowComments ? 'bg-orchid-500' : 'bg-silver-200' %>"
+            >
+              <span class="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform <%= allowComments ? 'left-5' : 'left-1' %>"></span>
+            </button>
           </div>
 
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Create as draft by default</span>
-              <span class="text-sm text-woodsmoke-400">New buckets will start as drafts instead of being published immediately</span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Allow grabs by default</span>
+              <span class="text-sm text-woodsmoke-400">Others can copy your new buckets into their own collection</span>
             </div>
-            <button class="relative w-10 h-6 rounded-full bg-silver-200 opacity-50 cursor-not-allowed shrink-0" disabled>
-              <span class="absolute left-1 top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform"></span>
+            <button
+              id="toggleAllowGrabs"
+              data-on="<%= allowGrabs ? 'true' : 'false' %>"
+              class="relative w-10 h-6 rounded-full transition-colors shrink-0 <%= allowGrabs ? 'bg-orchid-500' : 'bg-silver-200' %>"
+            >
+              <span class="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform <%= allowGrabs ? 'left-5' : 'left-1' %>"></span>
             </button>
           </div>
 
@@ -84,9 +178,9 @@
 
 <script>
 (function () {
-  const toggle   = document.getElementById('matureToggle');
-  const feedback = document.getElementById('contentFeedback');
-  if (!toggle) return;
+  // ── Mature content toggle ─────────────────────────────────────────────────
+  const matureToggle = document.getElementById('matureToggle');
+  const feedback     = document.getElementById('contentFeedback');
 
   function showFeedback(msg, ok) {
     feedback.textContent = msg;
@@ -95,28 +189,204 @@
     feedback._t = setTimeout(() => { feedback.className = 'hidden text-sm text-center'; }, 3000);
   }
 
-  toggle.addEventListener('click', async () => {
-    const current = toggle.dataset.enabled === 'true';
-    const next    = !current;
-    toggle.disabled = true;
-    try {
-      const res = await fetch('/api/user/mature-gate', {
-        method: 'PATCH', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isMatureGated: next }),
-      });
-      if (!res.ok) throw new Error();
-      toggle.dataset.enabled = String(next);
-      toggle.classList.toggle('bg-orchid-500', next);
-      toggle.classList.toggle('bg-silver-200', !next);
-      toggle.querySelector('span').classList.toggle('translate-x-4', next);
-      showFeedback(next ? 'Mature content filter enabled.' : 'Mature content filter disabled.', true);
-    } catch {
-      showFeedback('Could not save. Try again.', false);
-    } finally {
-      toggle.disabled = false;
+  if (matureToggle) {
+    matureToggle.addEventListener('click', async () => {
+      const current = matureToggle.dataset.enabled === 'true';
+      const next    = !current;
+      matureToggle.disabled = true;
+      try {
+        const res = await fetch('/api/user/mature-gate', {
+          method: 'PATCH', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isMatureGated: next }),
+        });
+        if (!res.ok) throw new Error();
+        matureToggle.dataset.enabled = String(next);
+        matureToggle.classList.toggle('bg-orchid-500', next);
+        matureToggle.classList.toggle('bg-silver-200', !next);
+        matureToggle.querySelector('span').classList.toggle('translate-x-4', next);
+        showFeedback(next ? 'Mature content filter enabled.' : 'Mature content filter disabled.', true);
+      } catch {
+        showFeedback('Could not save. Try again.', false);
+      } finally {
+        matureToggle.disabled = false;
+      }
+    });
+  }
+
+  // ── Comment default toggles ───────────────────────────────────────────────
+  function wireCommentToggle(id, settingKey) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      const next = btn.dataset.on !== 'true';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/user/settings', {
+          method: 'PATCH', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [settingKey]: next }),
+        });
+        if (!res.ok) throw new Error();
+        btn.dataset.on = String(next);
+        btn.classList.toggle('bg-orchid-500', next);
+        btn.classList.toggle('bg-silver-200', !next);
+        const dot = btn.querySelector('span');
+        dot.classList.toggle('left-5', next);
+        dot.classList.toggle('left-1', !next);
+      } catch {
+        showFeedback('Could not save. Try again.', false);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  wireCommentToggle('toggleAllowComments', 'allowComments');
+  wireCommentToggle('toggleAllowGrabs',    'allowGrabs');
+
+  // ── Muted tags ────────────────────────────────────────────────────────────
+  (function () {
+    const input    = document.getElementById('mutedTagInput');
+    const addBtn   = document.getElementById('mutedTagAdd');
+    const list     = document.getElementById('mutedTagList');
+    const fbEl     = document.getElementById('mutedTagFeedback');
+    if (!input) return;
+
+    function showTagFeedback(msg, ok) {
+      fbEl.textContent = msg;
+      fbEl.className = `text-xs ${ok ? 'text-emerald-600' : 'text-red-500'}`;
+      clearTimeout(fbEl._t);
+      fbEl._t = setTimeout(() => { fbEl.className = 'hidden text-xs'; }, 3000);
     }
-  });
+
+    function getEmpty() { return list.querySelector('#mutedTagEmpty'); }
+
+    function removeEmpty() {
+      const e = getEmpty();
+      if (e) e.remove();
+    }
+
+    function maybeShowEmpty() {
+      if (!list.querySelector('.muted-tag-chip')) {
+        list.insertAdjacentHTML('beforeend', '<span id="mutedTagEmpty" class="text-sm text-woodsmoke-400">No muted tags yet.</span>');
+      }
+    }
+
+    function buildChip(tag) {
+      const span = document.createElement('span');
+      span.className = 'muted-tag-chip flex items-center gap-1.5 h-7 pl-2.5 pr-2 text-sm rounded-md bg-silver-100 text-woodsmoke-700 border border-silver-200';
+      span.dataset.tag = tag;
+      span.innerHTML = `#${tag}
+        <button class="muted-tag-remove flex items-center justify-center w-4 h-4 rounded text-woodsmoke-400 hover:text-red-500 transition-colors" aria-label="Remove">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59L7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12L5.7 16.89a1 1 0 0 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4"/></svg>
+        </button>`;
+      span.querySelector('.muted-tag-remove').addEventListener('click', () => removeTag(tag, span));
+      return span;
+    }
+
+    async function removeTag(tag, chipEl) {
+      try {
+        const res = await fetch(`/api/user/muted-tags/${encodeURIComponent(tag)}`, {
+          method: 'DELETE', credentials: 'include',
+        });
+        if (!res.ok) throw new Error();
+        chipEl.remove();
+        maybeShowEmpty();
+      } catch {
+        showTagFeedback('Could not remove tag. Try again.', false);
+      }
+    }
+
+    // Wire existing chip remove buttons
+    list.querySelectorAll('.muted-tag-chip').forEach(chip => {
+      chip.querySelector('.muted-tag-remove').addEventListener('click', () => removeTag(chip.dataset.tag, chip));
+    });
+
+    async function addTag() {
+      const raw = input.value.trim().toLowerCase().replace(/^#+/, '');
+      if (!raw) return;
+      if (!/^[a-z0-9_-]{1,30}$/.test(raw)) {
+        showTagFeedback('Use letters, numbers, - and _ only (max 30 chars).', false);
+        return;
+      }
+      // Check for duplicate on client side
+      if (list.querySelector(`.muted-tag-chip[data-tag="${CSS.escape(raw)}"]`)) {
+        showTagFeedback('Tag already muted.', false);
+        return;
+      }
+      addBtn.disabled = true;
+      try {
+        const res = await fetch('/api/user/muted-tags', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tag: raw }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showTagFeedback(data.error || 'Could not add tag.', false); return; }
+        removeEmpty();
+        list.appendChild(buildChip(raw));
+        input.value = '';
+      } catch {
+        showTagFeedback('Could not add tag. Try again.', false);
+      } finally {
+        addBtn.disabled = false;
+      }
+    }
+
+    addBtn.addEventListener('click', addTag);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } });
+  })();
+
+  // ── Muted topics ─────────────────────────────────────────────────────────
+  (function () {
+    const pills  = document.querySelectorAll('.topic-pill');
+    const fbEl   = document.getElementById('mutedTopicFeedback');
+    if (!pills.length) return;
+
+    let saveTimer = null;
+
+    function showTopicFeedback(msg, ok) {
+      fbEl.textContent = msg;
+      fbEl.className = `text-xs ${ok ? 'text-emerald-600' : 'text-red-500'}`;
+      clearTimeout(fbEl._t);
+      fbEl._t = setTimeout(() => { fbEl.className = 'hidden text-xs'; }, 3000);
+    }
+
+    function getMutedTopics() {
+      return Array.from(pills)
+        .filter(p => p.dataset.hidden === 'true')
+        .map(p => p.dataset.value);
+    }
+
+    async function saveTopics() {
+      try {
+        const res = await fetch('/api/user/muted-topics', {
+          method: 'PATCH', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topics: getMutedTopics() }),
+        });
+        if (!res.ok) throw new Error();
+      } catch {
+        showTopicFeedback('Could not save. Try again.', false);
+      }
+    }
+
+    pills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const hidden = pill.dataset.hidden === 'true';
+        const next   = !hidden;
+        pill.dataset.hidden = String(next);
+        pill.querySelector('.topic-eye-open').classList.toggle('hidden', next);
+        pill.querySelector('.topic-eye-off').classList.toggle('hidden', !next);
+        const label = pill.querySelector('.topic-label');
+        label.classList.toggle('text-woodsmoke-300', next);
+        label.classList.toggle('text-woodsmoke-700', !next);
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveTopics, 600);
+      });
+    });
+  })();
 })();
 </script>
 

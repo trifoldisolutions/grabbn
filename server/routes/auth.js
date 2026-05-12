@@ -265,7 +265,7 @@ router.get('/google/callback', async (req, res) => {
                 httpOnly: true,
                 sameSite: 'lax'
             });
-            res.redirect('/');
+            res.redirect('/showroom');
         };
 
         const reactivateIfNeeded = async (user) => {

@@ -56,6 +56,7 @@ import BucketRating from './server/models/bucketRating.js';
 import UserRepo     from './server/models/userRepo.js';
 import CommentAgreement from './server/models/commentAgreement.js';
 import Link from './server/models/link.js';
+import Transaction from './server/models/transaction.js';
 import { wsClients, pushNotification } from './server/ws.js';
 
 dotenv.config();
@@ -1463,11 +1464,37 @@ app.post('/api/user/export', requireAuth, requireVerification, async (req, res) 
     // Background — no await
     (async () => {
         try {
-            const [buckets, grabs, following] = await Promise.all([
-                Bucket.find({ userId: req.user._id }).lean(),
-                BucketAccess.find({ userId: req.user._id }).populate('bucketId', 'name description hashtags visibility createdAt').lean(),
-                Subscription.find({ followerId: req.user._id }).populate('followeeId', 'username displayName').lean(),
+            const userId = req.user._id;
+            const [
+                buckets, grabs, following, followers,
+                comments, ratings, views, shares,
+                linkClicks, notifications, reports,
+                blocks, blocked, conversations, transactions,
+            ] = await Promise.all([
+                Bucket.find({ userId }).lean(),
+                BucketAccess.find({ userId }).populate('bucketId', 'name description hashtags createdAt').lean(),
+                Subscription.find({ followerId: userId }).populate('followeeId', 'username displayName').lean(),
+                Subscription.find({ followeeId: userId }).populate('followerId', 'username displayName').lean(),
+                BucketComment.find({ userId, deletedAt: null }).populate('bucketId', 'name').lean(),
+                BucketRating.find({ userId }).populate('bucketId', 'name').lean(),
+                BucketView.find({ userId }).populate('bucketId', 'name').lean(),
+                BucketShare.find({ userId }).populate('bucketId', 'name').lean(),
+                LinkClick.find({ userId }).lean(),
+                Notification.find({ userId }).lean(),
+                Report.find({ reporterId: userId }).lean(),
+                Block.find({ blockerId: userId }).populate('blockedId', 'username').lean(),
+                Block.find({ blockedId: userId }).populate('blockerId', 'username').lean(),
+                Conversation.find({ participants: userId }).populate('participants', 'username displayName').lean(),
+                Transaction.find({ userId }).lean(),
             ]);
+
+            const convIds = conversations.map(c => c._id);
+            const messages = await DirectMessage.find({ conversationId: { $in: convIds }, senderId: userId }).lean();
+            const messagesByConv = {};
+            for (const m of messages) {
+                const key = m.conversationId.toString();
+                (messagesByConv[key] = messagesByConv[key] || []).push({ body: m.body, sentAt: m.createdAt });
+            }
 
             const payload = {
                 exportedAt: new Date().toISOString(),
@@ -1502,10 +1529,40 @@ app.post('/api/user/export', requireAuth, requireVerification, async (req, res) 
                     })),
                 following: following
                     .filter(s => s.followeeId)
-                    .map(s => ({
-                        username:    s.followeeId.username,
-                        displayName: s.followeeId.displayName,
-                    })),
+                    .map(s => ({ username: s.followeeId.username, displayName: s.followeeId.displayName })),
+                followers: followers
+                    .filter(s => s.followerId)
+                    .map(s => ({ username: s.followerId.username, displayName: s.followerId.displayName })),
+                comments: comments
+                    .filter(c => c.bucketId)
+                    .map(c => ({ bucketName: c.bucketId.name, body: c.body, createdAt: c.createdAt, isEdited: c.isEdited })),
+                ratings: ratings
+                    .filter(r => r.bucketId)
+                    .map(r => ({ bucketName: r.bucketId.name, stars: r.stars, createdAt: r.createdAt })),
+                bucketViews: views
+                    .filter(v => v.bucketId)
+                    .map(v => ({ bucketName: v.bucketId.name, viewedAt: v.createdAt })),
+                bucketShares: shares
+                    .filter(s => s.bucketId)
+                    .map(s => ({ bucketName: s.bucketId.name, sharedAt: s.createdAt })),
+                linkClicks: linkClicks.map(c => ({ href: c.href, domain: c.domain, clickedAt: c.createdAt })),
+                notifications: notifications.map(n => ({ type: n.type, data: n.data, read: n.read, createdAt: n.createdAt })),
+                reports: reports.map(r => ({ reason: r.reason, detail: r.detail, status: r.status, createdAt: r.createdAt })),
+                blocks: blocks
+                    .filter(b => b.blockedId)
+                    .map(b => ({ username: b.blockedId.username, blockedAt: b.createdAt })),
+                blockedBy: blocked
+                    .filter(b => b.blockerId)
+                    .map(b => ({ username: b.blockerId.username })),
+                transactions: transactions.map(t => ({ type: t.type, amount: t.amount, createdAt: t.createdAt })),
+                directMessages: conversations
+                    .map(c => {
+                        const other = c.participants.find(p => p._id.toString() !== userId.toString());
+                        return {
+                            with:     other?.username ?? 'unknown',
+                            messages: messagesByConv[c._id.toString()] || [],
+                        };
+                    }),
             };
 
             const buffer = Buffer.from(JSON.stringify(payload, null, 2));
@@ -1625,7 +1682,7 @@ app.delete('/api/user/account', requireAuth, async (req, res) => {
 
 app.patch('/api/user/settings', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { isMatureGated, showActivityStatus, showGrabbedBuckets, whoCanMessage, accountVisibility } = req.body;
+        const { isMatureGated, showActivityStatus, showGrabbedBuckets, whoCanMessage, accountVisibility, allowComments, allowGrabs } = req.body;
         const update = {};
         if (isMatureGated !== undefined) update.isMatureGated = !!isMatureGated;
         if (showActivityStatus  !== undefined) update['privacy.showActivityStatus']  = !!showActivityStatus;
@@ -1642,6 +1699,8 @@ app.patch('/api/user/settings', requireAuth, requireVerification, async (req, re
                 return res.status(400).json({ error: 'Invalid accountVisibility value' });
             update['privacy.accountVisibility'] = accountVisibility;
         }
+        if (allowComments !== undefined) update['commentDefaults.allowComments'] = !!allowComments;
+        if (allowGrabs    !== undefined) update['commentDefaults.allowGrabs']    = !!allowGrabs;
         if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No valid fields provided' });
         await User.findByIdAndUpdate(req.user._id, update);
         res.json({ ok: true });
@@ -2597,6 +2656,13 @@ app.delete('/api/buckets/grab/:sourceBucketId', requireAuth, requireVerification
     }
 });
 
+const BOT_UA_RE = /bot|crawl|slurp|spider|mediapartners|facebookexternalhit|whatsapp|twitterbot|linkedinbot|embedly|quora|showyoubot|outbrain|pinterest|vkShare|W3C_Validator|headless|python-requests|node-fetch|axios|java\/|curl\/|wget\//i;
+
+function isBot(req) {
+    const ua = req.headers['user-agent'] || '';
+    return BOT_UA_RE.test(ua);
+}
+
 // Increment viewCount (and directViewCount when source !== 'explore') for a bucket,
 // deduplicating permanently by userId (logged-in) or IP (anon).
 // isOwner check must be done by the caller before invoking this.
@@ -2610,7 +2676,7 @@ async function trackBucketView(bucketId, userId, ip, source) {
         const exists = await BucketView.exists({ bucketId, userId });
         if (!exists) {
             await BucketView.create({ bucketId, userId, ip: null });
-            await Bucket.findByIdAndUpdate(bucketId, { $inc: inc }, { timestamps: false });
+            await Bucket.findByIdAndUpdate(bucketId, { $inc: { ...inc, authViewCount: 1 } }, { timestamps: false });
         }
     } else {
         const exists = await BucketView.exists({ bucketId, ip });
@@ -3901,7 +3967,7 @@ app.get('/settings', anonymousAuth, requireNonAdmin, (req, res) => {
 const SETTINGS_SECTIONS = [
     { section: 'account',       title: 'Account'       },
     { section: 'privacy',       title: 'Privacy'       },
-    { section: 'content',       title: 'Content'       },
+    // 'content' is handled separately below (needs categories data)
     { section: 'notifications', title: 'Notifications' },
     { section: 'monetization',  title: 'Monetization'  },
     { section: 'integrations',  title: 'Integrations'  },
@@ -4039,6 +4105,65 @@ app.patch('/api/user/language', requireAuth, async (req, res) => {
 const _categoriesJson  = JSON.parse(readFileSync(path.join(__dirname, 'public/data/categories.json'), 'utf8'));
 const VALID_CATEGORIES = new Set(['', ..._categoriesJson.categories.map(c => c.value), ..._categoriesJson.adultCategories.map(c => c.value)]);
 const ADULT_CATEGORIES = new Set(_categoriesJson.adultCategories.map(c => c.value));
+
+// Settings — content section (needs categories data, handled separately from the generic loop)
+app.get('/settings/content', anonymousAuth, requireNonAdmin, (req, res) => {
+    const user = req.user ?? null;
+    const showAdult = user && !user.isAnonymous && user.isMatureGated === false;
+    const categories = showAdult
+        ? [..._categoriesJson.categories, ..._categoriesJson.adultCategories]
+        : _categoriesJson.categories;
+    res.render('settings-content', {
+        title: 'Content',
+        page: 'settings',
+        settingsSection: 'content',
+        user,
+        categories,
+    });
+});
+
+// POST /api/user/muted-tags — add a single muted tag
+const MUTED_TAG_RE = /^[a-z0-9_-]{1,30}$/;
+app.post('/api/user/muted-tags', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const raw = (req.body.tag ?? '').trim().toLowerCase().replace(/^#+/, '');
+        if (!MUTED_TAG_RE.test(raw)) return res.status(400).json({ error: 'Invalid tag. Use letters, numbers, - and _ only (max 30 chars).' });
+        const user = await User.findById(req.user._id).select('mutedTags');
+        if ((user.mutedTags || []).length >= 50) return res.status(400).json({ error: 'You can mute up to 50 tags.' });
+        if ((user.mutedTags || []).includes(raw)) return res.json({ ok: true, tag: raw });
+        await User.findByIdAndUpdate(req.user._id, { $addToSet: { mutedTags: raw } });
+        res.json({ ok: true, tag: raw });
+    } catch (err) {
+        console.error('Muted tags add error:', err);
+        res.status(500).json({ error: 'Failed to mute tag' });
+    }
+});
+
+// DELETE /api/user/muted-tags/:tag — remove a single muted tag
+app.delete('/api/user/muted-tags/:tag', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const tag = (req.params.tag ?? '').trim().toLowerCase().replace(/^#+/, '');
+        await User.findByIdAndUpdate(req.user._id, { $pull: { mutedTags: tag } });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Muted tags remove error:', err);
+        res.status(500).json({ error: 'Failed to unmute tag' });
+    }
+});
+
+// PATCH /api/user/muted-topics — replace the full muted-topics list
+app.patch('/api/user/muted-topics', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const topics = Array.isArray(req.body.topics) ? req.body.topics : [];
+        const invalid = topics.filter(t => !VALID_CATEGORIES.has(t) || t === '');
+        if (invalid.length) return res.status(400).json({ error: 'Invalid topic value(s)' });
+        await User.findByIdAndUpdate(req.user._id, { mutedTopics: topics });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Muted topics update error:', err);
+        res.status(500).json({ error: 'Failed to update muted topics' });
+    }
+});
 app.patch('/api/user/category', requireAuth, async (req, res) => {
     try {
         const category = (req.body.category ?? '').trim();
@@ -5193,8 +5318,8 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
         const ratingAvg      = ratingCount > 0 ? Math.round((bucket.ratingSum / ratingCount) * 10) / 10 : null;
         const commentCount   = await BucketComment.countDocuments({ bucketId, deletedAt: null });
 
-        // Track view (fire-and-forget, skip owner)
-        if (!isOwner) {
+        // Track view (fire-and-forget, skip owner and bots)
+        if (!isOwner && !isBot(req)) {
             const userId = (req.user && !req.user.isAnonymous) ? req.user._id : null;
             const viewSource = req.query.src === 'explore' ? 'explore' : req.query.src === 'showroom' ? 'showroom' : 'direct';
             trackBucketView(bucketId, userId, req.ip, viewSource).catch(() => {});

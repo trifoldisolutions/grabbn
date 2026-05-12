@@ -1,5 +1,5 @@
 # Grabbn Partnership Program — Implementation Plan
-Last updated: 2026-04-22
+Last updated: 2026-05-11
 
 ---
 
@@ -122,6 +122,8 @@ For a curious visitor, in this order:
 - Admin grant/revoke endpoints exist at `server/routes/admin/partners.js` — functional but missing email notifications
 - Email system live via **Resend** (`server/utils/email.js`) — OTP, password reset, account lifecycle emails all implemented
 - Partner-gated UI controls built: ads toggle, monetization toggle, promote button
+- **View tracking** — `BucketView` records per unique viewer (userId or IP); bot/datacenter IPs filtered via user-agent check before recording
+- **`authViewCount`** — new field on the Bucket model; incremented only for logged-in viewers. This is the canonical metric for the partnership program. Anonymous/bot views are still tracked in `viewCount` for internal use but excluded from partnership calculations.
 
 ### Still to build
 - **`PartnerApplication` model** — fields: `userId`, `status` (pending/approved/rejected), `submittedAt`, `reviewedAt`, `reviewedBy`, `rejectionReason`, `pitch`, `idFileRef`, `selfieFileRef`, `claimedAccounts[]` (`{ email, phone, bucketOwnerIds[3] }`)
@@ -159,7 +161,7 @@ For a curious visitor, in this order:
 
 ### Phase 3 — Monetization (deferred)
 - [ ] Promote button modal flow (tier selection + payment)
-- [ ] Ad revenue tracking per bucket
+- [ ] Ad revenue tracking per bucket — use `authViewCount` as the basis, not `viewCount`
 - [ ] Stripe Connect integration for partner payouts
 
 ---

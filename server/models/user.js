@@ -115,6 +115,15 @@ const userSchema = new mongoose.Schema(
       accountVisibility:  { type: String, enum: ['public', 'unlisted', 'private'], default: 'public' },
       whoCanMessage:      { type: [String], default: ['everyone'] },
     },
+    // Tags (without #) the user wants hidden from their feed and search
+    mutedTags:   { type: [String], default: [] },
+    // Topic/category values the user wants hidden from their feed
+    mutedTopics: { type: [String], default: [] },
+    // Default interaction settings applied to newly created buckets
+    commentDefaults: {
+      allowComments: { type: Boolean, default: true },
+      allowGrabs:    { type: Boolean, default: true },
+    },
     // Dedicated token embedded in the bookmarklet so the popup can authenticate
     // without relying on third-party cookies (blocked by many modern browsers).
     bookmarkletToken: { type: String, sparse: true, index: true },
