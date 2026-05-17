@@ -12,6 +12,7 @@ import Block from '../models/block.js';
 import { anonymousAuth, requireVerification } from '../middleware/anonymousAuth.js';
 import { pushNotification } from '../ws.js';
 import { parseAndResolveEntities, fetchBucketSnapshot, buildSnapshot } from '../utils/entityParser.js';
+import { maybeSendNotificationEmail } from '../utils/email.js';
 
 // mergeParams: true is required so `:id` from the parent mount
 // (/api/buckets/:id/comments) is visible inside this router.
@@ -39,23 +40,14 @@ async function sendMentionNotifications(comment, bucket, commenter) {
             // Skip self-mention
             if (commenter.username && entity.value.toLowerCase() === commenter.username.toLowerCase()) continue;
 
-            const mentioned = await User.findOne({ username: entity.value }).select('_id').lean();
+            const mentioned = await User.findOne({ username: entity.value }).select('_id notificationPrefs').lean();
             if (!mentioned) continue;
+            if (mentioned.notificationPrefs?.comment_mention === false) continue;
 
-            await Notification.create({
-                userId: mentioned._id,
-                type:   'comment_mention',
-                data:   {
-                    commentId:         comment._id,
-                    bucketId:          bucket._id,
-                    bucketName:        bucket.name,
-                    commenterUsername: commenter.username || '',
-                    commenterAvatar:   commenter.avatar   || '',
-                    snippet:           comment.body.slice(0, 100),
-                },
-            });
-
+            const _cmData = { commentId: comment._id, bucketId: bucket._id, bucketName: bucket.name, commenterUsername: commenter.username || '', commenterAvatar: commenter.avatar || '', snippet: comment.body.slice(0, 100) };
+            await Notification.create({ userId: mentioned._id, type: 'comment_mention', data: _cmData });
             pushNotification(String(mentioned._id), { type: 'new_notification' });
+            maybeSendNotificationEmail(mentioned._id, 'comment_mention', _cmData).catch(() => {});
         }
     } catch (err) {
         console.error('[bucketComments] sendMentionNotifications error:', err);
@@ -81,6 +73,9 @@ async function sendBucketTagNotifications(comment, commenter) {
 
             // Skip if commenter is the bucket owner (no self-notification)
             if (taggedBucket.userId.equals(commenter._id)) continue;
+
+            const bucketOwner = await User.findById(taggedBucket.userId).select('notificationPrefs').lean();
+            if (bucketOwner?.notificationPrefs?.bucket_tagged === false) continue;
 
             await Notification.create({
                 userId: taggedBucket.userId,
@@ -111,19 +106,13 @@ async function sendReplyNotification(replyComment, parentCommentId, bucket, repl
         // Skip self-reply
         if (parent.userId.equals(replier._id)) return;
 
-        await Notification.create({
-            userId: parent.userId,
-            type:   'comment_reply',
-            data:   {
-                commentId:      replyComment._id,
-                bucketId:       bucket._id,
-                bucketName:     bucket.name,
-                replierUsername: replier.username || '',
-                replierAvatar:   replier.avatar   || '',
-                snippet:         replyComment.body.slice(0, 100),
-            },
-        });
+        const parentUser = await User.findById(parent.userId).select('notificationPrefs').lean();
+        if (parentUser?.notificationPrefs?.comment_reply === false) return;
+
+        const _crData = { commentId: replyComment._id, bucketId: bucket._id, bucketName: bucket.name, replierUsername: replier.username || '', replierAvatar: replier.avatar || '', snippet: replyComment.body.slice(0, 100) };
+        await Notification.create({ userId: parent.userId, type: 'comment_reply', data: _crData });
         pushNotification(String(parent.userId), { type: 'new_notification' });
+        maybeSendNotificationEmail(parent.userId, 'comment_reply', _crData).catch(() => {});
     } catch (err) {
         console.error('[bucketComments] sendReplyNotification error:', err);
     }
@@ -134,6 +123,9 @@ async function sendAgreementNotification(comment, bucket, agreer) {
     try {
         // Skip self-agree (shouldn't happen, but guard anyway)
         if (comment.userId.equals(agreer._id)) return;
+
+        const commenter = await User.findById(comment.userId).select('notificationPrefs').lean();
+        if (commenter?.notificationPrefs?.comment_agreed === false) return;
 
         await Notification.create({
             userId: comment.userId,

@@ -22,7 +22,7 @@ import Subscription from './server/models/subscription.js';
 import { buildRepositories } from './server/jobs/buildRepositories.js';
 import { buildExploreScores } from './server/jobs/buildExploreScores.js';
 import { FILTER_PUBLIC } from './server/utils/filters.js';
-import { sendOtpEmail, sendDataExportEmail, sendAccountDeletionEmail } from './server/utils/email.js';
+import { sendOtpEmail, sendDataExportEmail, sendAccountDeletionEmail, maybeSendNotificationEmail } from './server/utils/email.js';
 import { translate } from './server/i18n.js';
 import { validateLinks } from './server/utils/urlSafety.js';
 import { fetchAndStoreImage, deleteR2Images, uploadImageToR2, uploadFileToR2 } from './server/utils/r2.js';
@@ -1682,7 +1682,7 @@ app.delete('/api/user/account', requireAuth, async (req, res) => {
 
 app.patch('/api/user/settings', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { isMatureGated, showActivityStatus, showGrabbedBuckets, whoCanMessage, accountVisibility, allowComments, allowGrabs } = req.body;
+        const { isMatureGated, showActivityStatus, showGrabbedBuckets, whoCanMessage, accountVisibility, allowComments, allowGrabs, newsletterSubscribed } = req.body;
         const update = {};
         if (isMatureGated !== undefined) update.isMatureGated = !!isMatureGated;
         if (showActivityStatus  !== undefined) update['privacy.showActivityStatus']  = !!showActivityStatus;
@@ -1699,8 +1699,9 @@ app.patch('/api/user/settings', requireAuth, requireVerification, async (req, re
                 return res.status(400).json({ error: 'Invalid accountVisibility value' });
             update['privacy.accountVisibility'] = accountVisibility;
         }
-        if (allowComments !== undefined) update['commentDefaults.allowComments'] = !!allowComments;
-        if (allowGrabs    !== undefined) update['commentDefaults.allowGrabs']    = !!allowGrabs;
+        if (allowComments        !== undefined) update['commentDefaults.allowComments'] = !!allowComments;
+        if (allowGrabs           !== undefined) update['commentDefaults.allowGrabs']    = !!allowGrabs;
+        if (newsletterSubscribed !== undefined) update.newsletterSubscribed = !!newsletterSubscribed;
         if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No valid fields provided' });
         await User.findByIdAndUpdate(req.user._id, update);
         res.json({ ok: true });
@@ -1762,7 +1763,14 @@ async function fanOutGrabbedBucketUpdated(bucket, curatorUsername) {
         }).select('userId').lean();
 
         const notifiedSet = new Set(alreadyNotified.map(n => String(n.userId)));
-        const toNotify    = grabberIds.filter(id => !notifiedSet.has(String(id)));
+        const eligible    = grabberIds.filter(id => !notifiedSet.has(String(id)));
+        if (!eligible.length) return;
+
+        const opted = await User.find({
+            _id: { $in: eligible },
+            'notificationPrefs.grabbed_bucket_updated': { $ne: false },
+        }).select('_id').lean();
+        const toNotify = opted.map(u => u._id);
         if (!toNotify.length) return;
 
         const docs = await Notification.insertMany(
@@ -1789,15 +1797,28 @@ async function fanOutNewBucketPublished(curatorId, curatorUsername, bucketId, bu
     try {
         const followers = await Subscription.find({ followeeId: curatorId }).select('followerId').lean();
         if (!followers.length) return;
+
+        const allFollowerIds = followers.map(f => f.followerId);
+        const opted = await User.find({
+            _id: { $in: allFollowerIds },
+            'notificationPrefs.new_bucket_published': { $ne: false },
+        }).select('_id').lean();
+        const filteredIds = opted.map(u => u._id);
+        if (!filteredIds.length) return;
+
+        const emailData = { curatorId, curatorUsername, bucketId, bucketName };
         const docs = await Notification.insertMany(
-            followers.map(f => ({
-                userId: f.followerId,
+            filteredIds.map(userId => ({
+                userId,
                 type:   'new_bucket_published',
-                data:   { curatorId, curatorUsername, bucketId, bucketName },
+                data:   emailData,
             })),
             { ordered: false }
         );
-        for (const n of docs) pushNotification(n.userId, { type: 'new_notification', notification: n });
+        for (const n of docs) {
+            pushNotification(n.userId, { type: 'new_notification', notification: n });
+            maybeSendNotificationEmail(n.userId, 'new_bucket_published', emailData).catch(() => {});
+        }
     } catch (err) {
         console.error('[notif] new_bucket_published fan-out:', err);
     }
@@ -1806,7 +1827,7 @@ async function fanOutNewBucketPublished(curatorId, curatorUsername, bucketId, bu
 // Create a new bucket
 app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, draft, repoIds } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, allowComments, sourceUrl, thumbnail, links, draft, repoIds } = req.body;
 
         if (!name || typeof name !== 'string') {
             return res.status(400).json({ error: 'Bucket name is required' });
@@ -1854,10 +1875,11 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             isPublic:    vis === 'public',
             isPaywalled: !!monetized,
             price:       Number(price) || 0,
-            mature:      !!mature,
-            sourceUrl:   sourceUrl || '',
-            isDraft:     !!draft,
-            repoIds:     resolvedRepoIds,
+            mature:        !!mature,
+            allowComments: allowComments !== false,
+            sourceUrl:     sourceUrl || '',
+            isDraft:       !!draft,
+            repoIds:       resolvedRepoIds,
         });
 
         const bucketId = String(bucket._id);
@@ -1919,7 +1941,7 @@ app.put('/api/buckets/:oldName', requireAuth, requireVerification, async (req, r
 // Full bucket update (used by profile edit modal)
 app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, tags, visibility, monetized, price, mature, sourceUrl, thumbnail, links, isDraft, repoIds, removeRepoId, addRepoIds } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, allowComments, sourceUrl, thumbnail, links, isDraft, repoIds, removeRepoId, addRepoIds } = req.body;
 
         // Fetch current state to detect meaningful changes before building the update
         const current = await Bucket.findOne({ _id: req.params.id, userId: req.user._id });
@@ -1929,7 +1951,8 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         if (name        !== undefined) update.name        = name;
         if (description !== undefined) update.description = String(description || '').slice(0, 256);
         if (tags        !== undefined) update.hashtags    = Array.isArray(tags) ? tags.slice(0, 8) : [];
-        if (mature      !== undefined) update.mature      = !!mature;
+        if (mature         !== undefined) update.mature         = !!mature;
+        if (allowComments  !== undefined) update.allowComments  = allowComments !== false;
         if (repoIds !== undefined) {
             if (!Array.isArray(repoIds) || repoIds.length === 0) {
                 update.repoIds = [];
@@ -2620,16 +2643,17 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
 
         // Notify the curator (skip self-grabs)
         if (!bucket.userId._id.equals(req.user._id)) {
-            Notification.create({
-                userId: bucket.userId._id,
-                type: 'bucket_grabbed',
-                data: {
-                    grabberId:       req.user._id,
-                    grabberUsername: req.user.username || '',
-                    bucketId:        bucket._id,
-                    bucketName:      bucket.name,
-                },
-            }).then(n => pushNotification(bucket.userId._id, { type: 'new_notification', notification: n }))
+            const _bgData = { grabberId: req.user._id, grabberUsername: req.user.username || '', bucketId: bucket._id, bucketName: bucket.name };
+            User.findById(bucket.userId._id).select('notificationPrefs').lean()
+              .then(owner => {
+                  if (owner?.notificationPrefs?.bucket_grabbed === false) return null;
+                  return Notification.create({ userId: bucket.userId._id, type: 'bucket_grabbed', data: _bgData });
+              })
+              .then(n => {
+                  if (!n) return;
+                  pushNotification(bucket.userId._id, { type: 'new_notification', notification: n });
+                  maybeSendNotificationEmail(bucket.userId._id, 'bucket_grabbed', _bgData).catch(() => {});
+              })
               .catch(err => console.error('[notif] bucket_grabbed:', err));
         }
 
@@ -3154,6 +3178,14 @@ app.get('/api/showroom', anonymousAuth, async (req, res) => {
         let buckets;
         let isPersonalized = false;
 
+        const muteFilter = {};
+        if (req.user?._id && !req.user.isAnonymous) {
+            const mt = req.user.mutedTags   || [];
+            const mp = req.user.mutedTopics || [];
+            if (mt.length) muteFilter.hashtags = { $nin: mt };
+            if (mp.length) muteFilter.topic    = { $nin: mp };
+        }
+
         if (req.user?._id && !req.user.isAnonymous) {
             // Resolve followed curator IDs
             const subs = await Subscription.find({ followerId: req.user._id }).select('followeeId').lean();
@@ -3178,7 +3210,8 @@ app.get('/api/showroom', anonymousAuth, async (req, res) => {
                     $or: orClauses,
                     ...FILTER_PUBLIC,
                     isDraft: { $ne: true },
-                    name:    { $ne: 'Singletons' }
+                    name:    { $ne: 'Singletons' },
+                    ...muteFilter
                 })
                     .sort({ updatedAt: -1 })
                     .skip(skip)
@@ -3251,7 +3284,7 @@ app.get('/api/showroom', anonymousAuth, async (req, res) => {
 
         // Fallback for logged-in users with no follows/grabs yet
         if (!isPersonalized) {
-            buckets = await Bucket.find({ ...FILTER_PUBLIC, isDraft: { $ne: true }, name: { $ne: 'Singletons' } })
+            buckets = await Bucket.find({ ...FILTER_PUBLIC, isDraft: { $ne: true }, name: { $ne: 'Singletons' }, ...muteFilter })
                 .sort({ exploreScore: -1 })
                 .skip(skip)
                 .limit(limit + 1)
@@ -3342,12 +3375,21 @@ app.get('/api/explore', anonymousAuth, async (req, res) => {
         const excludeIds = (req.query.excludeIds || '').split(',').filter(Boolean).slice(0, 200);
 
         // Phase 1: fetch candidates sorted by pre-computed exploreScore
+        const exploreMuteFilter = {};
+        if (req.user?._id && !req.user.isAnonymous) {
+            const mt = req.user.mutedTags   || [];
+            const mp = req.user.mutedTopics || [];
+            if (mt.length) exploreMuteFilter.hashtags = { $nin: mt };
+            if (mp.length) exploreMuteFilter.topic    = { $nin: mp };
+        }
+
         const candidates = await Bucket.find({
             ...FILTER_PUBLIC,
             isDraft:     { $ne: true },
             isPaywalled: { $ne: true },
             name:        { $ne: 'Singletons' },
-            thumbnail:   { $exists: true, $ne: '' }
+            thumbnail:   { $exists: true, $ne: '' },
+            ...exploreMuteFilter
         })
             .sort({ exploreScore: -1 })
             .skip(skip)
@@ -3704,19 +3746,16 @@ app.post('/api/users/:anonymousId/subscribe', requireAuth, requireVerification, 
         await Subscription.create({ followerId: req.user._id, followeeId: curator._id });
 
         // Delete any previous follow notification from this same person before inserting a fresh one
-        Notification.findOneAndDelete({ userId: curator._id, type: 'new_follower', 'data.followerId': req.user._id })
-            .then(() => Notification.create({
-                userId: curator._id,
-                type: 'new_follower',
-                data: {
-                    followerId:          req.user._id,
-                    followerAnonymousId: req.user.anonymousId || '',
-                    followerUsername:    req.user.username || '',
-                    followerAvatar:      req.user.avatar   || '',
-                },
-            }))
-            .then(n => pushNotification(curator._id, { type: 'new_notification', notification: n }))
-            .catch(err => console.error('[notif] new_follower:', err));
+        if (curator.notificationPrefs?.new_follower !== false) {
+            const _nfData = { followerId: req.user._id, followerAnonymousId: req.user.anonymousId || '', followerUsername: req.user.username || '', followerAvatar: req.user.avatar || '' };
+            Notification.findOneAndDelete({ userId: curator._id, type: 'new_follower', 'data.followerId': req.user._id })
+                .then(() => Notification.create({ userId: curator._id, type: 'new_follower', data: _nfData }))
+                .then(n => {
+                    pushNotification(curator._id, { type: 'new_notification', notification: n });
+                    maybeSendNotificationEmail(curator._id, 'new_follower', _nfData).catch(() => {});
+                })
+                .catch(err => console.error('[notif] new_follower:', err));
+        }
 
         res.status(201).json({ success: true });
     } catch (err) {
@@ -3991,6 +4030,26 @@ function checkUsernameRateLimit(user) {
     const now = Date.now();
     const log = (user.usernameChangeLog || []).map(d => new Date(d).getTime());
     for (const { count, windowMs } of USERNAME_LIMITS) {
+        const inWindow = log.filter(t => now - t < windowMs).sort((a, b) => a - b);
+        if (inWindow.length >= count) {
+            return { blocked: true, availableAt: new Date(inWindow[0] + windowMs) };
+        }
+    }
+    return { blocked: false };
+}
+
+const EMAIL_CHANGE_LIFETIME_LIMIT = 3;
+const EMAIL_LIMITS = [
+    { count: 1, windowMs: 24 * 60 * 60 * 1000,      label: 'daily'   },
+    { count: 2, windowMs: 7  * 24 * 60 * 60 * 1000, label: 'weekly'  },
+    { count: 3, windowMs: 30 * 24 * 60 * 60 * 1000, label: 'monthly' },
+];
+const EMAIL_REUSE_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
+
+function checkEmailRateLimit(user) {
+    const now = Date.now();
+    const log = (user.emailChangeLog || []).map(d => new Date(d).getTime());
+    for (const { count, windowMs } of EMAIL_LIMITS) {
         const inWindow = log.filter(t => now - t < windowMs).sort((a, b) => a - b);
         if (inWindow.length >= count) {
             return { blocked: true, availableAt: new Date(inWindow[0] + windowMs) };
@@ -4319,7 +4378,7 @@ app.patch('/api/user/profile', requireAuth, async (req, res) => {
     }
 });
 
-// PATCH /api/user/email — change email address (requires current password; triggers new OTP)
+// PATCH /api/user/email — request email change (stores pendingEmail, sends OTP to new address)
 app.patch('/api/user/email', requireAuth, async (req, res) => {
     try {
         const { newEmail, currentPassword } = req.body;
@@ -4328,24 +4387,121 @@ app.patch('/api/user/email', requireAuth, async (req, res) => {
         if (!emailRegex.test(newEmail)) return res.status(400).json({ error: 'Invalid email format' });
         const normalized = newEmail.toLowerCase().trim();
         if (normalized === req.user.email) return res.status(400).json({ error: 'This is already your email address' });
-        const user = await User.findById(req.user._id).select('+password');
+        if ((req.user.emailChangeLog || []).length >= EMAIL_CHANGE_LIFETIME_LIMIT) {
+            return res.status(403).json({ error: 'You have reached the lifetime limit of 3 email changes.' });
+        }
+        const rateLimit = checkEmailRateLimit(req.user);
+        if (rateLimit.blocked) {
+            const formatted = rateLimit.availableAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            return res.status(429).json({ error: `You've hit an email change limit. Try again on ${formatted}.` });
+        }
+        const normalizedHash = createHash('sha256').update(normalized).digest('hex');
+        const recentHistory = (req.user.emailHistory || []).filter(e => Date.now() - new Date(e.changedAt).getTime() < EMAIL_REUSE_WINDOW_MS);
+        if (recentHistory.some(e => e.hash === normalizedHash)) {
+            return res.status(409).json({ error: 'You cannot reuse a recent email address within 90 days.' });
+        }
+        const user = await User.findById(req.user._id).select('+password +pendingEmailOtpSentAt');
         if (!user) return res.status(404).json({ error: 'User not found' });
         const valid = await user.comparePassword(currentPassword);
         if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
-        const taken = await User.findOne({ email: normalized, _id: { $ne: req.user._id } });
+        const isAdmin = ['moderator', 'superadmin'].includes(req.user.role);
+        const roleFilter = isAdmin ? { role: { $in: ['moderator', 'superadmin'] } } : { role: 'user' };
+        const taken = await User.findOne({ email: normalized, _id: { $ne: req.user._id }, ...roleFilter });
         if (taken) return res.status(409).json({ error: 'Email is already in use' });
+        if (user.pendingEmailOtpSentAt && Date.now() - new Date(user.pendingEmailOtpSentAt).getTime() < 60_000) {
+            return res.status(429).json({ error: 'Please wait a minute before requesting another code' });
+        }
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-        user.email = normalized;
-        user.isEmailVerified = false;
-        user.otpCode = createHash('sha256').update(code).digest('hex');
-        user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-        user.otpSentAt = new Date();
+        user.pendingEmail = normalized;
+        user.pendingEmailOtp = createHash('sha256').update(code).digest('hex');
+        user.pendingEmailOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
+        user.pendingEmailOtpSentAt = new Date();
         await user.save();
         await sendOtpEmail(normalized, code);
-        res.json({ ok: true, requiresOtp: true, email: normalized });
+        res.json({ ok: true });
     } catch (err) {
         console.error('Email update error:', err);
         res.status(500).json({ error: 'Failed to update email' });
+    }
+});
+
+// POST /api/user/email/verify — verify OTP and commit the email change
+app.post('/api/user/email/verify', requireAuth, async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (!code) return res.status(400).json({ error: 'Verification code is required' });
+        const hashedCode = createHash('sha256').update(code.trim()).digest('hex');
+        const user = await User.findById(req.user._id).select('+pendingEmailOtp +pendingEmailOtpExpires');
+        if (!user?.pendingEmail) return res.status(400).json({ error: 'No pending email change found' });
+        if (!user.pendingEmailOtp || user.pendingEmailOtp !== hashedCode) return res.status(400).json({ error: 'Invalid or expired code. Please try again.' });
+        if (!user.pendingEmailOtpExpires || user.pendingEmailOtpExpires < new Date()) return res.status(400).json({ error: 'Invalid or expired code. Please try again.' });
+        const newEmail = user.pendingEmail;
+        const oldEmailHash = createHash('sha256').update(user.email).digest('hex');
+        const now = new Date();
+        // Record old email in history (prune entries older than reuse window)
+        const pruned = (user.emailHistory || []).filter(e => Date.now() - new Date(e.changedAt).getTime() < EMAIL_REUSE_WINDOW_MS);
+        pruned.push({ hash: oldEmailHash, changedAt: now });
+        user.emailHistory = pruned;
+        user.emailChangeLog = [...(user.emailChangeLog || []), now];
+        user.email = newEmail;
+        user.isEmailVerified = true;
+        user.pendingEmail = null;
+        user.pendingEmailOtp = undefined;
+        user.pendingEmailOtpExpires = undefined;
+        user.pendingEmailOtpSentAt = undefined;
+        await user.save();
+        res.json({ ok: true, email: newEmail });
+    } catch (err) {
+        console.error('Email verify error:', err);
+        res.status(500).json({ error: 'Verification failed. Please try again.' });
+    }
+});
+
+// POST /api/user/email/resend — resend OTP to pending email
+app.post('/api/user/email/resend', requireAuth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select('+pendingEmailOtp +pendingEmailOtpExpires +pendingEmailOtpSentAt');
+        if (!user?.pendingEmail) return res.status(400).json({ error: 'No pending email change' });
+        if (user.pendingEmailOtpSentAt && Date.now() - new Date(user.pendingEmailOtpSentAt).getTime() < 60_000) {
+            return res.status(429).json({ error: 'Please wait a minute before requesting another code' });
+        }
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        user.pendingEmailOtp = createHash('sha256').update(code).digest('hex');
+        user.pendingEmailOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
+        user.pendingEmailOtpSentAt = new Date();
+        await user.save();
+        await sendOtpEmail(user.pendingEmail, code);
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Email resend error:', err);
+        res.status(500).json({ error: 'Failed to resend code' });
+    }
+});
+
+// PATCH /api/user/email-notification-prefs — per-type email notification toggles
+const VALID_EMAIL_NOTIF_TYPES = new Set([
+    'new_follower', 'bucket_grabbed', 'bucket_unlocked', 'new_bucket_published',
+    'grabbed_bucket_updated', 'comment_mention', 'comment_reply', 'comment_agreed',
+    'bucket_tagged', 'new_dm',
+]);
+app.patch('/api/user/email-notification-prefs', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const prefs = req.body;
+        if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs)) {
+            return res.status(400).json({ error: 'Prefs must be an object' });
+        }
+        const update = {};
+        for (const [key, val] of Object.entries(prefs)) {
+            if (!VALID_EMAIL_NOTIF_TYPES.has(key)) return res.status(400).json({ error: `Unknown notification type: ${key}` });
+            if (typeof val !== 'boolean') return res.status(400).json({ error: `Value for ${key} must be a boolean` });
+            update[`emailNotificationPrefs.${key}`] = val;
+        }
+        if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No valid fields provided' });
+        await User.findByIdAndUpdate(req.user._id, { $set: update });
+        res.json({ ok: true });
+    } catch (err) {
+        console.error('Email notification prefs update error:', err);
+        res.status(500).json({ error: 'Failed to update email notification preferences' });
     }
 });
 
@@ -4624,6 +4780,12 @@ app.get('/api/search', anonymousAuth, async (req, res) => {
                 $or:     FILTER_PUBLIC.$or,
             };
             if (blockedByUserIds.length) bucketFilter.userId = { $nin: blockedByUserIds };
+            if (req.user && !req.user.isAnonymous) {
+                const mt = req.user.mutedTags   || [];
+                const mp = req.user.mutedTopics || [];
+                if (mt.length) bucketFilter.hashtags = { $nin: mt };
+                if (mp.length) bucketFilter.topic    = { $nin: mp };
+            }
 
             const found = await Bucket.find(bucketFilter)
             .select(BUCKET_SELECT)

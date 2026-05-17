@@ -413,6 +413,17 @@
                         </button>
                     </div>
 
+                    <!-- Allow comments -->
+                    <div class="flex items-center justify-between py-3.5 border-b border-silver-100">
+                        <div>
+                            <p class="text-base font-medium text-woodsmoke-800">Allow comments</p>
+                            <p class="text-sm text-woodsmoke-400 mt-0.5">Let others comment on this bucket</p>
+                        </div>
+                        <button id="commentsToggle" data-state="on" class="relative w-14 h-7 rounded-full bg-orchid-500 transition-colors shrink-0 focus:outline-none">
+                            <span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform translate-x-7"></span>
+                        </button>
+                    </div>
+
                     <!-- Promote this Bucket -->
                     <div class="py-3.5 border-b border-silver-100">
                         <button id="promoteBucketBtn" type="button" class="w-full h-10 flex items-center justify-center gap-2 rounded-lg border border-orchid-300 text-sm font-semibold text-orchid-600 hover:bg-orchid-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" disabled>
@@ -656,7 +667,8 @@
         visibility:  'public',
         ads:          true,  // platform runs ads by default; only partners can disable
         monetization: false,
-        mature:       false,
+        mature:         false,
+        allowComments:  true,
         thumbnail:    null, // { dataUrl, visible }
         repoIds:      [], // array of ObjectId strings for selected UserRepos
         _linkThumbTargetId: null,
@@ -853,6 +865,8 @@
     var monetizationAmountInput = document.getElementById('monetizationAmountInput');
     var monetizationFiatValue   = document.getElementById('monetizationFiatValue');
     var matureToggle            = document.getElementById('matureToggle');
+    var commentsToggle          = document.getElementById('commentsToggle');
+    var _defaultAllowComments   = <%- JSON.stringify(user && user.commentDefaults ? user.commentDefaults.allowComments !== false : true) %>;
     var isPartner = !!(user && user.isPartner);
 
     // ── Repo dropdown ─────────────────────────────────────────────────────────
@@ -1300,7 +1314,9 @@
         currentCurrency = 'EWL';
         currencyToggleBtn.textContent = 'EWL';
         monetizationFiatValue.textContent = '≈ $0.00 USD';
-        setToggle(matureToggle,       false);
+        setToggle(matureToggle,    false);
+        state.allowComments = _defaultAllowComments;
+        setToggle(commentsToggle, _defaultAllowComments);
 
         // Inputs
         newLinkTitle.value = '';
@@ -1387,12 +1403,13 @@
         if (state._editBucket && state._editBucketIsDraft) {
             // Persist the current form state back to the draft before closing
             var draftPayload = {
-                name:        nameInput.value.trim() || state._editBucket.name,
-                visibility:  state.visibility,
-                monetized:   state.monetization,
-                price:       priceAsEWL(),
-                mature:      state.mature,
-                tags:        state.tags,
+                name:          nameInput.value.trim() || state._editBucket.name,
+                visibility:    state.visibility,
+                monetized:     state.monetization,
+                price:         priceAsEWL(),
+                mature:        state.mature,
+                allowComments: state.allowComments,
+                tags:          state.tags,
                 description: descInput.value.trim(),
                 sourceUrl:   sourceUrlInput.value.trim(),
                 thumbnail:   state.thumbnail ? state.thumbnail.dataUrl : null,
@@ -1435,8 +1452,9 @@
         state._linkCountDelta   = 0;
         state.tags         = bucket.hashtags || [];
         state.monetization = !!bucket.isPaywalled;
-        state.mature       = !!bucket.mature;
-        state.thumbnail    = bucket.thumbnail ? { dataUrl: bucket.thumbnail, visible: true } : null;
+        state.mature         = !!bucket.mature;
+        state.allowComments  = bucket.allowComments !== false;
+        state.thumbnail      = bucket.thumbnail ? { dataUrl: bucket.thumbnail, visible: true } : null;
         state.repoIds      = Array.isArray(bucket.repoIds) ? bucket.repoIds.map(String) : [];
 
         // Capture visibility before resetUI overwrites state.visibility to 'public'
@@ -1458,7 +1476,8 @@
         if (state.monetization) monetizationAmountInput.value = bucket.price
             ? formatPriceDisplay(sanitisePriceRaw(String(bucket.price)))
             : '';
-        setToggle(matureToggle, state.mature);
+        setToggle(matureToggle,    state.mature);
+        setToggle(commentsToggle,  state.allowComments);
 
         // Set bucket name, description and source URL (resetUI clears them)
         nameInput.value = bucket.name;
@@ -1519,8 +1538,9 @@
             visibility:  bucketVisibility,
             monetized:   !!bucket.isPaywalled,
             price:       bucket.price || 0,
-            mature:      !!bucket.mature,
-            tags:        (bucket.hashtags || []).slice().sort().join('|'),
+            mature:        !!bucket.mature,
+            allowComments: bucket.allowComments !== false,
+            tags:          (bucket.hashtags || []).slice().sort().join('|'),
             links:       '',  // filled in after async link fetch
             thumbnail:   bucket.thumbnail || '',
             repoIds:     Array.isArray(bucket.repoIds) ? bucket.repoIds.map(String).sort().join('|') : ''
@@ -1931,6 +1951,11 @@
     matureToggle.addEventListener('click', function () {
         state.mature = !state.mature;
         setToggle(this, state.mature);
+    });
+
+    commentsToggle.addEventListener('click', function () {
+        state.allowComments = !state.allowComments;
+        setToggle(this, state.allowComments);
     });
 
     // ── Tags ──────────────────────────────────────────────────────────────────
@@ -2587,6 +2612,7 @@
                 state.monetization            === snap.monetized &&
                 priceAsEWL()                  === snap.price &&
                 state.mature                  === snap.mature &&
+                state.allowComments           === snap.allowComments &&
                 (state.repoIds || []).slice().sort().join('|') === snap.repoIds &&
                 currentTags                   === snap.tags &&
                 currentLinks                  === snap.links &&
@@ -2600,16 +2626,17 @@
         setLoading(true);
         try {
             var payload = {
-                name:        name,
-                visibility:  state.visibility,
-                monetized:   state.monetization,
-                price:       priceAsEWL(),
-                mature:      state.mature,
-                tags:        state.tags,
-                description: descInput.value.trim(),
-                sourceUrl:   sourceUrlInput.value.trim(),
-                thumbnail:   state.thumbnail ? state.thumbnail.dataUrl : null,
-                repoIds:     state.repoIds,
+                name:          name,
+                visibility:    state.visibility,
+                monetized:     state.monetization,
+                price:         priceAsEWL(),
+                mature:        state.mature,
+                allowComments: state.allowComments,
+                tags:          state.tags,
+                description:   descInput.value.trim(),
+                sourceUrl:     sourceUrlInput.value.trim(),
+                thumbnail:     state.thumbnail ? state.thumbnail.dataUrl : null,
+                repoIds:       state.repoIds,
                 isDraft:     false,
                 links:       state.links.slice().sort(function (a, b) {
                     if (a.pinned && !b.pinned) return -1;

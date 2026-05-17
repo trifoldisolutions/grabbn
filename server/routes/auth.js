@@ -94,6 +94,12 @@ function validatePassword(password) {
     return { valid: true };
 }
 
+// ========== ROLE HELPERS ==========
+
+function buildRoleFilter(isAdmin) {
+    return isAdmin ? { role: { $in: ['moderator', 'superadmin'] } } : { role: 'user' };
+}
+
 // ========== OTP HELPER ==========
 
 async function generateAndSendOtp(user) {
@@ -284,8 +290,8 @@ router.get('/google/callback', async (req, res) => {
             return setCookieAndRedirect(existingGoogle);
         }
 
-        // Case 2: email matches an existing registered account → link
-        const existingEmail = await User.findOne({ email: email.toLowerCase(), isAnonymous: false });
+        // Case 2: email matches an existing standard user account → link (Google OAuth is standard-only)
+        const existingEmail = await User.findOne({ email: email.toLowerCase(), isAnonymous: false, role: 'user' });
         if (existingEmail) {
             if (!await reactivateIfNeeded(existingEmail)) return;
             existingEmail.googleId = googleId;
@@ -376,8 +382,8 @@ router.post('/signup', async (req, res) => {
             return res.status(400).json({ error: 'Password must contain at least 2 special characters' });
         }
 
-        // Check if email already exists
-        const existingEmailUser = await User.findOne({ email: email.toLowerCase() });
+        // Check if email already exists among standard users (admins share a separate namespace)
+        const existingEmailUser = await User.findOne({ email: email.toLowerCase(), role: 'user' });
         if (existingEmailUser && !existingEmailUser.isAnonymous) {
             return res.status(409).json({ error: 'Email already registered' });
         }
@@ -445,7 +451,7 @@ router.post('/signup', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, isAdmin = false } = req.body;
 
         // Validation
         if (!email || !password) {
@@ -456,8 +462,8 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Invalid email format' });
         }
 
-        // Find user by email (include password field for verification)
-        const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+        // Find user by email within the correct role namespace
+        const user = await User.findOne({ email: email.toLowerCase(), ...buildRoleFilter(isAdmin) }).select('+password');
 
         if (!user) {
             return res.status(401).json({ error: "Invalid email or password. Can't log in? Try resetting your password or signing up." });
@@ -509,7 +515,7 @@ router.post('/login', async (req, res) => {
 // Verify OTP (completes login or signup)
 router.post('/verify-otp', async (req, res) => {
     try {
-        const { email, code } = req.body;
+        const { email, code, isAdmin = false } = req.body;
 
         if (!email || !code) {
             return res.status(400).json({ error: 'Email and code are required' });
@@ -525,7 +531,8 @@ router.post('/verify-otp', async (req, res) => {
             email: email.toLowerCase(),
             isAnonymous: false,
             otpCode: hashedCode,
-            otpExpires: { $gt: Date.now() }
+            otpExpires: { $gt: Date.now() },
+            ...buildRoleFilter(isAdmin),
         }).select('+otpCode +otpExpires +otpSentAt');
 
         if (!user) {
@@ -577,13 +584,13 @@ router.post('/verify-otp', async (req, res) => {
 // Resend OTP
 router.post('/resend-otp', async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, isAdmin = false } = req.body;
 
         if (!email || !validateEmail(email)) {
             return res.status(400).json({ error: 'A valid email is required' });
         }
 
-        const user = await User.findOne({ email: email.toLowerCase(), isAnonymous: false })
+        const user = await User.findOne({ email: email.toLowerCase(), isAnonymous: false, ...buildRoleFilter(isAdmin) })
             .select('+otpSentAt');
 
         // Always return success to prevent email enumeration
@@ -671,7 +678,8 @@ router.post('/forgot-password', async (req, res) => {
         // Always return success to prevent email enumeration
         const successMsg = 'If an account with that email exists, a reset link has been sent.';
 
-        const user = await User.findOne({ email: email.toLowerCase(), isAnonymous: false });
+        const { isAdmin = false } = req.body;
+        const user = await User.findOne({ email: email.toLowerCase(), isAnonymous: false, ...buildRoleFilter(isAdmin) });
         if (!user) {
             return res.json({ success: true, message: successMsg });
         }

@@ -15,10 +15,9 @@ const userSchema = new mongoose.Schema(
       default: true 
     },
     // For registered users
-    email: { 
-      type: String, 
+    email: {
+      type: String,
       sparse: true,
-      unique: true,
       lowercase: true,
       trim: true
     },
@@ -75,6 +74,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    pendingEmail:           { type: String, default: null },
+    pendingEmailOtp:        { type: String, select: false, default: null },
+    pendingEmailOtpExpires: { type: Date,   select: false, default: null },
+    pendingEmailOtpSentAt:  { type: Date,   select: false, default: null },
+    emailChangeLog: { type: [Date], default: [] },
+    emailHistory:   { type: [{ hash: String, changedAt: Date, _id: false }], default: [] },
     accountSuspendedAt: {
       type: Date,
       default: null
@@ -151,6 +156,18 @@ const userSchema = new mongoose.Schema(
       comment_reply:          { type: Boolean, default: true },
       comment_agreed:         { type: Boolean, default: true },
       new_dm:                 { type: Boolean, default: true },
+    },
+    emailNotificationPrefs: {
+      new_follower:           { type: Boolean, default: false },
+      bucket_grabbed:         { type: Boolean, default: false },
+      bucket_unlocked:        { type: Boolean, default: false },
+      new_bucket_published:   { type: Boolean, default: false },
+      grabbed_bucket_updated: { type: Boolean, default: false },
+      comment_mention:        { type: Boolean, default: false },
+      comment_reply:          { type: Boolean, default: false },
+      comment_agreed:         { type: Boolean, default: false },
+      bucket_tagged:          { type: Boolean, default: false },
+      new_dm:                 { type: Boolean, default: false },
     },
     // Account deletion grace period — set on voluntary deletion, cleared on reactivation
     deletedAt: { type: Date, default: null },

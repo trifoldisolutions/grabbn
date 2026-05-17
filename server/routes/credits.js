@@ -9,6 +9,7 @@ import { requireAuth } from '../middleware/anonymousAuth.js';
 import { TOPUP_PACKAGES, PLATFORM_CUT_RATIO, FRAUD_RULES } from '../config.js';
 import Notification from '../models/notification.js';
 import { pushNotification } from '../ws.js';
+import { maybeSendNotificationEmail } from '../utils/email.js';
 
 // Returns the fraud tier for a given user based on account age
 function getAccountTier(user) {
@@ -283,15 +284,17 @@ router.post('/unlock/:bucketId', requireAuth, async (req, res) => {
         await viewer.save();
 
         // Notify the curator that their bucket was purchased (no buyer identity — privacy)
-        Notification.create({
-            userId: bucket.userId,
-            type: 'bucket_unlocked',
-            data: {
-                bucketId:      bucket._id,
-                bucketName:    bucket.name,
-                creditsEarned: curatorEarns,
-            },
-        }).then(n => pushNotification(bucket.userId, { type: 'new_notification', notification: n }))
+        const _buData = { bucketId: bucket._id, bucketName: bucket.name, creditsEarned: curatorEarns };
+        User.findById(bucket.userId).select('notificationPrefs').lean()
+          .then(owner => {
+              if (owner?.notificationPrefs?.bucket_unlocked === false) return null;
+              return Notification.create({ userId: bucket.userId, type: 'bucket_unlocked', data: _buData });
+          })
+          .then(n => {
+              if (!n) return;
+              pushNotification(bucket.userId, { type: 'new_notification', notification: n });
+              maybeSendNotificationEmail(bucket.userId, 'bucket_unlocked', _buData).catch(() => {});
+          })
           .catch(err => console.error('[notif] bucket_unlocked:', err));
 
         res.json({ success: true });

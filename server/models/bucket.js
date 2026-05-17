@@ -44,6 +44,10 @@ const bucketSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    allowComments: {
+      type: Boolean,
+      default: true
+    },
     sourceUrl: {
       type: String,
       default: ''

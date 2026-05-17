@@ -11,6 +11,7 @@ import Notification from '../models/notification.js';
 import { anonymousAuth, requireVerification } from '../middleware/anonymousAuth.js';
 import { pushNotification, wsClients } from '../ws.js';
 import { parseAndResolveEntities } from '../utils/entityParser.js';
+import { maybeSendNotificationEmail } from '../utils/email.js';
 
 const router = express.Router();
 router.use(anonymousAuth);
@@ -333,16 +334,14 @@ router.post('/send', requireRegistered, requireVerification, async (req, res) =>
         // Persist notification only if recipient hasn't muted this conversation
         const isMutedByRecipient = (conversation.mutedBy || []).some(id => String(id) === String(recipientId));
         if (!isMutedByRecipient) {
-            Notification.create({
-                userId: recipientId,
-                type:   'new_dm',
-                data:   {
-                    conversationId:  String(conversation._id),
-                    senderUsername:  req.user.username || '',
-                    senderAvatar:    req.user.avatar   || null,
-                    preview:         text.slice(0, 60),
-                },
-            }).catch(() => {});
+            const _dmData = { conversationId: String(conversation._id), senderUsername: req.user.username || '', senderAvatar: req.user.avatar || null, preview: text.slice(0, 60) };
+            User.findById(recipientId).select('notificationPrefs').lean()
+                .then(recipient => {
+                    if (recipient?.notificationPrefs?.new_dm === false) return;
+                    return Notification.create({ userId: recipientId, type: 'new_dm', data: _dmData })
+                        .then(() => maybeSendNotificationEmail(recipientId, 'new_dm', _dmData));
+                })
+                .catch(() => {});
         }
 
         return res.status(201).json({
