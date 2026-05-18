@@ -23,61 +23,45 @@
             <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Payouts</p>
           </div>
 
+          <!-- Stripe payout account -->
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
               <span class="text-sm font-semibold text-woodsmoke-900">Stripe payout account</span>
-              <span class="text-sm text-woodsmoke-400">Connect a Stripe account to receive payments from your paid buckets</span>
+              <span id="connectDesc" class="text-sm text-woodsmoke-400">Connect a Stripe account to receive payments from your paid buckets</span>
             </div>
-            <button class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
+            <button id="connectBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
               Connect
             </button>
           </div>
 
-          <div class="px-5 py-4 flex items-center justify-between gap-4">
-            <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Cash out</span>
-              <span class="text-sm text-woodsmoke-400">Transfer your available balance to your bank account</span>
-            </div>
-            <button class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
-              Cash out
-            </button>
-          </div>
-
+          <!-- Transactions link -->
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
               <span class="text-sm font-semibold text-woodsmoke-900">Transaction history</span>
-              <span class="text-sm text-woodsmoke-400">View your past earnings and payouts</span>
+              <span class="text-sm text-woodsmoke-400">View your past earnings, top-ups, and cash outs</span>
             </div>
-            <button class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
+            <a href="/transactions" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
               View
-            </button>
+            </a>
           </div>
 
         </div>
 
-        <!-- ── Meta-fetch Quota ───────────────────────────────────────────────── -->
+        <!-- ── Credits ───────────────────────────────────────────────────────── -->
         <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
           <div class="px-5 py-4">
-            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Meta-fetch quota</p>
-          </div>
-
-          <div class="px-5 py-4 flex items-center justify-between gap-4">
-            <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Daily usage</span>
-              <span class="text-sm text-woodsmoke-400">Automatic link previews used today</span>
-            </div>
-            <span class="text-sm font-semibold text-woodsmoke-500">— / —</span>
+            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Credits</p>
           </div>
 
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
               <span class="text-sm font-semibold text-woodsmoke-900">Top up credits</span>
-              <span class="text-sm text-woodsmoke-400">Purchase additional meta-fetch quota</span>
+              <span class="text-sm text-woodsmoke-400">Purchase credits to unlock paywalled buckets</span>
             </div>
-            <button class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
+            <a href="/topup" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors shrink-0">
               Top up
-            </button>
+            </a>
           </div>
 
         </div>
@@ -91,5 +75,55 @@
 
   </div>
 </div>
+
+<% if (user && !user.isAnonymous) { %>
+<script>
+(function () {
+  const btn  = document.getElementById('connectBtn');
+  const desc = document.getElementById('connectDesc');
+
+  async function loadStatus() {
+    try {
+      const data = await fetch('/api/connect/status').then(r => r.json());
+      const status = data.stripeAccountStatus ?? 'none';
+
+      if (status === 'active') {
+        btn.textContent = 'Connected';
+        btn.disabled = true;
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        btn.classList.remove('hover:border-woodsmoke-300');
+        desc.textContent = 'Your Stripe account is connected. Payouts are active.';
+      } else if (status === 'pending') {
+        btn.textContent = 'Continue setup';
+        desc.textContent = 'Your Stripe account setup is incomplete. Continue to activate payouts.';
+      }
+    } catch (err) {
+      console.error('Failed to load connect status:', err);
+    }
+  }
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Redirecting…';
+    try {
+      const res  = await fetch('/api/connect/onboard', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Could not start Stripe setup. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Connect';
+      }
+    } catch {
+      btn.disabled = false;
+      btn.textContent = 'Connect';
+    }
+  });
+
+  loadStatus();
+})();
+</script>
+<% } %>
 
 <%- include('partials/layout-end') %>

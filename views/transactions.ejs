@@ -4,9 +4,539 @@
 %>
 <%- include('partials/layout') %>
 
-<div class="p-6">
-    <h1 class="text-lg font-semibold mb-1">Transactions</h1>
-    <p class="text-xs text-gray-400">Your financial activity</p>
+<div class="w-full max-w-[992px] mx-auto px-4 md:px-6 py-6">
+
+  <% if (user && !user.isAnonymous) { %>
+
+  <!-- Chart -->
+  <div class="border border-silver-200 rounded-md mb-4">
+    <div class="px-5 py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-1.5 text-xs text-woodsmoke-400 cursor-pointer select-none">
+          <span class="relative w-4 h-4 shrink-0">
+            <input type="checkbox" id="toggleEarned" checked class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
+            <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+            <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+              <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </span>
+          <span id="swatchEarned" class=""></span>Earned
+        </label>
+        <label class="flex items-center gap-1.5 text-xs text-woodsmoke-400 cursor-pointer select-none">
+          <span class="relative w-4 h-4 shrink-0">
+            <input type="checkbox" id="toggleSpent" checked class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
+            <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+            <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+              <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </span>
+          <span id="swatchSpent" class=""></span>Spent
+        </label>
+      </div>
+      <div class="flex gap-1">
+        <button class="period-btn flex items-center justify-center text-xs font-semibold px-3 h-7 rounded-md border border-silver-200 text-woodsmoke-700" data-period="7d">7d</button>
+        <button class="period-btn flex items-center justify-center text-xs px-3 h-7 rounded-md text-woodsmoke-400 hover:text-woodsmoke-700 transition-colors" data-period="30d">30d</button>
+        <button class="period-btn flex items-center justify-center text-xs px-3 h-7 rounded-md text-woodsmoke-400 hover:text-woodsmoke-700 transition-colors" data-period="90d">90d</button>
+      </div>
+    </div>
+    <div class="px-4 pb-4">
+      <canvas id="txChart" class="w-full block" style="height:148px"></canvas>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-3 gap-3 mb-4">
+    <div class="border border-silver-200 rounded-md px-5 py-4">
+      <p class="text-xs text-woodsmoke-400 mb-1">Balance</p>
+      <p id="balanceCr" class="text-2xl font-bold text-woodsmoke-900">—</p>
+      <p id="balanceUsd" class="text-xs text-woodsmoke-400 mt-0.5">—</p>
+      <p id="balanceNet" class="text-xs mt-1 hidden"></p>
+    </div>
+    <div class="border border-silver-200 rounded-md px-5 py-4">
+      <p id="earnedLabel" class="text-xs text-woodsmoke-400 mb-1">Earned (7d)</p>
+      <p id="earnedStat" class="text-lg font-semibold text-green-600">—</p>
+    </div>
+    <div class="border border-silver-200 rounded-md px-5 py-4">
+      <p id="spentLabel" class="text-xs text-woodsmoke-400 mb-1">Spent (7d)</p>
+      <p id="spentStat" class="text-lg font-semibold text-woodsmoke-700">—</p>
+    </div>
+  </div>
+
+  <!-- Pending credits notice -->
+  <div id="pendingNotice" class="hidden border border-amber-200 bg-amber-50 rounded-md px-4 py-3 mb-4">
+    <p class="text-sm font-semibold text-amber-800">Credits on hold</p>
+    <p id="pendingNoticeText" class="text-sm text-amber-700 mt-0.5"></p>
+  </div>
+
+  <!-- Actions -->
+  <div class="flex flex-wrap items-center gap-2 mb-2">
+    <button id="topupBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors">
+      Top up
+    </button>
+    <button id="cashoutBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
+      Cash out
+    </button>
+    <a href="/api/credits/export" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors">
+      Download CSV
+    </a>
+    <a href="/contact" class="flex items-center justify-center text-sm px-3 h-9 text-woodsmoke-400 hover:text-woodsmoke-700 transition-colors">
+      Dispute a charge
+    </a>
+  </div>
+  <p id="connectHint" class="hidden text-sm text-woodsmoke-400 mb-5">
+    To enable cash out, <a href="/settings/monetization" class="text-orchid-600 font-semibold hover:underline">connect your bank account</a> in Settings.
+  </p>
+  <div id="actionsSpacing" class="mb-6"></div>
+
+  <!-- History -->
+  <div class="border border-silver-200 rounded-md divide-y divide-silver-100">
+
+    <div class="px-5 py-4">
+      <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">History</p>
+    </div>
+
+    <div id="txLoading" class="px-5 py-8 text-center">
+      <p class="text-sm text-woodsmoke-400">Loading…</p>
+    </div>
+
+    <div id="txEmpty" class="hidden px-5 py-10 text-center">
+      <p class="text-sm font-semibold text-woodsmoke-500">No transactions yet</p>
+      <p class="text-sm text-woodsmoke-400 mt-1">Top up to get started.</p>
+    </div>
+
+    <div id="txList"></div>
+
+  </div>
+
+  <div id="loadMoreWrap" class="hidden mt-4 flex justify-center">
+    <button id="loadMoreBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors">
+      Load more
+    </button>
+  </div>
+
+  <% } else { %>
+  <p class="text-sm text-woodsmoke-400 py-6">
+    <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">Sign in</a> to view your transactions.
+  </p>
+  <% } %>
+
 </div>
+
+<!-- Chart tooltip -->
+<div id="chartTooltip" class="hidden fixed z-50 pointer-events-none bg-woodsmoke-950 text-white text-xs rounded-md px-3 py-2 leading-snug"></div>
+
+<script>
+(function () {
+  if (!window.__GRABBN_USER__ || window.__GRABBN_USER__.isAnonymous) return;
+
+  const LABELS = { topup: 'Credit purchase', unlock: 'Bucket unlock', earn: 'Earnings', cashout: 'Cash out' };
+  const SIGNS  = { topup: '+', earn: '+', unlock: '−', cashout: '−' };
+  const COLORS = { topup: 'text-green-600', earn: 'text-green-600', unlock: 'text-woodsmoke-700', cashout: 'text-woodsmoke-700' };
+
+  let txPage = 1, txTotalPages = 1, txLoading = false, currentBalance = 0, activePeriod = '7d';
+  let showEarned = true, showSpent = true;
+
+  // ── Chart ──────────────────────────────────────────────────────────────────
+
+  let currentHover  = null;
+  let lastChartArgs = null;
+  let lastLayout    = null;
+  let rawChartData  = null; // always holds unfiltered data
+
+  function niceMax(val) {
+    if (val <= 0) return 100;
+    const mag = Math.pow(10, Math.floor(Math.log10(val)));
+    const n   = val / mag;
+    const nice = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+    return nice * mag;
+  }
+
+  function fmtCr(val) {
+    if (val >= 1000) {
+      const k = val / 1000;
+      return (k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)) + 'k';
+    }
+    return String(val);
+  }
+
+  function drawChart(labels, earnedData, spentData, hover) {
+    lastChartArgs = { labels, earnedData, spentData };
+    const canvas = document.getElementById('txChart');
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const W   = canvas.offsetWidth;
+    const H   = canvas.offsetHeight;
+    if (!W || !H) return;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
+    const n = labels.length;
+    if (!n) return;
+
+    const FONT    = `10px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    const nMax    = niceMax(Math.max(...earnedData, ...spentData, 1));
+    const padTop  = 10, padBot = 22, padR = 6;
+
+    // Measure widest Y label to set left padding
+    ctx.font = FONT;
+    const padL = ctx.measureText(fmtCr(nMax)).width + 14;
+
+    const chartW = W - padL - padR;
+    const chartH = H - padTop - padBot;
+    const groupW = chartW / n;
+    const barW   = Math.max(2, Math.min(groupW * 0.38, 18));
+    const barGap = Math.max(1, barW * 0.15);
+
+    // Store layout so hover handler can recalculate hit zones without relying on hitTargets
+    lastLayout = { padL, padTop, padBot, padR, chartH, groupW, barW, barGap, nMax, n };
+
+    // Grid lines + Y-axis labels
+    ctx.lineWidth = 1;
+    for (let g = 1; g <= 3; g++) {
+      const ratio = g / 4;
+      const y     = padTop + chartH * (1 - ratio);
+      const val   = Math.round(nMax * ratio);
+
+      ctx.strokeStyle = '#efefef';
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(W - padR, y);
+      ctx.stroke();
+
+      ctx.fillStyle    = '#b0b0b0';
+      ctx.font         = FONT;
+      ctx.textAlign    = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(fmtCr(val), padL - 6, y);
+    }
+
+    // Bars
+    for (let i = 0; i < n; i++) {
+      const cx = padL + i * groupW + groupW / 2;
+      const x0 = cx - barW - barGap / 2;
+      const x1 = cx + barGap / 2;
+
+      const eH = (earnedData[i] / nMax) * chartH;
+      const sH = (spentData[i]  / nMax) * chartH;
+      const eY = padTop + chartH - eH;
+      const sY = padTop + chartH - sH;
+
+      const eHovered = hover && hover.idx === i && hover.type === 'earned';
+      const sHovered = hover && hover.idx === i && hover.type === 'spent';
+
+      if (eH > 0) {
+        ctx.fillStyle = eHovered ? '#15803d' : '#16a34a';
+        rRect(ctx, x0, eY, barW, eH, 2);
+        ctx.fill();
+      }
+
+      if (sH > 0) {
+        ctx.fillStyle = sHovered ? '#9ca3af' : '#bdbdbd';
+        rRect(ctx, x1, sY, barW, sH, 2);
+        ctx.fill();
+      }
+
+
+      // X-axis labels
+      const step = n <= 8 ? 1 : n <= 16 ? 2 : n <= 31 ? 4 : 7;
+      if (i % step === 0 || i === n - 1) {
+        ctx.fillStyle    = '#b0b0b0';
+        ctx.font         = FONT;
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(labels[i], cx, H - 2);
+      }
+    }
+  }
+
+  function rRect(ctx, x, y, w, h, r) {
+    if (h <= 0 || w <= 0) return;
+    r = Math.min(r, h, w / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function setupChartHover() {
+    const canvas  = document.getElementById('txChart');
+    const tooltip = document.getElementById('chartTooltip');
+    if (!canvas || !tooltip) return;
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!lastChartArgs || !lastLayout) return;
+      const { labels, earnedData, spentData } = lastChartArgs;
+      const { padL, padTop, chartH, groupW, barW, barGap, nMax, n } = lastLayout;
+
+      const rect = canvas.getBoundingClientRect();
+      const mx   = e.clientX - rect.left;
+      const my   = e.clientY - rect.top;
+      const floorY = padTop + chartH;
+
+      let hit = null;
+
+      // Only consider hover inside the chart area
+      if (my >= padTop && my <= floorY) {
+        const gi = Math.floor((mx - padL) / groupW);
+        if (gi >= 0 && gi < n) {
+          const cx = padL + gi * groupW + groupW / 2;
+          const x0 = cx - barW - barGap / 2;  // earned bar start (left)
+          const x1 = cx + barGap / 2;          // spent bar start (right)
+
+          if (mx >= x0 && mx <= x0 + barW && earnedData[gi] > 0) {
+            // Cursor is over the earned column — hit extends to floor for small bars
+            hit = { idx: gi, type: 'earned', value: earnedData[gi], label: labels[gi] };
+          } else if (mx >= x1 && mx <= x1 + barW && spentData[gi] > 0) {
+            hit = { idx: gi, type: 'spent',  value: spentData[gi],  label: labels[gi] };
+          }
+        }
+      }
+
+      const hitKey = hit ? `${hit.idx}-${hit.type}` : null;
+      const prevKey = currentHover ? `${currentHover.idx}-${currentHover.type}` : null;
+      if (hitKey !== prevKey) {
+        currentHover = hit;
+        drawChart(labels, earnedData, spentData, hit);
+      }
+
+      if (hit) {
+        canvas.style.cursor = 'pointer';
+        const typeLabel = hit.type === 'earned' ? 'Earned' : 'Spent';
+        tooltip.innerHTML = `<span style="opacity:.7">${hit.label}</span><br><strong>${typeLabel}: ${hit.value.toLocaleString()} cr</strong>`;
+        tooltip.classList.remove('hidden');
+        tooltip.style.left = Math.min(e.clientX + 10, window.innerWidth - 130) + 'px';
+        tooltip.style.top  = (e.clientY - 48) + 'px';
+      } else {
+        canvas.style.cursor = '';
+        tooltip.classList.add('hidden');
+      }
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      currentHover = null;
+      if (lastChartArgs) {
+        const { labels, earnedData, spentData } = lastChartArgs;
+        drawChart(labels, earnedData, spentData, null);
+      }
+      tooltip.classList.add('hidden');
+    });
+  }
+
+  async function loadChart(period) {
+    activePeriod = period;
+
+    document.querySelectorAll('.period-btn').forEach(btn => {
+      const active = btn.dataset.period === period;
+      btn.classList.toggle('border',            active);
+      btn.classList.toggle('border-silver-200', active);
+      btn.classList.toggle('font-semibold',     active);
+      btn.classList.toggle('text-woodsmoke-700', active);
+      btn.classList.toggle('text-woodsmoke-400', !active);
+    });
+
+    document.getElementById('earnedLabel').textContent = `Earned (${period})`;
+    document.getElementById('spentLabel').textContent  = `Spent (${period})`;
+
+    try {
+      const data = await fetch(`/api/credits/chart?period=${period}`).then(r => r.json());
+      document.getElementById('earnedStat').textContent = '+' + (data.totalEarned ?? 0).toLocaleString();
+      document.getElementById('spentStat').textContent  = (data.totalSpent ?? 0).toLocaleString();
+      rawChartData = { labels: data.labels, earned: data.earned, spent: data.spent };
+      redrawFiltered();
+
+      const net     = (data.totalEarned ?? 0) - (data.totalSpent ?? 0);
+      const netEl   = document.getElementById('balanceNet');
+      netEl.classList.remove('hidden', 'text-green-600', 'text-red-500', 'text-woodsmoke-400');
+      if (net > 0) {
+        netEl.textContent = '+' + net.toLocaleString() + ' net (' + period + ')';
+        netEl.classList.add('text-green-600');
+      } else if (net < 0) {
+        netEl.textContent = net.toLocaleString() + ' net (' + period + ')';
+        netEl.classList.add('text-red-500');
+      } else {
+        netEl.textContent = '0 net (' + period + ')';
+        netEl.classList.add('text-woodsmoke-400');
+      }
+    } catch (err) {
+      console.error('Failed to load chart:', err);
+    }
+  }
+
+  // ── Summary + connect status ───────────────────────────────────────────────
+
+  async function loadSummary() {
+    try {
+      const [summary, connect] = await Promise.all([
+        fetch('/api/credits/summary').then(r => r.json()),
+        fetch('/api/connect/status').then(r => r.json()),
+      ]);
+
+      currentBalance = summary.balance ?? 0;
+      document.getElementById('balanceCr').textContent  = currentBalance.toLocaleString() + ' cr';
+      document.getElementById('balanceUsd').textContent = '$' + (currentBalance / 100).toFixed(2) + ' USD equivalent';
+
+      if ((summary.pendingCredits ?? 0) > 0 && summary.pendingCreditsUntil) {
+        const until = new Date(summary.pendingCreditsUntil).toLocaleString();
+        document.getElementById('pendingNotice').classList.remove('hidden');
+        document.getElementById('pendingNoticeText').textContent =
+          summary.pendingCredits.toLocaleString() + ' credits are on hold until ' + until +
+          ' — standard first-purchase verification period.';
+      }
+
+      const status = connect.stripeAccountStatus ?? 'none';
+      const btn    = document.getElementById('cashoutBtn');
+      if (status === 'active') {
+        if (currentBalance >= 1000) {
+          btn.disabled = false;
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+          btn.classList.add('hover:border-woodsmoke-300', 'transition-colors');
+        } else {
+          btn.title = 'Minimum cash out is 1,000 credits ($10.00)';
+        }
+      } else {
+        document.getElementById('connectHint').classList.remove('hidden');
+        document.getElementById('actionsSpacing').classList.add('hidden');
+      }
+    } catch (err) {
+      console.error('Failed to load summary:', err);
+    }
+  }
+
+  // ── Transaction history ────────────────────────────────────────────────────
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  async function loadTxPage(p) {
+    if (txLoading) return;
+    txLoading = true;
+    try {
+      const data = await fetch('/api/credits/history?page=' + p).then(r => r.json());
+      txTotalPages = data.pages ?? 1;
+      txPage       = data.page  ?? p;
+
+      document.getElementById('txLoading').classList.add('hidden');
+
+      if (!data.transactions?.length && p === 1) {
+        document.getElementById('txEmpty').classList.remove('hidden');
+        return;
+      }
+
+      const list = document.getElementById('txList');
+      data.transactions.forEach(tx => {
+        const label  = LABELS[tx.type]  || tx.type;
+        const sign   = SIGNS[tx.type]   || '';
+        const color  = COLORS[tx.type]  || 'text-woodsmoke-700';
+        const abs    = Math.abs(tx.amount);
+        const usd    = '$' + (abs / 100).toFixed(2);
+        const bucket = tx.relatedBucketId?.name;
+        const date   = new Date(tx.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+        const row = document.createElement('div');
+        row.className = 'px-5 py-3 flex items-center justify-between gap-4';
+        row.innerHTML = `
+          <div class="flex flex-col gap-0.5 min-w-0">
+            <span class="text-sm font-semibold text-woodsmoke-800 truncate">
+              ${esc(label)}${bucket ? '<span class="font-normal text-woodsmoke-400"> · ' + esc(bucket) + '</span>' : ''}
+            </span>
+            <span class="text-xs text-woodsmoke-400">${esc(date)}</span>
+          </div>
+          <div class="text-right shrink-0">
+            <p class="text-sm font-semibold ${color}">${sign}${abs.toLocaleString()} cr</p>
+            <p class="text-xs text-woodsmoke-400">${esc(usd)}</p>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+
+      document.getElementById('loadMoreWrap').classList.toggle('hidden', txPage >= txTotalPages);
+    } catch (err) {
+      console.error('Failed to load transactions:', err);
+    } finally {
+      txLoading = false;
+    }
+  }
+
+  // ── Chart filter helpers ───────────────────────────────────────────────────
+
+  function redrawFiltered() {
+    if (!rawChartData) return;
+    const zeros = rawChartData.earned.map(() => 0);
+    drawChart(
+      rawChartData.labels,
+      showEarned ? rawChartData.earned : zeros,
+      showSpent  ? rawChartData.spent  : zeros,
+      null
+    );
+  }
+
+  function setupSeriesToggle(checkboxId, swatchId, getState, setState) {
+    const cb     = document.getElementById(checkboxId);
+    const swatch = document.getElementById(swatchId);
+    if (!cb || !swatch) return;
+    cb.addEventListener('change', () => {
+      setState(cb.checked);
+      swatch.style.opacity = cb.checked ? '1' : '0.25';
+      redrawFiltered();
+    });
+  }
+
+  setupSeriesToggle('toggleEarned', 'swatchEarned', () => showEarned, v => showEarned = v);
+  setupSeriesToggle('toggleSpent',  'swatchSpent',  () => showSpent,  v => showSpent  = v);
+
+  // ── Event listeners ────────────────────────────────────────────────────────
+
+  document.querySelectorAll('.period-btn').forEach(btn => {
+    btn.addEventListener('click', () => loadChart(btn.dataset.period));
+  });
+
+  document.getElementById('topupBtn').addEventListener('click', () => {
+    window.location.href = '/topup';
+  });
+
+  document.getElementById('cashoutBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('cashoutBtn');
+    if (btn.disabled) return;
+    const usd = '$' + (currentBalance / 100).toFixed(2);
+    if (!confirm('Cash out ' + currentBalance.toLocaleString() + ' credits (' + usd + ')?\n\nThis transfers your full balance to your connected bank account.')) return;
+    btn.disabled = true;
+    btn.textContent = 'Processing…';
+    try {
+      const res  = await fetch('/api/connect/cashout', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) { window.location.reload(); return; }
+      alert(data.error || 'Cash out failed. Please try again.');
+    } catch (_) {}
+    btn.disabled = false;
+    btn.textContent = 'Cash out';
+  });
+
+  document.getElementById('loadMoreBtn').addEventListener('click', () => {
+    document.getElementById('loadMoreWrap').classList.add('hidden');
+    loadTxPage(txPage + 1);
+  });
+
+  // Redraw chart on resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => loadChart(activePeriod), 150);
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  loadSummary();
+  loadChart('7d').then(setupChartHover);
+  loadTxPage(1);
+})();
+</script>
 
 <%- include('partials/layout-end') %>

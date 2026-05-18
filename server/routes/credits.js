@@ -319,13 +319,108 @@ router.get('/summary', requireAuth, async (req, res) => {
             ])
         ]);
         res.json({
-            balance: req.user.credits ?? 0,
-            earned7d: earned[0]?.total ?? 0,
-            spent7d:  spent[0]?.total ?? 0,
+            balance:             req.user.credits ?? 0,
+            pendingCredits:      req.user.pendingCredits ?? 0,
+            pendingCreditsUntil: req.user.pendingCreditsUntil ?? null,
+            earned7d:            earned[0]?.total ?? 0,
+            spent7d:             spent[0]?.total ?? 0,
         });
     } catch (error) {
         console.error('Error fetching credit summary:', error);
         res.status(500).json({ error: 'Failed to fetch credit summary' });
+    }
+});
+
+// GET /api/credits/chart?period=7d|30d|90d — daily/weekly aggregates for charting
+router.get('/chart', requireAuth, async (req, res) => {
+    try {
+        const period = ['7d', '30d', '90d'].includes(req.query.period) ? req.query.period : '7d';
+        const days   = period === '90d' ? 90 : period === '30d' ? 30 : 7;
+        const step   = days === 90 ? 7 : 1; // weekly buckets for 90d
+
+        const now        = new Date();
+        const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        const since      = new Date(todayStart.getTime() - days * 86400000);
+
+        const txs = await Transaction.find({
+            userId: req.user._id,
+            type:   { $in: ['topup', 'earn', 'unlock', 'cashout'] },
+            createdAt: { $gte: since }
+        }).lean();
+
+        const bucketCount = Math.ceil(days / step);
+        const earned      = new Array(bucketCount).fill(0);
+        const spent       = new Array(bucketCount).fill(0);
+        const labels      = [];
+
+        for (let i = 0; i < bucketCount; i++) {
+            const d = new Date(since.getTime() + i * step * 86400000);
+            labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }));
+        }
+
+        for (const tx of txs) {
+            const offset = Math.floor((new Date(tx.createdAt).getTime() - since.getTime()) / (step * 86400000));
+            const idx    = Math.min(Math.max(offset, 0), bucketCount - 1);
+            if (tx.type === 'topup' || tx.type === 'earn') {
+                earned[idx] += tx.amount;
+            } else {
+                spent[idx]  += Math.abs(tx.amount);
+            }
+        }
+
+        res.json({
+            labels,
+            earned,
+            spent,
+            totalEarned: earned.reduce((a, b) => a + b, 0),
+            totalSpent:  spent.reduce((a, b) => a + b, 0),
+        });
+    } catch (err) {
+        console.error('Error fetching chart data:', err);
+        res.status(500).json({ error: 'Failed to fetch chart data' });
+    }
+});
+
+// GET /api/credits/export — download full transaction history as CSV
+router.get('/export', requireAuth, async (req, res) => {
+    try {
+        const transactions = await Transaction.find({
+            userId: req.user._id,
+            type: { $ne: 'platform_fee' }
+        })
+        .sort({ createdAt: -1 })
+        .populate('relatedBucketId', 'name')
+        .lean();
+
+        const LABELS = {
+            topup:   'Credit purchase',
+            unlock:  'Bucket unlock',
+            earn:    'Earnings',
+            cashout: 'Cash out'
+        };
+
+        const header = ['Date (UTC)', 'Transaction Type', 'Credits', 'USD Equivalent', 'Related Bucket'].join(',');
+        const rows = transactions.map(t => {
+            const bucket = t.relatedBucketId?.name
+                ? '"' + t.relatedBucketId.name.replace(/"/g, '""') + '"'
+                : '';
+            return [
+                new Date(t.createdAt).toISOString(),
+                LABELS[t.type] || t.type,
+                t.amount,
+                (Math.abs(t.amount) / 100).toFixed(2),
+                bucket
+            ].join(',');
+        });
+
+        const csv = [header, ...rows].join('\r\n');
+        const filename = `grabbn-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(csv);
+    } catch (error) {
+        console.error('Error exporting transactions:', error);
+        res.status(500).json({ error: 'Failed to export transactions' });
     }
 });
 
