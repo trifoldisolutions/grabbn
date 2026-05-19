@@ -4615,6 +4615,51 @@ app.get('/partnership/apply', anonymousAuth, requireNonAdmin, async (req, res) =
     });
 });
 
+// Partnership program — PDF export
+app.get('/partnership/pdf', async (req, res) => {
+    let browser;
+    try {
+        const puppeteer = (await import('puppeteer')).default;
+        browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+        const page = await browser.newPage();
+
+        // A4 at 96dpi = 794px wide; give enough height so nothing is cropped before PDF generation
+        await page.setViewport({ width: 794, height: 1200 });
+
+        const baseUrl = `http://localhost:${PORT}`;
+        await page.goto(`${baseUrl}/partnership`, { waitUntil: 'networkidle0', timeout: 15000 });
+
+        // Strip all navigation chrome, let only the main content column render
+        await page.addStyleTag({ content: `
+            header, nav, aside, footer,
+            [id*="sidebar"], [id*="topbar"], [class*="sidebar"], [class*="topbar"],
+            [id="notificationModal"], [id="messagesModal"] {
+                display: none !important;
+            }
+            html, body {
+                background: white !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+        ` });
+
+        const pdf = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '14mm', right: '14mm', bottom: '14mm', left: '14mm' },
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="grabbn-partner-program.pdf"');
+        res.send(pdf);
+    } catch (err) {
+        console.error('[partnership/pdf]', err);
+        res.status(500).send('Failed to generate PDF');
+    } finally {
+        if (browser) await browser.close();
+    }
+});
+
 // ---------------------------------------------------------------------------
 // Admin panel — server-rendered EJS pages at /admin/*
 // Protected by anonymousAuth + requireModerator (imported from adminAuth.js)
