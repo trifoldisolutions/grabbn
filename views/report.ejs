@@ -56,7 +56,13 @@
                     reportOptions.push({ value: 'other', label: 'Other' });
                     reportOptions.forEach(function(opt) { %>
                     <label class="flex items-center gap-2.5 cursor-pointer group">
-                        <input type="radio" name="reason" value="<%= opt.value %>" class="accent-orchid-600 w-3.5 h-3.5 shrink-0">
+                        <span class="relative w-4 h-4 shrink-0">
+                            <input type="radio" name="reason" value="<%= opt.value %>" class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
+                            <span class="absolute inset-0 rounded-full border-2 border-silver-300 peer-checked:border-orchid-500 transition-colors"></span>
+                            <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                                <span class="w-2 h-2 rounded-full bg-orchid-500"></span>
+                            </span>
+                        </span>
                         <span class="text-sm text-woodsmoke-700 group-hover:text-woodsmoke-950 transition-colors"><%= opt.label %></span>
                     </label>
                     <% }); %>

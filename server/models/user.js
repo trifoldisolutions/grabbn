@@ -104,6 +104,7 @@ const userSchema = new mongoose.Schema(
       enum: ['none', 'pending', 'active'],
       default: 'none'
     },
+    currency:     { type: String, default: 'USD' },
     avatar:       { type: String, default: '' },
     displayName:  { type: String, default: '', maxlength: 30 },
     bio:          { type: String, default: '', maxlength: 128 },
@@ -126,12 +127,9 @@ const userSchema = new mongoose.Schema(
     mutedTopics: { type: [String], default: [] },
     // Default interaction settings applied to newly created buckets
     commentDefaults: {
-      allowComments: { type: Boolean, default: true },
-      allowGrabs:    { type: Boolean, default: true },
+      allowComments: { type: String, enum: ['everyone', 'followers', 'followees', 'no_one'], default: 'everyone' },
+      allowGrabs:    { type: String, enum: ['everyone', 'followers', 'followees', 'no_one'], default: 'everyone' },
     },
-    // Dedicated token embedded in the bookmarklet so the popup can authenticate
-    // without relying on third-party cookies (blocked by many modern browsers).
-    bookmarkletToken: { type: String, sparse: true, index: true },
     isPartner: { type: Boolean, default: false },
     // Admin access tier — set manually in the database for the first superadmin.
     // 'user' is the default for all regular accounts.
@@ -203,6 +201,18 @@ const userSchema = new mongoose.Schema(
 );
 
 // Hash password before saving - FIXED VERSION WITHOUT next()
+// Normalize legacy boolean commentDefaults fields to the string enum
+userSchema.pre('validate', function () {
+  const PERMS = ['everyone', 'followers', 'followees', 'no_one'];
+  if (!this.commentDefaults) return;
+  for (const field of ['allowComments', 'allowGrabs']) {
+    const v = this.commentDefaults[field];
+    if (v === true || v === 'true') this.commentDefaults[field] = 'everyone';
+    else if (v === false || v === 'false') this.commentDefaults[field] = 'no_one';
+    else if (v !== undefined && v !== null && !PERMS.includes(v)) this.commentDefaults[field] = 'everyone';
+  }
+});
+
 userSchema.pre('save', async function() {
   // Only hash the password if it has been modified (or is new)
   if (!this.isModified('password')) return;

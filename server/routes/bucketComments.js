@@ -9,6 +9,7 @@ import CommentReport from '../models/commentReport.js';
 import LinkClick from '../models/linkClick.js';
 import Notification from '../models/notification.js';
 import Block from '../models/block.js';
+import Subscription from '../models/subscription.js';
 import { anonymousAuth, requireVerification } from '../middleware/anonymousAuth.js';
 import { pushNotification } from '../ws.js';
 import { parseAndResolveEntities, fetchBucketSnapshot, buildSnapshot } from '../utils/entityParser.js';
@@ -237,11 +238,27 @@ router.post('/', requireRegistered, requireVerification, async (req, res) => {
         if (req.user.privacy?.accountVisibility === 'private')
             return res.status(403).json({ error: 'Private accounts cannot post comments' });
 
-        const bucket = await Bucket.findById(bucketId).select('_id name userId').lean();
+        const bucket = await Bucket.findById(bucketId).select('_id name userId allowComments').lean();
         if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
 
         // Gate: must have clicked at least 2 links in this bucket, unless owner
         const isOwner = bucket.userId.equals(req.user._id);
+
+        // Enforce comment permission
+        if (!isOwner) {
+            const perm = bucket.allowComments;
+            if (perm === false || perm === 'no_one') {
+                return res.status(403).json({ error: 'Comments are disabled on this bucket.' });
+            }
+            if (perm === 'followers') {
+                const sub = await Subscription.findOne({ followerId: req.user._id, followeeId: bucket.userId }).lean();
+                if (!sub) return res.status(403).json({ error: 'Only followers can comment on this bucket.' });
+            }
+            if (perm === 'followees') {
+                const sub = await Subscription.findOne({ followerId: bucket.userId, followeeId: req.user._id }).lean();
+                if (!sub) return res.status(403).json({ error: 'Only people this curator follows can comment.' });
+            }
+        }
         if (!isOwner) {
             const clickCount = await LinkClick.countDocuments({ bucketId: bucket._id, userId: req.user._id });
             if (clickCount < 2) {

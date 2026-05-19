@@ -1060,7 +1060,7 @@
             });
             renderConvList();
         })
-        .catch(err => alert(err?.error || 'Failed to send'))
+        .catch(err => window.showToast(err?.error || 'Failed to send', 'error'))
         .finally(() => {
             sending = false;
             sendBtn.disabled = false;
@@ -1660,7 +1660,7 @@
                     if (c) openConversation(String(data.conversationId), c.otherUser, null);
                 });
             })
-            .catch(err => { alert(err?.error || 'Failed to send'); sendB.disabled = false; });
+            .catch(err => { window.showToast(err?.error || 'Failed to send', 'error'); sendB.disabled = false; });
         });
     }
 

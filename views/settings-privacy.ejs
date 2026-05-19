@@ -47,8 +47,14 @@
               <div id="wcm-panel" class="hidden absolute right-0 top-full mt-1 w-56 bg-white border border-silver-200 rounded-md shadow-sm z-20 py-1">
                 <% wcmOptions.forEach(opt => { %>
                 <label class="flex items-center gap-2.5 px-3 py-2 hover:bg-silver-50 cursor-pointer select-none">
-                  <input type="checkbox" class="wcm-cb accent-orchid-500 w-4 h-4 rounded" value="<%= opt.value %>" <%= wcmSelected.includes(opt.value) ? 'checked' : '' %> />
-                  <span class="text-sm text-woodsmoke-700"><%= opt.label %></span>
+                  <span class="relative w-4 h-4 shrink-0">
+                    <input type="checkbox" class="wcm-cb peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" value="<%= opt.value %>" <%= wcmSelected.includes(opt.value) ? 'checked' : '' %>>
+                    <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+                    <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                      <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </span>
+                  <span class="wcm-opt-label text-sm text-woodsmoke-700"><%= opt.label %></span>
                 </label>
                 <% }) %>
               </div>
@@ -116,10 +122,8 @@
               <div id="av-panel" class="hidden absolute right-0 top-full mt-1 w-72 bg-white border border-silver-200 rounded-md shadow-md z-20 py-1 overflow-hidden">
                 <% avOptions.forEach(opt => { %>
                 <button type="button" class="av-opt w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-silver-50 transition-colors" data-value="<%= opt.value %>" data-label="<%= opt.label %>" data-desc="<%= opt.desc %>">
-                  <span class="mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors av-radio <%= opt.value === currentVisibility ? 'border-orchid-500 bg-orchid-500' : 'border-silver-300 bg-white' %>">
-                    <% if (opt.value === currentVisibility) { %>
-                    <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
-                    <% } %>
+                  <span class="mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors av-radio <%= opt.value === currentVisibility ? 'border-orchid-500' : 'border-silver-300' %>">
+                    <span class="w-2 h-2 rounded-full bg-orchid-500 transition-opacity <%= opt.value === currentVisibility ? '' : 'hidden' %>"></span>
                   </span>
                   <div class="min-w-0">
                     <p class="text-sm font-semibold text-woodsmoke-900"><%= opt.label %></p>
@@ -173,7 +177,7 @@
     function updateSummary() {
       const sel = getSelected();
       if (!sel.length) { summary.textContent = 'No one'; return; }
-      const labels = sel.map(v => root.querySelector(`.wcm-cb[value="${v}"]`)?.closest('label')?.querySelector('span')?.textContent?.trim() || v);
+      const labels = sel.map(v => root.querySelector(`.wcm-cb[value="${v}"]`)?.closest('label')?.querySelector('.wcm-opt-label')?.textContent?.trim() || v);
       summary.textContent = labels.length <= 2 ? labels.join(', ') : `${labels.length} groups selected`;
     }
 
@@ -247,14 +251,16 @@
 
         // Update radios
         root.querySelectorAll('.av-radio').forEach(r => {
-          r.classList.remove('border-orchid-500', 'bg-orchid-500');
-          r.classList.add('border-silver-300', 'bg-white');
-          r.innerHTML = '';
+          r.classList.remove('border-orchid-500');
+          r.classList.add('border-silver-300');
+          const dot = r.querySelector('span');
+          if (dot) dot.classList.add('hidden');
         });
         const radio = btn.querySelector('.av-radio');
-        radio.classList.remove('border-silver-300', 'bg-white');
-        radio.classList.add('border-orchid-500', 'bg-orchid-500');
-        radio.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-white"></span>';
+        radio.classList.remove('border-silver-300');
+        radio.classList.add('border-orchid-500');
+        const dot = radio.querySelector('span');
+        if (dot) dot.classList.remove('hidden');
 
         // Update trigger label + left-side hint
         label.textContent = optLabel;

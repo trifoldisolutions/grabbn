@@ -179,11 +179,13 @@
 
                         <div class="space-y-3 pt-1">
                             <label class="flex items-start gap-3 cursor-pointer select-none">
-                                <input
-                                    type="checkbox"
-                                    id="agreeTerms"
-                                    class="mt-0.5 w-4 h-4 accent-orchid-600 cursor-pointer shrink-0"
-                                >
+                                <span class="relative w-4 h-4 mt-0.5 shrink-0">
+                                    <input type="checkbox" id="agreeTerms" class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
+                                    <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+                                    <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                                        <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </span>
+                                </span>
                                 <span class="text-sm text-woodsmoke-500">
                                     I agree to the
                                     <a href="/terms.html" target="_blank" class="text-orchid-600 hover:text-orchid-700 font-medium underline">Terms of Usage</a>
@@ -193,11 +195,13 @@
                                 </span>
                             </label>
                             <label class="flex items-start gap-3 cursor-pointer select-none">
-                                <input
-                                    type="checkbox"
-                                    id="newsletterSubscribe"
-                                    class="mt-0.5 w-4 h-4 accent-orchid-600 cursor-pointer shrink-0"
-                                >
+                                <span class="relative w-4 h-4 mt-0.5 shrink-0">
+                                    <input type="checkbox" id="newsletterSubscribe" class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
+                                    <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+                                    <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                                        <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </span>
+                                </span>
                                 <span class="text-sm text-woodsmoke-500">
                                     Keep me updated with product news and improvements
                                     <span class="text-woodsmoke-300">(optional)</span>

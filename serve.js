@@ -72,8 +72,10 @@ function bucketVisibility(bucket) {
   return bucket.isPublic ? 'public' : 'private';
 }
 
-// MongoDB filter that matches "link-accessible" buckets (public + unlisted).
+// MongoDB filter that matches "link-accessible" buckets (public + unlisted)
+// and meet the minimum link requirement enforced on write.
 const FILTER_ACCESSIBLE = {
+  'links.2': { $exists: true },
   $or: [
     { visibility: { $in: ['public', 'unlisted'] } },
     { visibility: { $exists: false }, isPublic: true },
@@ -155,9 +157,6 @@ wss.on('connection', (ws, req) => {
 // ---------------------------------------------------------------------------
 // Popup-session — registered BEFORE the global CORS middleware so we can
 // allow any origin (bookmarklet runs on arbitrary third-party sites).
-// Auth is cookie-independent: the bookmarklet embeds a per-user bookmarkletToken
-// (fetched server-side when "Get bookmarklet" is opened) and sends it in the
-// request body so the server can identify the user without any cookies.
 // ---------------------------------------------------------------------------
 const popupSessions = new Map();
 
@@ -167,19 +166,9 @@ app.post('/api/popup-session',
     cors({ origin: '*', methods: ['POST', 'OPTIONS'] }),
     express.json({ limit: '2mb' }),
     async (req, res) => {
-        const { links, sourceUrl, maxPage, currentPage, pagesCollected, bkt } = req.body;
+        const { links, sourceUrl, maxPage, currentPage, pagesCollected, anon } = req.body;
         if (!Array.isArray(links)) {
             return res.status(400).json({ error: 'links is required' });
-        }
-
-        // Resolve the user via the bookmarklet token embedded in the code.
-        // This is completely cookie-independent and works in all browsers.
-        let anonymousId = null;
-        if (bkt) {
-            try {
-                const user = await User.findOne({ bookmarkletToken: bkt });
-                if (user) anonymousId = user.anonymousId;
-            } catch { /* non-fatal */ }
         }
 
         const token =
@@ -192,7 +181,7 @@ app.post('/api/popup-session',
             currentPage: Math.max(Number(currentPage) || 1, 1),
             pagesCollected: Math.max(Number(pagesCollected) || 1, 1),
             createdAt: Date.now(),
-            anonymousId,
+            anonymousId: typeof anon === 'string' && anon.length > 0 ? anon : null,
         });
         setTimeout(() => popupSessions.delete(token), 600_000); // 10-min TTL
         res.json({ token });
@@ -438,28 +427,12 @@ async function fetchImageAsBase64(url, { referer, minBytes = 0 } = {}) {
 // API ENDPOINTS
 // ====================
 
-// Return (and lazily generate) a per-user bookmarklet token.
-// Called from the "Get bookmarklet" modal; cookies always work here because
-// it is a same-origin request from app.grabbn.com.
-app.get('/api/auth/bookmarklet-token', requireAuth, async (req, res) => {
-    try {
-        let { bookmarkletToken } = req.user;
-        if (!bookmarkletToken) {
-            const { randomUUID } = await import('crypto');
-            bookmarkletToken = randomUUID();
-            req.user.bookmarkletToken = bookmarkletToken;
-            await req.user.save();
-        }
-        res.json({ token: bookmarkletToken });
-    } catch (err) {
-        console.error('bookmarklet-token error:', err);
-        res.status(500).json({ error: 'Failed to generate token' });
-    }
+app.get('/api/auth/anon-id', requireAuth, (req, res) => {
+    res.json({ id: req.user.anonymousId });
 });
 
-
 const META_DAILY_LIMIT = 50;
-const META_FETCH_COST  = 2; // JWL per extra fetch
+const META_FETCH_COST  = 2; // GTK per extra fetch
 
 // Per-minute sliding window (hidden, alert only)
 const _metaMinuteMap = new Map();
@@ -1408,7 +1381,7 @@ app.get('/api/img-proxy', requireAuth, async (req, res) => {
     }
 });
 
-// Purchase extra daily meta fetches with JWL credits (2 JWL each).
+// Purchase extra daily meta fetches with GTK credits (2 GTK each).
 app.get('/api/meta/usage', requireAuth, async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     const doc   = await User.findById(req.user._id, { metaFetchDate: 1, metaFetchCount: 1, metaFetchBonus: 1, metaFetchLimit: 1 });
@@ -1635,12 +1608,11 @@ app.delete('/api/user/data', requireAuth, async (req, res) => {
                 avatar:        '',
                 website:       '',
                 socialLinks:   [],
-                bookmarkletToken: undefined,
                 preferences:   {},
                 credits:       0,
             },
             $unset: {
-                email: '', googleId: '', password: '', username: '', bookmarkletToken: '',
+                email: '', googleId: '', password: '', username: '',
                 resetPasswordToken: '', resetPasswordExpires: '',
                 otpCode: '', otpExpires: '', otpSentAt: '',
             },
@@ -1699,8 +1671,13 @@ app.patch('/api/user/settings', requireAuth, requireVerification, async (req, re
                 return res.status(400).json({ error: 'Invalid accountVisibility value' });
             update['privacy.accountVisibility'] = accountVisibility;
         }
-        if (allowComments        !== undefined) update['commentDefaults.allowComments'] = !!allowComments;
-        if (allowGrabs           !== undefined) update['commentDefaults.allowGrabs']    = !!allowGrabs;
+        if (allowComments        !== undefined) {
+            const COMMENT_PERMS = ['everyone', 'followers', 'followees', 'no_one'];
+            update['commentDefaults.allowComments'] = COMMENT_PERMS.includes(allowComments) ? allowComments : 'everyone';
+        }
+        if (allowGrabs           !== undefined) {
+            update['commentDefaults.allowGrabs'] = COMMENT_PERMS.includes(allowGrabs) ? allowGrabs : 'everyone';
+        }
         if (newsletterSubscribed !== undefined) update.newsletterSubscribed = !!newsletterSubscribed;
         if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No valid fields provided' });
         await User.findByIdAndUpdate(req.user._id, update);
@@ -1827,7 +1804,7 @@ async function fanOutNewBucketPublished(curatorId, curatorUsername, bucketId, bu
 // Create a new bucket
 app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, tags, visibility, monetized, price, mature, allowComments, sourceUrl, thumbnail, links, draft, repoIds } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, allowComments, allowGrabs, sourceUrl, thumbnail, links, draft, repoIds } = req.body;
 
         if (!name || typeof name !== 'string') {
             return res.status(400).json({ error: 'Bucket name is required' });
@@ -1851,6 +1828,8 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
         if (Array.isArray(links) && links.length > 0) {
             if (links.length > 256) return res.status(400).json({ error: 'A bucket cannot have more than 256 links' });
             const urls = links.map(l => l.url || '');
+            const uniqueUrls = new Set(urls.map(u => u.toLowerCase()));
+            if (uniqueUrls.size !== urls.length) return res.status(400).json({ error: 'A bucket cannot contain duplicate links' });
             const { ok, blocked } = await validateLinks(urls);
             if (!ok) return res.status(400).json({ error: 'One or more links were rejected for safety reasons', blocked });
         }
@@ -1876,9 +1855,10 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
             isPaywalled: !!monetized,
             price:       Number(price) || 0,
             mature:        !!mature,
-            allowComments: allowComments !== false,
+            allowComments: ['everyone', 'followers', 'followees', 'no_one'].includes(allowComments) ? allowComments : 'everyone',
+            allowGrabs:    ['everyone', 'followers', 'followees', 'no_one'].includes(allowGrabs)    ? allowGrabs    : 'everyone',
             sourceUrl:     sourceUrl || '',
-            isDraft:       !!draft,
+            isDraft:       draft !== false,
             repoIds:       resolvedRepoIds,
         });
 
@@ -1896,6 +1876,12 @@ app.post('/api/buckets', requireAuth, requireVerification, async (req, res) => {
 
         bucket.links     = resolvedLinks;
         bucket.thumbnail = effectiveThumb;
+
+        if (['public', 'unlisted'].includes(vis) && resolvedLinks.length < 3) {
+            await Bucket.deleteOne({ _id: bucket._id });
+            return res.status(400).json({ error: 'A bucket must have at least 3 links to be made public or unlisted.' });
+        }
+
         await bucket.save();
 
         if (vis === 'public' && !bucket.isDraft) {
@@ -1941,7 +1927,7 @@ app.put('/api/buckets/:oldName', requireAuth, requireVerification, async (req, r
 // Full bucket update (used by profile edit modal)
 app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req, res) => {
     try {
-        const { name, description, tags, visibility, monetized, price, mature, allowComments, sourceUrl, thumbnail, links, isDraft, repoIds, removeRepoId, addRepoIds } = req.body;
+        const { name, description, tags, visibility, monetized, price, mature, allowComments, allowGrabs, sourceUrl, thumbnail, links, isDraft, repoIds, removeRepoId, addRepoIds } = req.body;
 
         // Fetch current state to detect meaningful changes before building the update
         const current = await Bucket.findOne({ _id: req.params.id, userId: req.user._id });
@@ -1952,7 +1938,8 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
         if (description !== undefined) update.description = String(description || '').slice(0, 256);
         if (tags        !== undefined) update.hashtags    = Array.isArray(tags) ? tags.slice(0, 8) : [];
         if (mature         !== undefined) update.mature         = !!mature;
-        if (allowComments  !== undefined) update.allowComments  = allowComments !== false;
+        if (allowComments  !== undefined) update.allowComments  = ['everyone', 'followers', 'followees', 'no_one'].includes(allowComments) ? allowComments : 'everyone';
+        if (allowGrabs     !== undefined) update.allowGrabs     = ['everyone', 'followers', 'followees', 'no_one'].includes(allowGrabs)    ? allowGrabs    : 'everyone';
         if (repoIds !== undefined) {
             if (!Array.isArray(repoIds) || repoIds.length === 0) {
                 update.repoIds = [];
@@ -1973,7 +1960,16 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
             update.repoIds = [...new Set([...existingIds, ...newIds])];
         }
         if (visibility !== undefined) {
+            if (current.isDraft && isDraft !== false) {
+                return res.status(403).json({ error: 'Publish the bucket before changing its visibility.' });
+            }
             const vis = ['public', 'unlisted', 'private'].includes(visibility) ? visibility : 'private';
+            if (['public', 'unlisted'].includes(vis)) {
+                const effectiveLinkCount = update.links ? update.links.length : current.links.length;
+                if (effectiveLinkCount < 3) {
+                    return res.status(400).json({ error: 'A bucket must have at least 3 links to be made public or unlisted.' });
+                }
+            }
             update.visibility = vis;
             update.isPublic   = vis === 'public';
         }
@@ -1986,6 +1982,8 @@ app.patch('/api/buckets/:id/full', requireAuth, requireVerification, async (req,
             if (links.length > 256) return res.status(400).json({ error: 'A bucket cannot have more than 256 links' });
             if (links.length > 0) {
                 const urls = links.map(l => l.url || '');
+                const uniqueUrls = new Set(urls.map(u => u.toLowerCase()));
+                if (uniqueUrls.size !== urls.length) return res.status(400).json({ error: 'A bucket cannot contain duplicate links' });
                 const { ok, blocked } = await validateLinks(urls);
                 if (!ok) return res.status(400).json({ error: 'One or more links were rejected for safety reasons', blocked });
             }
@@ -2445,6 +2443,15 @@ app.patch('/api/buckets/:name/visibility', requireAuth, requireVerification, asy
             return res.status(400).json({ error: 'visibility must be "public", "unlisted", or "private"' });
         }
 
+        const currentBucket = await Bucket.findOne({ userId: req.user._id, name });
+        if (!currentBucket) return res.status(404).json({ error: 'Bucket not found' });
+        if (currentBucket.isDraft) {
+            return res.status(403).json({ error: 'Publish the bucket before changing its visibility.' });
+        }
+        if (['public', 'unlisted'].includes(visibility) && currentBucket.links.length < 3) {
+            return res.status(400).json({ error: 'A bucket must have at least 3 links to be made public or unlisted.' });
+        }
+
         // new: false → returns the OLD doc so we can detect the publish transition
         const oldBucket = await Bucket.findOneAndUpdate(
             { userId: req.user._id, name },
@@ -2608,7 +2615,7 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
             return res.status(400).json({ error: 'sourceBucketId is required' });
         }
 
-        const bucket = await Bucket.findById(sourceBucketId).select('+topic').populate('userId', 'username anonymousId');
+        const bucket = await Bucket.findById(sourceBucketId).select('+topic allowGrabs').populate('userId', 'username anonymousId');
         if (!bucket) {
             return res.status(404).json({ error: 'Bucket not found' });
         }
@@ -2618,9 +2625,28 @@ app.post('/api/buckets/grab', requireAuth, requireVerification, async (req, res)
             return res.status(403).json({ error: 'Only public buckets can be grabbed' });
         }
 
+        // Enforce grab permission
+        const isOwner = bucket.userId._id.equals(req.user._id);
+        if (!isOwner) {
+            const grabPerm = bucket.allowGrabs;
+            const normalizedGrabPerm = (grabPerm === false || grabPerm === 'false') ? 'no_one'
+                : (grabPerm === true || grabPerm === 'true' || !grabPerm) ? 'everyone'
+                : grabPerm;
+            if (normalizedGrabPerm === 'no_one') {
+                return res.status(403).json({ error: 'The curator has disabled grabs on this bucket.' });
+            }
+            if (normalizedGrabPerm === 'followers') {
+                const isSub = await Subscription.exists({ followerId: req.user._id, followeeId: bucket.userId._id });
+                if (!isSub) return res.status(403).json({ error: 'Only followers can grab this bucket.' });
+            }
+            if (normalizedGrabPerm === 'followees') {
+                const isSub = await Subscription.exists({ followerId: bucket.userId._id, followeeId: req.user._id });
+                if (!isSub) return res.status(403).json({ error: 'Only people this curator follows can grab this bucket.' });
+            }
+        }
+
         // Paywalled buckets require the user to have unlocked them first
         if (bucket.isPaywalled) {
-            const isOwner = bucket.userId._id.equals(req.user._id);
             if (!isOwner) {
                 const access = await BucketAccess.findOne({ userId: req.user._id, bucketId: bucket._id });
                 if (!access) {
@@ -5189,7 +5215,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
 
         const [allBuckets, subscriberCount, followingCount, rawGrabbed, userRepos] = await Promise.all([
             Bucket.find(bucketFilter)
-                .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
+                .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft allowComments allowGrabs ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
                 .sort({ order: 1, createdAt: -1 })
                 .lean(),
             Subscription.countDocuments({ followeeId: profileUser._id }),
@@ -5443,6 +5469,9 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
         if (vis === 'private' && !isOwner) {
             return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null });
         }
+        if (!isOwner && ['public', 'unlisted'].includes(vis) && (bucket.links?.length ?? 0) < 3) {
+            return res.status(404).render('404', { title: 'Not Found', page: '', user: req.user ?? null });
+        }
 
         // Block check: if bucket's curator has blocked the viewer, treat as 404
         if (!isOwner && req.user && !req.user.isAnonymous) {
@@ -5465,11 +5494,36 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
         // Comment eligibility: clicked >= 2 links (no grab required)
         // Rating eligibility: grabbed + clicked >= 2 links
         let canComment = false;
+        let commentBlockReason = null; // 'clicks' | 'no_one' | 'followers' | 'followees' | null
         let canRate    = false;
         let userRating = null;
         if (!isOwner && req.user && !req.user.isAnonymous) {
             const clickCount = await LinkClick.countDocuments({ bucketId, userId: req.user._id });
-            canComment = clickCount >= 2;
+            const hasClicks  = clickCount >= 2;
+
+            const perm = bucket.allowComments;
+            const normalizedPerm = (perm === false || perm === 'false') ? 'no_one'
+                : (perm === true || perm === 'true' || !perm) ? 'everyone'
+                : perm;
+
+            if (normalizedPerm === 'no_one') {
+                commentBlockReason = 'no_one';
+            } else if (normalizedPerm === 'followers') {
+                const isFollower = !!(await Subscription.exists({ followerId: req.user._id, followeeId: curator._id }));
+                if (!isFollower) commentBlockReason = 'followers';
+                else if (!hasClicks) commentBlockReason = 'clicks';
+                else canComment = true;
+            } else if (normalizedPerm === 'followees') {
+                const isFollowee = !!(await Subscription.exists({ followerId: curator._id, followeeId: req.user._id }));
+                if (!isFollowee) commentBlockReason = 'followees';
+                else if (!hasClicks) commentBlockReason = 'clicks';
+                else canComment = true;
+            } else {
+                // 'everyone'
+                if (!hasClicks) commentBlockReason = 'clicks';
+                else canComment = true;
+            }
+
             if (hasGrabbed) {
                 const existingRating = await BucketRating.findOne({ bucketId, userId: req.user._id }).select('stars').lean();
                 canRate    = clickCount >= 2;
@@ -5526,6 +5580,7 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
             hasAccess,
             hasGrabbed,
             canComment,
+            commentBlockReason,
             canRate,
             userRating,
             ratingCount,

@@ -415,13 +415,44 @@
 
                     <!-- Allow comments -->
                     <div class="flex items-center justify-between py-3.5 border-b border-silver-100">
-                        <div>
-                            <p class="text-base font-medium text-woodsmoke-800">Allow comments</p>
-                            <p class="text-sm text-woodsmoke-400 mt-0.5">Let others comment on this bucket</p>
+                        <div class="min-w-0 flex-1 pr-3">
+                            <p class="text-base font-medium text-woodsmoke-800">Comments</p>
+                            <p class="text-sm text-woodsmoke-400 mt-0.5">Who can post comments on this bucket</p>
                         </div>
-                        <button id="commentsToggle" data-state="on" class="relative w-14 h-7 rounded-full bg-orchid-500 transition-colors shrink-0 focus:outline-none">
-                            <span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform translate-x-7"></span>
-                        </button>
+                        <div id="commentsDropdownWrap" class="relative shrink-0">
+                            <button id="commentsDropdownTrigger" type="button"
+                                class="flex items-center gap-2 h-9 px-3 rounded-md border border-silver-200 bg-white hover:border-orchid-300 transition-colors text-sm text-woodsmoke-900 min-w-[130px]">
+                                <span id="commentsDropdownLabel" class="flex-1 text-left">Everyone</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="shrink-0 text-woodsmoke-400"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
+                            </button>
+                            <div id="commentsDropdownPanel" class="hidden absolute top-full right-0 mt-1 z-30 bg-white rounded-md border border-silver-200 shadow-lg overflow-hidden min-w-[150px]">
+                                <button data-perm="everyone"  class="comment-dd-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors"><span class="comment-dd-radio w-4 h-4 rounded-full border-2 border-silver-300 shrink-0 flex items-center justify-center"><span class="comment-dd-dot w-2 h-2 rounded-full bg-orchid-500 hidden"></span></span>Everyone</button>
+                                <button data-perm="followers" class="comment-dd-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors border-t border-silver-100"><span class="comment-dd-radio w-4 h-4 rounded-full border-2 border-silver-300 shrink-0 flex items-center justify-center"><span class="comment-dd-dot w-2 h-2 rounded-full bg-orchid-500 hidden"></span></span>Only followers</button>
+                                <button data-perm="followees" class="comment-dd-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors border-t border-silver-100"><span class="comment-dd-radio w-4 h-4 rounded-full border-2 border-silver-300 shrink-0 flex items-center justify-center"><span class="comment-dd-dot w-2 h-2 rounded-full bg-orchid-500 hidden"></span></span>Only followees</button>
+                                <button data-perm="no_one"    class="comment-dd-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors border-t border-silver-100"><span class="comment-dd-radio w-4 h-4 rounded-full border-2 border-silver-300 shrink-0 flex items-center justify-center"><span class="comment-dd-dot w-2 h-2 rounded-full bg-orchid-500 hidden"></span></span>No one</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Allow grabs -->
+                    <div class="flex items-center justify-between py-3.5 border-b border-silver-100">
+                        <div class="min-w-0 flex-1 pr-3">
+                            <p class="text-base font-medium text-woodsmoke-800">Grabs</p>
+                            <p class="text-sm text-woodsmoke-400 mt-0.5">Who can save this bucket to their collection</p>
+                        </div>
+                        <div id="grabsDropdownWrap" class="relative shrink-0">
+                            <button id="grabsDropdownTrigger" type="button"
+                                class="flex items-center gap-2 h-9 px-3 rounded-md border border-silver-200 bg-white hover:border-orchid-300 transition-colors text-sm text-woodsmoke-900 min-w-[130px]">
+                                <span id="grabsDropdownLabel" class="flex-1 text-left">Everyone</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="shrink-0 text-woodsmoke-400"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
+                            </button>
+                            <div id="grabsDropdownPanel" class="hidden absolute top-full right-0 mt-1 z-30 bg-white rounded-md border border-silver-200 shadow-lg overflow-hidden min-w-[150px]">
+                                <button data-perm="everyone"  class="grabs-dd-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors"><span class="grabs-dd-radio w-4 h-4 rounded-full border-2 border-silver-300 shrink-0 flex items-center justify-center"><span class="grabs-dd-dot w-2 h-2 rounded-full bg-orchid-500 hidden"></span></span>Everyone</button>
+                                <button data-perm="followers" class="grabs-dd-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors border-t border-silver-100"><span class="grabs-dd-radio w-4 h-4 rounded-full border-2 border-silver-300 shrink-0 flex items-center justify-center"><span class="grabs-dd-dot w-2 h-2 rounded-full bg-orchid-500 hidden"></span></span>Only followers</button>
+                                <button data-perm="followees" class="grabs-dd-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors border-t border-silver-100"><span class="grabs-dd-radio w-4 h-4 rounded-full border-2 border-silver-300 shrink-0 flex items-center justify-center"><span class="grabs-dd-dot w-2 h-2 rounded-full bg-orchid-500 hidden"></span></span>Only followees</button>
+                                <button data-perm="no_one"    class="grabs-dd-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors border-t border-silver-100"><span class="grabs-dd-radio w-4 h-4 rounded-full border-2 border-silver-300 shrink-0 flex items-center justify-center"><span class="grabs-dd-dot w-2 h-2 rounded-full bg-orchid-500 hidden"></span></span>No one</button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Promote this Bucket -->
@@ -441,8 +472,8 @@
                     <div class="flex items-baseline gap-2 mb-1">
                         <input id="monetizationAmountInput" type="text" inputmode="decimal" placeholder="0"
                             class="w-full text-3xl font-bold text-woodsmoke-950 bg-transparent border-none outline-none placeholder-silver-300" />
-                        <button id="currencyToggleBtn" title="Switch currency"
-                            class="text-xl font-semibold text-woodsmoke-400 hover:text-orchid-600 shrink-0 transition-colors">EWL</button>
+                        <button id="bucketPriceCurrencyBtn" title="Switch currency"
+                            class="text-xl font-semibold text-woodsmoke-400 hover:text-orchid-600 shrink-0 transition-colors">GTK</button>
                     </div>
                     <p id="monetizationFiatValue" class="text-base text-woodsmoke-400">≈ $0.00 USD</p>
                 </div>
@@ -502,27 +533,27 @@
         <!-- Balance -->
         <div class="px-5 py-4 border-b border-silver-100 flex items-center justify-between">
             <span class="text-sm text-woodsmoke-500">Your balance</span>
-            <span id="metaTopupBalance" class="text-sm font-semibold text-woodsmoke-950">— JWL</span>
+            <span id="metaTopupBalance" class="text-sm font-semibold text-woodsmoke-950">— GTK</span>
         </div>
         <!-- Bundles -->
         <div class="px-5 py-4 flex flex-col gap-2">
-            <p class="text-xs text-woodsmoke-400 mb-1">Each fetch costs 2 JWL</p>
+            <p class="text-xs text-woodsmoke-400 mb-1">Each fetch costs 2 GTK</p>
             <div id="metaTopupBundles" class="grid grid-cols-2 gap-2">
                 <button data-fetches="25"  data-cost="50"  class="meta-bundle-btn flex flex-col items-center py-3 rounded-md border-2 border-silver-200 hover:border-orchid-400 transition-colors">
                     <span class="font-semibold text-woodsmoke-950">+25 fetches</span>
-                    <span class="text-xs text-woodsmoke-400 mt-0.5">50 JWL</span>
+                    <span class="text-xs text-woodsmoke-400 mt-0.5">50 GTK</span>
                 </button>
                 <button data-fetches="50"  data-cost="100" class="meta-bundle-btn flex flex-col items-center py-3 rounded-md border-2 border-silver-200 hover:border-orchid-400 transition-colors">
                     <span class="font-semibold text-woodsmoke-950">+50 fetches</span>
-                    <span class="text-xs text-woodsmoke-400 mt-0.5">100 JWL</span>
+                    <span class="text-xs text-woodsmoke-400 mt-0.5">100 GTK</span>
                 </button>
                 <button data-fetches="100" data-cost="200" class="meta-bundle-btn flex flex-col items-center py-3 rounded-md border-2 border-silver-200 hover:border-orchid-400 transition-colors">
                     <span class="font-semibold text-woodsmoke-950">+100 fetches</span>
-                    <span class="text-xs text-woodsmoke-400 mt-0.5">200 JWL</span>
+                    <span class="text-xs text-woodsmoke-400 mt-0.5">200 GTK</span>
                 </button>
                 <button data-fetches="200" data-cost="400" class="meta-bundle-btn flex flex-col items-center py-3 rounded-md border-2 border-silver-200 hover:border-orchid-400 transition-colors">
                     <span class="font-semibold text-woodsmoke-950">+200 fetches</span>
-                    <span class="text-xs text-woodsmoke-400 mt-0.5">400 JWL</span>
+                    <span class="text-xs text-woodsmoke-400 mt-0.5">400 GTK</span>
                 </button>
             </div>
         </div>
@@ -541,6 +572,64 @@
 <!-- Hidden file input for per-link thumbnail uploads -->
 <input id="linkThumbFileInput" type="file" accept=".jpg,.jpeg,.png" class="hidden" />
 
+<!-- ── Global Toast Container ────────────────────────────────────────────── -->
+<div id="toastContainer" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-end gap-2 pointer-events-none" style="transform:translateX(-50%)"></div>
+
+<script>
+window.showToast = (function () {
+    var DURATION = 8000;
+    return function showToast(msg, type) {
+        type = type || 'error';
+        var container = document.getElementById('toastContainer');
+        if (!container) return;
+        var bg = type === 'success' ? 'bg-emerald-600'
+               : type === 'info'    ? 'bg-woodsmoke-700'
+               :                      'bg-red-600';
+
+        var el = document.createElement('div');
+        el.className = 'pointer-events-auto flex items-center justify-between gap-4 px-4 py-3 rounded-md text-white text-sm font-medium shadow-xl translate-y-3 opacity-0 transition-all duration-300 ' + bg;
+        el.style.minWidth = '450px';
+
+        var text = document.createElement('span');
+        text.textContent = msg;
+        el.appendChild(text);
+
+        var closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        closeBtn.className = 'shrink-0 opacity-70 hover:opacity-100 transition-opacity cursor-pointer';
+        el.appendChild(closeBtn);
+
+        container.appendChild(el);
+
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                el.classList.remove('translate-y-3', 'opacity-0');
+            });
+        });
+
+        var remaining = DURATION;
+        var startedAt;
+        var timer = setTimeout(function () { dismiss(el); }, remaining);
+
+        el.addEventListener('mouseenter', function () {
+            clearTimeout(timer);
+            remaining -= Date.now() - startedAt;
+        });
+        el.addEventListener('mouseleave', function () {
+            startedAt = Date.now();
+            timer = setTimeout(function () { dismiss(el); }, remaining);
+        });
+        startedAt = Date.now();
+
+        closeBtn.addEventListener('click', function () { clearTimeout(timer); dismiss(el); });
+
+        function dismiss(node) {
+            node.classList.add('translate-y-3', 'opacity-0');
+            setTimeout(function () { if (node.parentNode) node.parentNode.removeChild(node); }, 300);
+        }
+    };
+}());
+</script>
 
 <script>
 // ── Scroll lock (shared by all modals) ───────────────────────────────────────
@@ -668,7 +757,8 @@
         ads:          true,  // platform runs ads by default; only partners can disable
         monetization: false,
         mature:         false,
-        allowComments:  true,
+        allowComments:  'everyone',
+        allowGrabs:     'everyone',
         thumbnail:    null, // { dataUrl, visible }
         repoIds:      [], // array of ObjectId strings for selected UserRepos
         _linkThumbTargetId: null,
@@ -785,7 +875,7 @@
         function openTopupModal() {
             topupModal.classList.remove('hidden');
             window.lockScroll();
-            topupBalance.textContent = '— JWL';
+            topupBalance.textContent = '— GTK';
             topupConfirmBtn.disabled = true;
             topupSummary.classList.add('hidden');
             topupError.classList.add('hidden');
@@ -793,7 +883,7 @@
             selectedFetches = 0;
             fetch('/api/credits/balance')
                 .then(function (r) { return r.json(); })
-                .then(function (d) { topupBalance.textContent = (d.credits ?? 0) + ' JWL'; })
+                .then(function (d) { topupBalance.textContent = (d.credits ?? 0) + ' GTK'; })
                 .catch(function () {});
         }
 
@@ -809,7 +899,7 @@
                 btn.classList.add('border-orchid-500', 'bg-orchid-50');
                 selectedFetches = parseInt(btn.dataset.fetches);
                 selectedCost    = parseInt(btn.dataset.cost);
-                topupSummary.textContent = selectedFetches + ' fetches for ' + selectedCost + ' JWL';
+                topupSummary.textContent = selectedFetches + ' fetches for ' + selectedCost + ' GTK';
                 topupSummary.classList.remove('hidden');
                 topupError.classList.add('hidden');
                 topupConfirmBtn.disabled = false;
@@ -833,7 +923,7 @@
                     topupError.textContent = 'Something went wrong.';
                     topupError.classList.remove('hidden');
                 } else {
-                    topupBalance.textContent = data.credits + ' JWL';
+                    topupBalance.textContent = data.credits + ' GTK';
                     metaUsageLabel.textContent = data.usage.used + ' / ' + data.usage.limit + ' fetches today';
                     closeTopupModal();
                 }
@@ -865,8 +955,27 @@
     var monetizationAmountInput = document.getElementById('monetizationAmountInput');
     var monetizationFiatValue   = document.getElementById('monetizationFiatValue');
     var matureToggle            = document.getElementById('matureToggle');
-    var commentsToggle          = document.getElementById('commentsToggle');
-    var _defaultAllowComments   = <%- JSON.stringify(user && user.commentDefaults ? user.commentDefaults.allowComments !== false : true) %>;
+    var commentsDropdownWrap    = document.getElementById('commentsDropdownWrap');
+    var commentsDropdownTrigger = document.getElementById('commentsDropdownTrigger');
+    var commentsDropdownPanel   = document.getElementById('commentsDropdownPanel');
+    var commentsDropdownLabel   = document.getElementById('commentsDropdownLabel');
+    var grabsDropdownWrap       = document.getElementById('grabsDropdownWrap');
+    var grabsDropdownTrigger    = document.getElementById('grabsDropdownTrigger');
+    var grabsDropdownPanel      = document.getElementById('grabsDropdownPanel');
+    var grabsDropdownLabel      = document.getElementById('grabsDropdownLabel');
+    var _COMMENT_PERMS = ['everyone', 'followers', 'followees', 'no_one'];
+    var _defaultAllowComments = (function () {
+        var v = <%- JSON.stringify(user && user.commentDefaults ? user.commentDefaults.allowComments : 'everyone') %>;
+        if (v === false) return 'no_one';
+        if (_COMMENT_PERMS.indexOf(v) !== -1) return v;
+        return 'everyone';
+    }());
+    var _defaultAllowGrabs = (function () {
+        var v = <%- JSON.stringify(user && user.commentDefaults ? user.commentDefaults.allowGrabs : 'everyone') %>;
+        if (v === false) return 'no_one';
+        if (_COMMENT_PERMS.indexOf(v) !== -1) return v;
+        return 'everyone';
+    }());
     var isPartner = !!(user && user.isPartner);
 
     // ── Repo dropdown ─────────────────────────────────────────────────────────
@@ -1068,10 +1177,10 @@
         becomePartnerLink.classList.add('hidden');
     }
 
-    // EWL ↔ USD rate (placeholder; swap with live rate when available)
-    var EWL_TO_USD = 0.01; // 1 EWL = $0.01 USD
-    var currentCurrency = 'EWL'; // 'EWL' | 'USD'
-    var currencyToggleBtn = document.getElementById('currencyToggleBtn');
+    // GTK ↔ USD rate: 100 GTK = $1.00, so 1 GTK = $0.01 USD
+    var GTK_TO_USD = 0.01;
+    var currentCurrency = 'GTK'; // 'GTK' | 'USD'
+    var bucketPriceCurrencyBtn = document.getElementById('bucketPriceCurrencyBtn');
 
     // ── Price formatting helpers (US format: 1,234.56) ───────────────────────
     // Sanitise raw input: keep digits + at most one period (decimal)
@@ -1095,29 +1204,26 @@
     }
     function updateFiatLine() {
         var raw = parsePriceValue(monetizationAmountInput.value);
-        if (currentCurrency === 'EWL') {
-            var usd = (raw * EWL_TO_USD).toFixed(2);
+        if (currentCurrency === 'GTK') {
+            var usd = (raw * GTK_TO_USD).toFixed(2);
             monetizationFiatValue.textContent = '≈ $' + usd + ' USD';
         } else {
-            var ewl = Math.round(raw / EWL_TO_USD);
-            monetizationFiatValue.textContent = '≈ ' + Number(ewl).toLocaleString('en-US') + ' EWL';
+            var gtk = Math.round(raw / GTK_TO_USD);
+            monetizationFiatValue.textContent = '≈ ' + Number(gtk).toLocaleString('en-US') + ' GTK';
         }
     }
 
-    // Returns the price in EWL regardless of which currency the user entered
-    function priceAsEWL() {
+    // Returns the price in GTK regardless of which currency the user entered
+    function priceAsGTK() {
         var raw = parsePriceValue(monetizationAmountInput.value);
-        return currentCurrency === 'USD' ? raw / EWL_TO_USD : raw;
+        return currentCurrency === 'USD' ? raw / GTK_TO_USD : raw;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
     function uid() { return Math.random().toString(36).slice(2, 9); }
 
     function showError(msg) {
-        errorEl.textContent = msg;
-        errorEl.classList.remove('hidden');
-        nameInput.classList.add('border-red-400');
-        nameInput.classList.remove('border-silver-200');
+        window.showToast(msg, 'error');
     }
 
     function hideError() {
@@ -1135,10 +1241,11 @@
     function resetState() {
         state.links        = [];
         state.tags         = [];
-        state.visibility   = 'public';
+        state.visibility   = 'private';
         state.ads          = true;
         state.monetization = false;
         state.mature       = false;
+        state.allowGrabs   = 'everyone';
         state.thumbnail    = null;
         state.repoIds      = [];
         state._linkThumbTargetId = null;
@@ -1296,7 +1403,7 @@
         renderTags();
 
         // Toggles
-        setVisSegment('public');
+        setVisSegment('private');
         setToggle(adsToggle, true);
         adsLabel.textContent = "Don't run ads in my bucket";
         adsLabel.href = isPartner ? '#' : '/partnership';
@@ -1311,12 +1418,14 @@
         monetizationLabel.textContent = 'Disabled';
         monetizationAmountPanel.classList.add('hidden');
         monetizationAmountInput.value = '';
-        currentCurrency = 'EWL';
-        currencyToggleBtn.textContent = 'EWL';
+        currentCurrency = 'GTK';
+        bucketPriceCurrencyBtn.textContent = 'GTK';
         monetizationFiatValue.textContent = '≈ $0.00 USD';
         setToggle(matureToggle,    false);
         state.allowComments = _defaultAllowComments;
-        setToggle(commentsToggle, _defaultAllowComments);
+        setCommentSegment(_defaultAllowComments);
+        state.allowGrabs = _defaultAllowGrabs;
+        setGrabsSegment(_defaultAllowGrabs);
 
         // Inputs
         newLinkTitle.value = '';
@@ -1328,6 +1437,9 @@
         newRepoInline.classList.add('hidden');
         newRepoError.classList.add('hidden');
         newRepoNameInput.value = '';
+
+        // New buckets are always drafts — lock visibility to private
+        lockVisibilityForDraft(true);
     }
 
     // ── Mobile tab switching ──────────────────────────────────────────────────
@@ -1406,7 +1518,7 @@
                 name:          nameInput.value.trim() || state._editBucket.name,
                 visibility:    state.visibility,
                 monetized:     state.monetization,
-                price:         priceAsEWL(),
+                price:         priceAsGTK(),
                 mature:        state.mature,
                 allowComments: state.allowComments,
                 tags:          state.tags,
@@ -1453,12 +1565,14 @@
         state.tags         = bucket.hashtags || [];
         state.monetization = !!bucket.isPaywalled;
         state.mature         = !!bucket.mature;
-        state.allowComments  = bucket.allowComments !== false;
         state.thumbnail      = bucket.thumbnail ? { dataUrl: bucket.thumbnail, visible: true } : null;
         state.repoIds      = Array.isArray(bucket.repoIds) ? bucket.repoIds.map(String) : [];
 
-        // Capture visibility before resetUI overwrites state.visibility to 'public'
-        var bucketVisibility = bucket.visibility || (bucket.isPublic ? 'public' : 'private');
+        // Capture these before resetUI overwrites them
+        var bucketVisibility    = bucket.visibility || (bucket.isPublic ? 'public' : 'private');
+        var _normPerm = function(v) { if (v === false) return 'no_one'; if (_COMMENT_PERMS.indexOf(v) !== -1) return v; return 'everyone'; };
+        var bucketAllowComments = _normPerm(bucket.allowComments);
+        var bucketAllowGrabs    = _normPerm(bucket.allowGrabs);
 
         // Reset the UI using the populated state
         resetUI();
@@ -1466,6 +1580,9 @@
 
         // resetUI hardcodes toggles — fix them to match the bucket's actual settings
         setVisSegment(bucketVisibility);
+        lockVisibilityForDraft(!!bucket.isDraft);
+        setCommentSegment(bucketAllowComments);
+        setGrabsSegment(bucketAllowGrabs);
         setToggle(monetizationToggle, state.monetization);
         var monetizationDisabled = bucketVisibility !== 'public' || !isPartner;
         monetizationToggle.disabled = monetizationDisabled;
@@ -1477,7 +1594,7 @@
             ? formatPriceDisplay(sanitisePriceRaw(String(bucket.price)))
             : '';
         setToggle(matureToggle,    state.mature);
-        setToggle(commentsToggle,  state.allowComments);
+        setCommentSegment(state.allowComments);
 
         // Set bucket name, description and source URL (resetUI clears them)
         nameInput.value = bucket.name;
@@ -1539,7 +1656,8 @@
             monetized:   !!bucket.isPaywalled,
             price:       bucket.price || 0,
             mature:        !!bucket.mature,
-            allowComments: bucket.allowComments !== false,
+            allowComments: bucketAllowComments,
+            allowGrabs:    bucketAllowGrabs,
             tags:          (bucket.hashtags || []).slice().sort().join('|'),
             links:       '',  // filled in after async link fetch
             thumbnail:   bucket.thumbnail || '',
@@ -1633,11 +1751,11 @@
     function loadThumbnailFile(file) {
         if (!file) return;
         if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
-            alert('Only JPG and PNG images are allowed.');
+            window.showToast('Only JPG and PNG images are allowed.', 'error');
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            alert('Image must be under 5 MB.');
+            window.showToast('Image must be under 5 MB.', 'error');
             return;
         }
         thumbPlaceholder.classList.add('hidden');
@@ -1832,6 +1950,23 @@
         monetizationToggle.classList.toggle('cursor-not-allowed', !canMonetize);
     }
 
+    function lockVisibilityForDraft(locked) {
+        visibilitySegment.querySelectorAll('.vis-seg').forEach(function (btn) {
+            var isPrivate = btn.dataset.vis === 'private';
+            btn.disabled = locked && !isPrivate;
+            btn.classList.toggle('opacity-30', locked && !isPrivate);
+            btn.classList.toggle('cursor-not-allowed', locked && !isPrivate);
+            if (locked && !isPrivate) {
+                btn.title = 'Publish the bucket to unlock visibility';
+            } else {
+                btn.removeAttribute('title');
+            }
+        });
+        if (locked) {
+            visibilityLabel.textContent = 'Locked until published';
+        }
+    }
+
     visibilitySegment.querySelectorAll('.vis-seg').forEach(function (btn) {
         btn.addEventListener('click', function () { setVisSegment(this.dataset.vis); });
     });
@@ -1931,20 +2066,20 @@
         updateFiatLine();
     });
 
-    currencyToggleBtn.addEventListener('click', function () {
+    bucketPriceCurrencyBtn.addEventListener('click', function () {
         var raw = parsePriceValue(monetizationAmountInput.value);
-        if (currentCurrency === 'EWL') {
-            // switching to USD: convert current EWL amount → USD
+        if (currentCurrency === 'GTK') {
+            // switching to USD: convert current GTK amount → USD
             currentCurrency = 'USD';
-            var asUsd = raw * EWL_TO_USD;
+            var asUsd = raw * GTK_TO_USD;
             monetizationAmountInput.value = asUsd > 0 ? formatPriceDisplay(sanitisePriceRaw(asUsd.toFixed(2))) : '';
         } else {
-            // switching to EWL: convert current USD amount → EWL
-            currentCurrency = 'EWL';
-            var asEwl = Math.round(raw / EWL_TO_USD);
-            monetizationAmountInput.value = asEwl > 0 ? formatPriceDisplay(String(asEwl)) : '';
+            // switching to GTK: convert current USD amount → GTK
+            currentCurrency = 'GTK';
+            var asGtk = Math.round(raw / GTK_TO_USD);
+            monetizationAmountInput.value = asGtk > 0 ? formatPriceDisplay(String(asGtk)) : '';
         }
-        currencyToggleBtn.textContent = currentCurrency;
+        bucketPriceCurrencyBtn.textContent = currentCurrency;
         updateFiatLine();
     });
 
@@ -1953,9 +2088,71 @@
         setToggle(this, state.mature);
     });
 
-    commentsToggle.addEventListener('click', function () {
-        state.allowComments = !state.allowComments;
-        setToggle(this, state.allowComments);
+    var COMMENT_PERM_LABELS = {
+        everyone:  'Everyone',
+        followers: 'Only followers',
+        followees: 'Only followees',
+        no_one:    'No one'
+    };
+    function setCommentSegment(perm) {
+        state.allowComments = perm;
+        commentsDropdownLabel.textContent = COMMENT_PERM_LABELS[perm] || COMMENT_PERM_LABELS.everyone;
+        commentsDropdownPanel.querySelectorAll('.comment-dd-item').forEach(function (btn) {
+            var active = btn.dataset.perm === perm;
+            var radio = btn.querySelector('.comment-dd-radio');
+            var dot   = btn.querySelector('.comment-dd-dot');
+            radio.classList.toggle('border-orchid-500', active);
+            radio.classList.toggle('border-silver-300', !active);
+            dot.classList.toggle('hidden', !active);
+            btn.classList.toggle('font-medium', active);
+        });
+    }
+
+    commentsDropdownTrigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        commentsDropdownPanel.classList.toggle('hidden');
+    });
+
+    commentsDropdownPanel.querySelectorAll('.comment-dd-item').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            setCommentSegment(this.dataset.perm);
+            commentsDropdownPanel.classList.add('hidden');
+        });
+    });
+
+    function setGrabsSegment(perm) {
+        state.allowGrabs = perm;
+        grabsDropdownLabel.textContent = COMMENT_PERM_LABELS[perm] || COMMENT_PERM_LABELS.everyone;
+        grabsDropdownPanel.querySelectorAll('.grabs-dd-item').forEach(function (btn) {
+            var active = btn.dataset.perm === perm;
+            var radio  = btn.querySelector('.grabs-dd-radio');
+            var dot    = btn.querySelector('.grabs-dd-dot');
+            radio.classList.toggle('border-orchid-500', active);
+            radio.classList.toggle('border-silver-300', !active);
+            dot.classList.toggle('hidden', !active);
+            btn.classList.toggle('font-medium', active);
+        });
+    }
+
+    grabsDropdownTrigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        grabsDropdownPanel.classList.toggle('hidden');
+    });
+
+    grabsDropdownPanel.querySelectorAll('.grabs-dd-item').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            setGrabsSegment(this.dataset.perm);
+            grabsDropdownPanel.classList.add('hidden');
+        });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!commentsDropdownWrap.contains(e.target)) {
+            commentsDropdownPanel.classList.add('hidden');
+        }
+        if (!grabsDropdownWrap.contains(e.target)) {
+            grabsDropdownPanel.classList.add('hidden');
+        }
     });
 
     // ── Tags ──────────────────────────────────────────────────────────────────
@@ -2286,6 +2483,12 @@
             });
             state.links         = state.links.concat(newLinks.filter(function (l) { return !l.archived; }));
             state.archivedLinks = state.archivedLinks.concat(newLinks.filter(function (l) { return l.archived; }));
+            // On the first page, override _initialLinkCount with the server's authoritative total.
+            // The profile page payload uses a links._id projection that may be unreliable when
+            // the link schema has _id:false, so this ensures the guard count is always correct.
+            if (state._editBucket && state._linksSkip === 0) {
+                state._initialLinkCount = data.total ?? 0;
+            }
             state._linksSkip   += data.links.length;
             state._clicksAccum += (data.links || []).reduce(function (s, l) { return s + (l.clickCount || 0); }, 0);
 
@@ -2429,6 +2632,7 @@
 
         var thumb = null;
         addLinkBtn.disabled = true;
+        submitBtn.disabled = true;
         addLinkBtn.innerHTML = LOADER_SVG;
         try {
             var metaRes = await fetch('/api/meta?url=' + encodeURIComponent(url));
@@ -2437,7 +2641,7 @@
                 if (meta.error === 'rate_daily') {
                     metaUsageLabel.textContent = meta.used + ' / ' + meta.limit + ' fetches today - limit reached';
                 } else {
-                    alert('Too many requests. Please wait a moment.');
+                    window.showToast('Too many requests. Please wait a moment.', 'error');
                 }
             } else if (metaRes.ok) {
                 if (!title && meta.title) title = meta.title;
@@ -2447,6 +2651,7 @@
         } catch {}
         addLinkBtn.textContent = 'Add';
         updateAddBtn();
+        submitBtn.disabled = !nameInput.value.trim();
 
         state.links.push({ id: uid(), title: title || url, url: url, thumb: thumb, monetized: false, checked: false, clickCount: 0, pinned: false });
         state._linkCountDelta += 1;
@@ -2472,8 +2677,8 @@
         var id   = state._linkThumbTargetId;
         var file = this.files[0];
         if (!id || !file) return;
-        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) { alert('Only JPG and PNG images are allowed.'); this.value = ''; return; }
-        if (file.size > 5 * 1024 * 1024) { alert('Image must be under 5 MB.'); this.value = ''; return; }
+        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) { window.showToast('Only JPG and PNG images are allowed.', 'error'); this.value = ''; return; }
+        if (file.size > 5 * 1024 * 1024) { window.showToast('Image must be under 5 MB.', 'error'); this.value = ''; return; }
 
         var reader = new FileReader();
         reader.onload = function (ev) {
@@ -2596,6 +2801,12 @@
             return;
         }
 
+        // Enforce minimum link count before any visibility-changing save
+        if (['public', 'unlisted'].includes(state.visibility) && state.links.length < 3) {
+            showError('A bucket must have at least 3 links to be made public or unlisted.');
+            return;
+        }
+
         // When editing an existing (non-draft) bucket, skip the round-trip if nothing changed
         if (state._editBucket && !state._editBucketIsDraft && state._originalSnapshot) {
             var snap = state._originalSnapshot;
@@ -2610,9 +2821,10 @@
                 sourceUrlInput.value.trim()   === snap.sourceUrl &&
                 state.visibility              === snap.visibility &&
                 state.monetization            === snap.monetized &&
-                priceAsEWL()                  === snap.price &&
+                priceAsGTK()                  === snap.price &&
                 state.mature                  === snap.mature &&
                 state.allowComments           === snap.allowComments &&
+                state.allowGrabs              === snap.allowGrabs &&
                 (state.repoIds || []).slice().sort().join('|') === snap.repoIds &&
                 currentTags                   === snap.tags &&
                 currentLinks                  === snap.links &&
@@ -2629,9 +2841,10 @@
                 name:          name,
                 visibility:    state.visibility,
                 monetized:     state.monetization,
-                price:         priceAsEWL(),
+                price:         priceAsGTK(),
                 mature:        state.mature,
                 allowComments: state.allowComments,
+                allowGrabs:    state.allowGrabs,
                 tags:          state.tags,
                 description:   descInput.value.trim(),
                 sourceUrl:     sourceUrlInput.value.trim(),
@@ -2648,6 +2861,7 @@
 
             var isEdit  = !!state._editBucket;
             var isDraft = !isEdit && !!_draftId;
+
             var url, method;
             if (isEdit) {
                 url    = '/api/buckets/' + state._editBucket._id + '/full';
@@ -2675,7 +2889,7 @@
                 setLoading(false);
                 nameInput.focus();
             } else if (res.status === 400 && Array.isArray(data.blocked) && data.blocked.length > 0) {
-                alert('One or more links were blocked for safety reasons:\n\n' + data.blocked.join('\n'));
+                window.showToast('One or more links were blocked for safety reasons.', 'error');
                 setLoading(false);
             } else {
                 showError(data.error || 'Something went wrong. Please try again.');
@@ -2746,7 +2960,7 @@
                 ? '<img src="' + b.thumbnail + '" alt="" class="w-10 h-10 object-cover rounded-md bg-silver-100">'
                 : '<div class="w-10 h-10 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-silver-300"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zm3-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/></g></svg></div>';
             return '<label class="flex items-center gap-3 px-4 py-2.5 hover:bg-silver-50 cursor-pointer">'
-                + '<input type="checkbox" class="lt-cb w-4 h-4 rounded accent-orchid-700 shrink-0" data-bucket-name="' + b.name.replace(/"/g, '&quot;') + '">'
+                + '<span class="relative w-4 h-4 shrink-0"><input type="checkbox" class="lt-cb peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" data-bucket-name="' + b.name.replace(/"/g, '&quot;') + '"><span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span><span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"><svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>'
                 + '<span class="shrink-0">' + thumb + '</span>'
                 + '<span class="flex flex-col min-w-0 flex-1">'
                 +   '<span class="text-sm font-medium text-woodsmoke-950 truncate">' + b.name + '</span>'
@@ -2921,9 +3135,9 @@
         }
     }
 
-    function buildCode(bkToken) {
-        var safeTok = String(bkToken || '').replace(/['"\\]/g, '');
-        return `javascript:(function(){var ex=document.getElementById('grabbn-widget');if(ex){ex.remove();return;}function xi(a,base){var el=a,img,src,attrs=['data-src','data-lazy','data-original','data-srcset','src'],depth=0;while(el&&depth<5){img=el.querySelector('img');if(img){for(var k=0;k<attrs.length;k++){src=(img.getAttribute(attrs[k])||'').trim();if(src.indexOf(' ')!==-1)src=src.split(',')[0].trim().split(' ')[0];if(src&&src.indexOf('data:')!==0&&src.indexOf('.svg')===-1){try{return new URL(src,base).href;}catch{}}}}el=el.parentElement;depth++;}return null;}function xl(doc,base){var l=[],s=new Set();doc.querySelectorAll('a[href]').forEach(function(a){var r=a.getAttribute('href');if(!r||r[0]==='#'||/^(javascript|mailto|tel):/.test(r))return;try{var h=new URL(r,base).href;if(s.has(h))return;s.add(h);var t=(a.title||a.getAttribute('aria-label')||'').trim();if(!t){var i=a.querySelector('img');if(i)t=(i.alt||'').trim();}if(!t){var f=a.textContent.trim().replace(/\\s+/g,' ');t=f.replace(/[$€£¥][\\d\\s,.]+.*/,'').trim()||f;}t=t.slice(0,120);if(t.length>2)l.push({href:h,text:t,image:xi(a,base)});}catch{}});return l;}var WN_KEY='grabbn:'+location.hostname+':';var acc=null;try{if(window.name&&window.name.indexOf(WN_KEY)===0)acc=JSON.parse(window.name.slice(WN_KEY.length));}catch{}if(acc&&acc.pagesCollected>=50){alert('Grabbn: 50-page limit reached. Save your current collection first, then continue grabbing.');return;}var curLinks=xl(document,location.href);var seen=new Set(acc?acc.links.map(function(l){return l.href;}):[]);var merged=acc?acc.links.slice():[];curLinks.forEach(function(l){if(!seen.has(l.href)){merged.push(l);seen.add(l.href);}});if(merged.length>2000)merged=merged.slice(0,2000);var pagesCollected=(acc?acc.pagesCollected:0)+1;try{window.name=WN_KEY+JSON.stringify({links:merged,pagesCollected:pagesCollected});}catch{}var maxPage=1,cp=parseInt(new URLSearchParams(location.search).get('page')||'1',10);document.querySelectorAll('a[href]').forEach(function(a){var m=(a.getAttribute('href')||'').match(/[?&]page=(\\d+)/i);if(m){var n=parseInt(m[1],10);if(n>maxPage)maxPage=n;}});var sty=document.createElement('style');sty.textContent='@keyframes grabbn-spin{to{transform:rotate(360deg)}}';document.head.appendChild(sty);var ov=document.createElement('div');ov.id='grabbn-widget';ov.style.cssText='position:fixed;bottom:20px;right:20px;width:380px;height:560px;z-index:2147483647;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden;background:#fff;border:1px solid #e5e7eb;';var xb=document.createElement('button');xb.title='Close';xb.textContent='\u00d7';xb.style.cssText='position:absolute;top:9px;right:9px;z-index:10;background:rgba(255,255,255,.95);border:1px solid #e5e7eb;border-radius:6px;width:24px;height:24px;font-size:16px;cursor:pointer;color:#6b7280;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;';xb.onclick=function(){ov.remove();};ov.appendChild(xb);var ld=document.createElement('div');ld.style.cssText='display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:8px;color:#9ca3af;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';ld.innerHTML='<div style="width:20px;height:20px;border:2px solid #f3e8ff;border-top-color:#b346b3;border-radius:50%;animation:grabbn-spin .8s linear infinite;"></div><span>Loading Grabbn\u2026</span>';ov.appendChild(ld);document.body.appendChild(ov);var wf=null;window.addEventListener('message',function(e){if(e.origin!=='${origin}')return;if(e.data==='grabbn-close'){ov.remove();return;}if(e.data==='grabbn-reset'){try{window.name='';}catch{}return;}if(e.data&&e.data.type==='grabbn-fetch-pages'){var urls=e.data.urls;urls.forEach(function(u,i){fetch(u).then(function(r){return r.text();}).then(function(html){var d2=new DOMParser().parseFromString(html,'text/html');var pl=xl(d2,u);if(wf)wf.contentWindow.postMessage({type:'grabbn-page-links',links:pl,pageUrl:u,index:i,total:urls.length},'${origin}');}).catch(function(){if(wf)wf.contentWindow.postMessage({type:'grabbn-page-links',links:[],pageUrl:u,index:i,total:urls.length,error:true},'${origin}');});});}if(e.data&&e.data.type==='grabbn-rescan'){var fr2=xl(document,location.href);var ac2=null;try{if(window.name&&window.name.indexOf(WN_KEY)===0)ac2=JSON.parse(window.name.slice(WN_KEY.length));}catch{}var ex2=new Set(ac2?ac2.links.map(function(l){return l.href;}):[]);var nw=fr2.filter(function(l){return!ex2.has(l.href);});if(ac2&&nw.length){nw.forEach(function(l){ac2.links.push(l);});try{window.name=WN_KEY+JSON.stringify(ac2);}catch{}}if(wf)wf.contentWindow.postMessage({type:'grabbn-rescan-result',links:nw},'${origin}');return;}});fetch('${origin}/api/popup-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({links:merged,sourceUrl:location.href,maxPage:maxPage,currentPage:cp,pagesCollected:pagesCollected,bkt:'${safeTok}'})}).then(function(r){return r.json();}).then(function(d){if(!d.token){ld.querySelector('span').textContent='Server error.';return;}ld.remove();var fr=document.createElement('iframe');fr.src='${origin}/popup.html?session='+d.token;fr.style.cssText='width:100%;height:100%;border:none;display:block;';ov.appendChild(fr);wf=fr;}).catch(function(){ld.querySelector('span').textContent='Could not connect.';});})();`;
+    function buildCode(anonId) {
+        var safeAnon = String(anonId || '').replace(/['"\\]/g, '');
+        return `javascript:(function(){var ex=document.getElementById('grabbn-widget');if(ex){ex.remove();return;}function xi(a,base){var el=a,img,src,attrs=['data-src','data-lazy','data-original','data-srcset','src'],depth=0;while(el&&depth<5){img=el.querySelector('img');if(img){for(var k=0;k<attrs.length;k++){src=(img.getAttribute(attrs[k])||'').trim();if(src.indexOf(' ')!==-1)src=src.split(',')[0].trim().split(' ')[0];if(src&&src.indexOf('data:')!==0&&src.indexOf('.svg')===-1){try{return new URL(src,base).href;}catch{}}}}el=el.parentElement;depth++;}return null;}function xl(doc,base){var l=[],s=new Set();doc.querySelectorAll('a[href]').forEach(function(a){var r=a.getAttribute('href');if(!r||r[0]==='#'||/^(javascript|mailto|tel):/.test(r))return;try{var h=new URL(r,base).href;if(s.has(h))return;s.add(h);var t=(a.title||a.getAttribute('aria-label')||'').trim();if(!t){var i=a.querySelector('img');if(i)t=(i.alt||'').trim();}if(!t){var f=a.textContent.trim().replace(/\\s+/g,' ');t=f.replace(/[$€£¥][\\d\\s,.]+.*/,'').trim()||f;}t=t.slice(0,120);if(t.length>2)l.push({href:h,text:t,image:xi(a,base)});}catch{}});return l;}var WN_KEY='grabbn:'+location.hostname+':';var acc=null;try{if(window.name&&window.name.indexOf(WN_KEY)===0)acc=JSON.parse(window.name.slice(WN_KEY.length));}catch{}if(acc&&acc.pagesCollected>=50){alert('Grabbn: 50-page limit reached. Save your current collection first, then continue grabbing.');return;}var curLinks=xl(document,location.href);var seen=new Set(acc?acc.links.map(function(l){return l.href;}):[]);var merged=acc?acc.links.slice():[];curLinks.forEach(function(l){if(!seen.has(l.href)){merged.push(l);seen.add(l.href);}});if(merged.length>2000)merged=merged.slice(0,2000);var pagesCollected=(acc?acc.pagesCollected:0)+1;try{window.name=WN_KEY+JSON.stringify({links:merged,pagesCollected:pagesCollected});}catch{}var maxPage=1,cp=parseInt(new URLSearchParams(location.search).get('page')||'1',10);document.querySelectorAll('a[href]').forEach(function(a){var m=(a.getAttribute('href')||'').match(/[?&]page=(\\d+)/i);if(m){var n=parseInt(m[1],10);if(n>maxPage)maxPage=n;}});var sty=document.createElement('style');sty.textContent='@keyframes grabbn-spin{to{transform:rotate(360deg)}}';document.head.appendChild(sty);var ov=document.createElement('div');ov.id='grabbn-widget';ov.style.cssText='position:fixed;bottom:20px;right:20px;width:380px;height:560px;z-index:2147483647;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden;background:#fff;border:1px solid #e5e7eb;';var xb=document.createElement('button');xb.title='Close';xb.textContent='\u00d7';xb.style.cssText='position:absolute;top:9px;right:9px;z-index:10;background:rgba(255,255,255,.95);border:1px solid #e5e7eb;border-radius:6px;width:24px;height:24px;font-size:16px;cursor:pointer;color:#6b7280;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;';xb.onclick=function(){ov.remove();};ov.appendChild(xb);var ld=document.createElement('div');ld.style.cssText='display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:8px;color:#9ca3af;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';ld.innerHTML='<div style="width:20px;height:20px;border:2px solid #f3e8ff;border-top-color:#b346b3;border-radius:50%;animation:grabbn-spin .8s linear infinite;"></div><span>Loading Grabbn\u2026</span>';ov.appendChild(ld);document.body.appendChild(ov);var wf=null;window.addEventListener('message',function(e){if(e.origin!=='${origin}')return;if(e.data==='grabbn-close'){ov.remove();return;}if(e.data==='grabbn-reset'){try{window.name='';}catch{}return;}if(e.data&&e.data.type==='grabbn-fetch-pages'){var urls=e.data.urls;urls.forEach(function(u,i){fetch(u).then(function(r){return r.text();}).then(function(html){var d2=new DOMParser().parseFromString(html,'text/html');var pl=xl(d2,u);if(wf)wf.contentWindow.postMessage({type:'grabbn-page-links',links:pl,pageUrl:u,index:i,total:urls.length},'${origin}');}).catch(function(){if(wf)wf.contentWindow.postMessage({type:'grabbn-page-links',links:[],pageUrl:u,index:i,total:urls.length,error:true},'${origin}');});});}if(e.data&&e.data.type==='grabbn-rescan'){var fr2=xl(document,location.href);var ac2=null;try{if(window.name&&window.name.indexOf(WN_KEY)===0)ac2=JSON.parse(window.name.slice(WN_KEY.length));}catch{}var ex2=new Set(ac2?ac2.links.map(function(l){return l.href;}):[]);var nw=fr2.filter(function(l){return!ex2.has(l.href);});if(ac2&&nw.length){nw.forEach(function(l){ac2.links.push(l);});try{window.name=WN_KEY+JSON.stringify(ac2);}catch{}}if(wf)wf.contentWindow.postMessage({type:'grabbn-rescan-result',links:nw},'${origin}');return;}});fetch('${origin}/api/popup-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({links:merged,sourceUrl:location.href,maxPage:maxPage,currentPage:cp,pagesCollected:pagesCollected,anon:'${safeAnon}'})}).then(function(r){return r.json();}).then(function(d){if(!d.token){ld.querySelector('span').textContent='Server error.';return;}ld.remove();var fr=document.createElement('iframe');fr.src='${origin}/popup.html?session='+d.token;fr.style.cssText='width:100%;height:100%;border:none;display:block;';ov.appendChild(fr);wf=fr;}).catch(function(){ld.querySelector('span').textContent='Could not connect.';});})();`;
     }
 
     async function openBookmarkletModal(triggerBtn) {
@@ -2933,13 +3147,13 @@
         }
         setButtonSpinner(triggerBtn, true);
         bookmarkletCode.textContent = 'Generating…';
+        var anonId = '';
         try {
-            var res = await fetch('/api/auth/bookmarklet-token', { credentials: 'include' });
+            var res = await fetch('/api/auth/anon-id', { credentials: 'include' });
             var data = await res.json();
-            cachedCode = buildCode(data.token);
-        } catch {
-            cachedCode = buildCode('');
-        }
+            anonId = data.id || '';
+        } catch {}
+        cachedCode = buildCode(anonId);
         setButtonSpinner(triggerBtn, false);
         if (bookmarkletLink) bookmarkletLink.href = cachedCode;
         if (bookmarkletCode) bookmarkletCode.textContent = cachedCode;

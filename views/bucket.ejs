@@ -84,7 +84,7 @@
                     <% if (bucket.isPaywalled) { %>
                     <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-amber-200">
                         <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
-                        <%= (bucket.price || 0).toLocaleString('en-US') %> EWL
+                        <%= (bucket.price || 0).toLocaleString('en-US') %> GTK
                     </span>
                     <% } else { %>
                     <span class="inline-flex items-center bg-green-50 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-green-200">Free</span>
@@ -409,7 +409,7 @@
                     <% } else { %>
                     <button id="bvUnlockBtn" class="inline-flex items-center justify-center gap-2 w-full max-w-xs h-10 bg-orchid-700 hover:bg-orchid-800 text-white font-semibold text-sm rounded-md transition-colors mx-auto">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.010z"/><path fill="currentColor" d="M6 8a6 6 0 1 1 12 0h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2zm6-4a4 4 0 0 1 4 4H8a4 4 0 0 1 4-4m2 10a2 2 0 0 1-1 1.732V17a1 1 0 1 1-2 0v-1.268A2 2 0 0 1 12 12a2 2 0 0 1 2 2"/></g></svg>
-                        Unlock for <%= (bucket.price || 0).toLocaleString('en-US') %> EWL
+                        Unlock for <%= (bucket.price || 0).toLocaleString('en-US') %> GTK
                     </button>
                     <% } %>
                 </div>
@@ -463,7 +463,13 @@
         </div>
         <% } else { %>
         <div id="bvCommentCompose" class="mb-5">
-            <% var canComment = canRate || isOwner; %>
+            <% if (commentBlockReason === 'no_one') { %>
+            <p class="text-sm text-woodsmoke-400 italic">The curator has disabled comments on this bucket.</p>
+            <% } else if (commentBlockReason === 'followers') { %>
+            <p class="text-sm text-woodsmoke-400 italic">Only people who follow this curator can comment.</p>
+            <% } else if (commentBlockReason === 'followees') { %>
+            <p class="text-sm text-woodsmoke-400 italic">Only people this curator follows can comment.</p>
+            <% } else { %>
             <div class="flex items-end gap-2">
                 <div class="flex-1 flex flex-col">
                     <textarea id="bvCommentBody" rows="1" maxlength="250"
@@ -479,6 +485,7 @@
                 </button>
                 <% } %>
             </div>
+            <% } %>
         </div>
         <% } %>
 
@@ -674,7 +681,7 @@
                     ? '<img src="' + b.thumbnail + '" alt="" class="w-10 h-10 object-cover rounded-md bg-silver-100">'
                     : '<div class="w-10 h-10 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-silver-300"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zm3-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/></g></svg></div>';
                 return '<label class="flex items-center gap-3 px-4 py-2.5 hover:bg-silver-50 cursor-pointer">'
-                    + '<input type="checkbox" class="bv-clone-cb w-4 h-4 rounded accent-orchid-700 shrink-0" data-bucket-name="' + b.name.replace(/"/g, '&quot;') + '">'
+                    + '<span class="relative w-4 h-4 shrink-0"><input type="checkbox" class="bv-clone-cb peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" data-bucket-name="' + b.name.replace(/"/g, '&quot;') + '"><span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span><span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"><svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>'
                     + '<span class="shrink-0">' + thumb + '</span>'
                     + '<span class="flex flex-col min-w-0 flex-1">'
                     +   '<span class="text-sm font-medium text-woodsmoke-950 truncate">' + b.name + '</span>'
@@ -789,7 +796,7 @@
                     ? '<img src="' + b.thumbnail + '" alt="" class="w-10 h-10 object-cover rounded-md bg-silver-100">'
                     : '<div class="w-10 h-10 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-silver-300"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zm3-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/></g></svg></div>';
                 return '<label class="flex items-center gap-3 px-4 py-2.5 hover:bg-silver-50 cursor-pointer">'
-                    + '<input type="checkbox" class="bv-move-cb w-4 h-4 rounded accent-orchid-700 shrink-0" data-bucket-name="' + b.name.replace(/"/g, '&quot;') + '">'
+                    + '<span class="relative w-4 h-4 shrink-0"><input type="checkbox" class="bv-move-cb peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" data-bucket-name="' + b.name.replace(/"/g, '&quot;') + '"><span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span><span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"><svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>'
                     + '<span class="shrink-0">' + thumb + '</span>'
                     + '<span class="flex flex-col min-w-0 flex-1">'
                     +   '<span class="text-sm font-medium text-woodsmoke-950 truncate">' + b.name + '</span>'
@@ -1191,7 +1198,7 @@
                 : `<div class="w-full h-full flex items-center justify-center text-gray-400">${NO_THUMB_SVG}</div>`;
 
             const priceBadge = b.isPaywalled
-                ? `<span class="px-1.5 py-0.5 rounded text-[12px] font-bold backdrop-blur-sm leading-none bg-orchid-600 text-white">${fmt(b.price)} EWL</span>`
+                ? `<span class="px-1.5 py-0.5 rounded text-[12px] font-bold backdrop-blur-sm leading-none bg-orchid-600 text-white">${fmt(b.price)} GTK</span>`
                 : `<span class="px-1.5 py-0.5 rounded text-[12px] font-bold backdrop-blur-sm leading-none bg-white/80 text-gray-600">Free</span>`;
 
             card.innerHTML = `
@@ -1489,7 +1496,7 @@
                 const data = await res.json();
 
                 if (!res.ok) {
-                    alert(data.error || 'Failed to post comment');
+                    window.showToast(data.error || 'Failed to post comment', 'error');
                     return;
                 }
 
@@ -1512,7 +1519,7 @@
                 document.getElementById('bvCommentEmpty').classList.add('hidden');
 
             } catch (_) {
-                alert('Network error — please try again');
+                window.showToast('Network error — please try again', 'error');
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
@@ -1620,7 +1627,7 @@
                                 body: JSON.stringify({ body: newBody }),
                             });
                             const data = await res.json();
-                            if (!res.ok) { alert(data.error || 'Failed to edit'); return; }
+                            if (!res.ok) { window.showToast(data.error || 'Failed to edit', 'error'); return; }
                             // Re-render body
                             bodyEl.innerHTML = renderBody(data.comment.body, data.comment.entities);
                             bodyEl.dataset.raw = data.comment.body;
@@ -1635,7 +1642,7 @@
                             textarea.replaceWith(bodyEl);
                             actions.remove();
                             editBtn.remove();
-                        } catch { alert('Network error'); }
+                        } catch { window.showToast('Network error', 'error'); }
                     });
                     bodyEl.replaceWith(textarea);
                     textarea.after(actions);
@@ -1651,7 +1658,7 @@
                     try {
                         const res  = await fetch(BASE_URL + '/' + id + '/pin', { method: 'PATCH', credentials: 'include' });
                         const data = await res.json();
-                        if (!res.ok) { alert(data.error || 'Failed'); return; }
+                        if (!res.ok) { window.showToast(data.error || 'Failed', 'error'); return; }
                         pinBtn.textContent     = data.isPinned ? 'Unpin' : 'Pin';
                         pinBtn.dataset.pinned  = data.isPinned.toString();
                         // Update pinned badge
@@ -1665,7 +1672,7 @@
                         } else if (!data.isPinned && existing) {
                             existing.remove();
                         }
-                    } catch { alert('Network error'); }
+                    } catch { window.showToast('Network error', 'error'); }
                 });
             }
 
@@ -1677,7 +1684,7 @@
                     const id = deleteBtn.dataset.id;
                     try {
                         const res = await fetch(BASE_URL + '/' + id, { method: 'DELETE', credentials: 'include' });
-                        if (!res.ok) { const d = await res.json(); alert(d.error || 'Failed'); return; }
+                        if (!res.ok) { const d = await res.json(); window.showToast(d.error || 'Failed', 'error'); return; }
                         el.remove();
                         const countEl = document.getElementById('bvCommentCountLabel');
                         if (countEl) countEl.textContent = String(Math.max(0, parseInt(countEl.textContent || '0') - 1));
@@ -1685,7 +1692,7 @@
                         if (thread && !thread.children.length) {
                             document.getElementById('bvCommentEmpty').classList.remove('hidden');
                         }
-                    } catch { alert('Network error'); }
+                    } catch { window.showToast('Network error', 'error'); }
                 });
             }
 
@@ -1704,10 +1711,10 @@
                             body: JSON.stringify({ reason: reason.toLowerCase().trim() }),
                         });
                         const data = await res.json();
-                        if (!res.ok) { alert(data.error || 'Failed'); return; }
+                        if (!res.ok) { window.showToast(data.error || 'Failed', 'error'); return; }
                         reportBtn.textContent = 'Reported';
                         reportBtn.disabled    = true;
-                    } catch { alert('Network error'); }
+                    } catch { window.showToast('Network error', 'error'); }
                 });
             }
 
@@ -1909,7 +1916,7 @@
                     unlockBtn.textContent = data.error || 'Failed';
                     setTimeout(function () {
                         unlockBtn.disabled = false;
-                        unlockBtn.textContent = 'Unlock for <%= (bucket.price || 0).toLocaleString("en-US") %> EWL';
+                        unlockBtn.textContent = 'Unlock for <%= (bucket.price || 0).toLocaleString("en-US") %> GTK';
                     }, 2500);
                 }
             } catch (_) {

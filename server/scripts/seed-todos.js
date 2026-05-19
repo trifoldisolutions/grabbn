@@ -225,12 +225,12 @@ const todos = [
   },
   {
     name: 'Credits — H3 dispute webhook handler (charge.dispute.created) + account flagging',
-    description: 'Handle Stripe charge.dispute.created webhooks: freeze the associated user account, reverse the credited JWL, and create an internal dispute record for admin review.',
+    description: 'Handle Stripe charge.dispute.created webhooks: freeze the associated user account, reverse the credited GTK, and create an internal dispute record for admin review.',
     tags: ['credits', 'backend'],
   },
   {
     name: 'Credits — H2 credit liability query (GET /api/admin/liability)',
-    description: 'Aggregate the total outstanding spendable JWL across all user wallets to calculate platform liability. Result should be queryable by date range and segmented by paid vs bonus credits.',
+    description: 'Aggregate the total outstanding spendable GTK across all user wallets to calculate platform liability. Result should be queryable by date range and segmented by paid vs bonus credits.',
     tags: ['credits', 'backend', 'api'],
   },
   {
@@ -245,7 +245,7 @@ const todos = [
   },
   {
     name: 'Credits — L1 bucket deletion guard (check BucketAccess before delete, refund if needed)',
-    description: 'Before deleting a bucket, check if any users have purchased access. If so, calculate the pro-rata refund, issue JWL refunds to affected wallets, and log the refund transactions before proceeding with deletion.',
+    description: 'Before deleting a bucket, check if any users have purchased access. If so, calculate the pro-rata refund, issue GTK refunds to affected wallets, and log the refund transactions before proceeding with deletion.',
     tags: ['credits', 'backend'],
   },
   {

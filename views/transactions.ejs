@@ -12,7 +12,7 @@
   <div class="border border-silver-200 rounded-md mb-4">
     <div class="px-5 py-3 flex items-center justify-between gap-4">
       <div class="flex items-center gap-4">
-        <label class="flex items-center gap-1.5 text-xs text-woodsmoke-400 cursor-pointer select-none">
+        <label class="flex items-center gap-1.5 text-sm text-woodsmoke-400 cursor-pointer select-none">
           <span class="relative w-4 h-4 shrink-0">
             <input type="checkbox" id="toggleEarned" checked class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
             <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
@@ -22,7 +22,7 @@
           </span>
           <span id="swatchEarned" class=""></span>Earned
         </label>
-        <label class="flex items-center gap-1.5 text-xs text-woodsmoke-400 cursor-pointer select-none">
+        <label class="flex items-center gap-1.5 text-sm text-woodsmoke-400 cursor-pointer select-none">
           <span class="relative w-4 h-4 shrink-0">
             <input type="checkbox" id="toggleSpent" checked class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
             <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
@@ -33,10 +33,18 @@
           <span id="swatchSpent" class=""></span>Spent
         </label>
       </div>
-      <div class="flex gap-1">
-        <button class="period-btn flex items-center justify-center text-xs font-semibold px-3 h-7 rounded-md border border-silver-200 text-woodsmoke-700" data-period="7d">7d</button>
-        <button class="period-btn flex items-center justify-center text-xs px-3 h-7 rounded-md text-woodsmoke-400 hover:text-woodsmoke-700 transition-colors" data-period="30d">30d</button>
-        <button class="period-btn flex items-center justify-center text-xs px-3 h-7 rounded-md text-woodsmoke-400 hover:text-woodsmoke-700 transition-colors" data-period="90d">90d</button>
+      <div class="relative">
+        <button id="periodBtn" class="flex items-center gap-2 h-10 px-4 text-base border border-silver-200 rounded-md text-woodsmoke-700 hover:border-woodsmoke-300 transition-colors">
+          <span id="periodLabel">Last 7 days</span>
+          <svg id="periodChevron" class="shrink-0 text-woodsmoke-400 transition-transform" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
+        </button>
+        <div id="periodDropdown" class="hidden absolute right-0 top-[46px] z-20 bg-white border border-silver-200 rounded-md shadow-md py-1 w-[152px]">
+          <button class="period-option w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-period="7d" data-label="Last 7 days">Last 7 days</button>
+          <button class="period-option w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-period="30d" data-label="Last 30 days">Last 30 days</button>
+          <button class="period-option w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-period="90d" data-label="Last 90 days">Last 90 days</button>
+          <button class="period-option w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-period="ytd" data-label="Year to date">Year to date</button>
+          <button class="period-option w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-period="lifetime" data-label="Lifetime">Lifetime</button>
+        </div>
       </div>
     </div>
     <div class="px-4 pb-4">
@@ -64,58 +72,130 @@
 
   <!-- Pending credits notice -->
   <div id="pendingNotice" class="hidden border border-amber-200 bg-amber-50 rounded-md px-4 py-3 mb-4">
-    <p class="text-sm font-semibold text-amber-800">Credits on hold</p>
-    <p id="pendingNoticeText" class="text-sm text-amber-700 mt-0.5"></p>
+    <p class="text-base font-semibold text-amber-800">Credits on hold</p>
+    <p id="pendingNoticeText" class="text-base text-amber-700 mt-0.5"></p>
   </div>
 
   <!-- Actions -->
   <div class="flex flex-wrap items-center gap-2 mb-2">
-    <button id="topupBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors">
+    <button id="topupBtn" class="flex items-center justify-center text-base font-semibold px-5 h-10 bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors">
       Top up
     </button>
-    <button id="cashoutBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
+    <button id="cashoutBtn" class="flex items-center justify-center text-base font-semibold px-5 h-10 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
       Cash out
     </button>
-    <a href="/api/credits/export" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors">
+    <a href="/api/credits/export" class="flex items-center justify-center text-base font-semibold px-5 h-10 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors">
       Download CSV
     </a>
-    <a href="/contact" class="flex items-center justify-center text-sm px-3 h-9 text-woodsmoke-400 hover:text-woodsmoke-700 transition-colors">
-      Dispute a charge
+    <a href="/contact" class="flex items-center justify-center text-base px-3 h-10 text-woodsmoke-400 hover:text-woodsmoke-700 transition-colors">
+      Dispute charge
     </a>
   </div>
-  <p id="connectHint" class="hidden text-sm text-woodsmoke-400 mb-5">
+  <p id="connectHint" class="hidden text-base text-woodsmoke-400 mb-5">
     To enable cash out, <a href="/settings/monetization" class="text-orchid-600 font-semibold hover:underline">connect your bank account</a> in Settings.
   </p>
   <div id="actionsSpacing" class="mb-6"></div>
 
   <!-- History -->
-  <div class="border border-silver-200 rounded-md divide-y divide-silver-100">
+  <div class="border border-silver-200 rounded-md">
 
-    <div class="px-5 py-4">
-      <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">History</p>
+    <!-- Header -->
+    <div class="px-5 py-3.5 flex items-center justify-between gap-4 border-b border-silver-200">
+      <p class="text-base font-semibold uppercase tracking-wide text-woodsmoke-400 shrink-0">History</p>
+      <div class="flex items-center gap-2">
+        <!-- Search -->
+        <input id="txSearch" type="text" placeholder="Search…" class="h-10 px-4 text-base border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 bg-white text-woodsmoke-700 w-44">
+        <!-- Currency switcher -->
+        <button id="currencyToggleBtn" class="flex items-center gap-1.5 justify-center h-10 px-4 text-base font-semibold rounded-md border border-silver-200 text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink:0;pointer-events:none"><path d="M0 0h24v24H0z" fill="none"/><path fill="currentColor" d="M20 9a1 1 0 0 1 1 1v1a8 8 0 0 1-8 8H9.414l.793.793a1 1 0 0 1-1.414 1.414l-2.496-2.496a1 1 0 0 1-.287-.567L6 17.991a1 1 0 0 1 .237-.638l.056-.06l2.5-2.5a1 1 0 0 1 1.414 1.414L9.414 17H13a6 6 0 0 0 6-6v-1a1 1 0 0 1 1-1m-4.793-6.207l2.5 2.5a1 1 0 0 1 0 1.414l-2.5 2.5a1 1 0 1 1-1.414-1.414L14.586 7H11a6 6 0 0 0-6 6v1a1 1 0 1 1-2 0v-1a8 8 0 0 1 8-8h3.586l-.793-.793a1 1 0 0 1 1.414-1.414"/></svg>
+          <span id="currencyLabel">GTK</span>
+        </button>
+        <!-- Filter dropdown -->
+        <div class="relative">
+          <button id="txFilterBtn" class="flex items-center gap-2 h-10 px-4 text-base border border-silver-200 rounded-md text-woodsmoke-700 hover:border-woodsmoke-300 transition-colors">
+            <span id="txFilterLabel">Filter</span>
+            <svg id="txFilterChevron" class="shrink-0 text-woodsmoke-400 transition-transform" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
+          </button>
+          <div id="txFilterDropdown" class="hidden absolute right-0 top-[46px] z-20 bg-white border border-silver-200 rounded-md shadow-md py-1.5 w-[192px]">
+            <p class="px-4 pt-0.5 pb-1 text-xs font-semibold uppercase tracking-wider text-woodsmoke-400">Sort by date</p>
+            <button class="tx-filter-opt w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-sort="date-desc" data-label="Date: newest first">Newest first</button>
+            <button class="tx-filter-opt w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-sort="date-asc" data-label="Date: oldest first">Oldest first</button>
+            <div class="my-1 border-t border-silver-100"></div>
+            <p class="px-4 pt-0.5 pb-1 text-xs font-semibold uppercase tracking-wider text-woodsmoke-400">Sort by amount</p>
+            <button class="tx-filter-opt w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-sort="amount-desc" data-label="Amount: highest first">Highest first</button>
+            <button class="tx-filter-opt w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-sort="amount-asc" data-label="Amount: lowest first">Lowest first</button>
+            <div class="my-1 border-t border-silver-100"></div>
+            <p class="px-4 pt-0.5 pb-1 text-xs font-semibold uppercase tracking-wider text-woodsmoke-400">Type</p>
+            <button class="tx-filter-opt w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-type="" data-label="Filter">All types</button>
+            <button class="tx-filter-opt w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-type="topup" data-label="Credit purchases">Credit purchases</button>
+            <button class="tx-filter-opt w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-type="unlock" data-label="Bucket unlocks">Bucket unlocks</button>
+            <button class="tx-filter-opt w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-type="earn" data-label="Earnings">Earnings</button>
+            <button class="tx-filter-opt w-full text-left px-4 py-2 text-base text-woodsmoke-700 hover:bg-silver-50" data-type="cashout" data-label="Cash outs">Cash outs</button>
+          </div>
+        </div>
+      </div>
     </div>
 
+    <!-- Table -->
     <div id="txLoading" class="px-5 py-8 text-center">
-      <p class="text-sm text-woodsmoke-400">Loading…</p>
+      <p class="text-base text-woodsmoke-400">Loading…</p>
     </div>
 
     <div id="txEmpty" class="hidden px-5 py-10 text-center">
-      <p class="text-sm font-semibold text-woodsmoke-500">No transactions yet</p>
-      <p class="text-sm text-woodsmoke-400 mt-1">Top up to get started.</p>
+      <p class="text-base font-semibold text-woodsmoke-500">No transactions yet</p>
+      <p class="text-base text-woodsmoke-400 mt-1">Top up to get started.</p>
     </div>
 
-    <div id="txList"></div>
+    <div id="txNoMatch" class="hidden px-5 py-10 text-center">
+      <p class="text-base font-semibold text-woodsmoke-500">No matching transactions</p>
+      <p class="text-base text-woodsmoke-400 mt-1">Try a different search or filter.</p>
+    </div>
 
-  </div>
+    <table id="txTable" class="hidden w-full text-base overflow-hidden rounded-b-md">
+      <thead class="border-b border-silver-200 bg-silver-50">
+        <!-- Normal header -->
+        <tr id="txHeaderNormal">
+          <th class="pl-5 pr-3 py-2.5 w-8">
+            <label class="relative w-4 h-4 flex shrink-0 cursor-pointer">
+              <input type="checkbox" id="txSelectAll" class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
+              <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+              <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </label>
+          </th>
+          <th class="px-3 py-2.5 text-left text-xs font-semibold text-woodsmoke-400 uppercase tracking-wide">Transaction</th>
+          <th class="px-3 py-2.5 text-left text-xs font-semibold text-woodsmoke-400 uppercase tracking-wide whitespace-nowrap">Date</th>
+          <th class="px-3 py-2.5 text-right text-xs font-semibold text-woodsmoke-400 uppercase tracking-wide whitespace-nowrap">Amount</th>
+          <th class="pl-3 pr-5 py-2.5"></th>
+        </tr>
+        <!-- Bulk action header (shown when ≥1 row checked) -->
+        <tr id="txHeaderBulk" class="hidden">
+          <th class="pl-5 pr-3 py-2.5 w-8">
+            <label class="relative w-4 h-4 flex shrink-0 cursor-pointer">
+              <input type="checkbox" id="txSelectAllBulk" class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
+              <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+              <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </label>
+          </th>
+          <th colspan="4" class="px-3 py-2.5 text-left">
+            <div class="flex items-center gap-4">
+              <span id="txSelectedCount" class="text-sm font-semibold text-woodsmoke-500"></span>
+              <button id="txBulkDelete" class="text-base font-medium text-red-500 hover:text-red-700 transition-colors">Delete</button>
+              <a href="/contact" class="text-base font-medium text-woodsmoke-500 hover:text-woodsmoke-800 transition-colors">Dispute</a>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody id="txList" class="divide-y divide-silver-100"></tbody>
+    </table>
 
-  <div id="loadMoreWrap" class="hidden mt-4 flex justify-center">
-    <button id="loadMoreBtn" class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 hover:border-woodsmoke-300 transition-colors">
-      Load more
-    </button>
   </div>
 
   <% } else { %>
-  <p class="text-sm text-woodsmoke-400 py-6">
+  <p class="text-base text-woodsmoke-400 py-6">
     <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">Sign in</a> to view your transactions.
   </p>
   <% } %>
@@ -133,10 +213,82 @@
   const SIGNS  = { topup: '+', earn: '+', unlock: '−', cashout: '−' };
   const COLORS = { topup: 'text-green-600', earn: 'text-green-600', unlock: 'text-woodsmoke-700', cashout: 'text-woodsmoke-700' };
 
-  let txPage = 1, txTotalPages = 1, txLoading = false, currentBalance = 0, activePeriod = '7d';
+  let currentBalance = 0, activePeriod = '7d';
   let showEarned = true, showSpent = true;
+  let earnedTotal = 0, spentTotal = 0, periodNet = 0, currentPeriodLabel = '7d';
+  let pendingCreditsAmt = 0, pendingCreditsUntilStr = '';
 
-  // ── Chart ──────────────────────────────────────────────────────────────────
+  // ── Currency ───────────────────────────────────────────────────────────────
+
+  const CREDITS_PER_DOLLAR = 100;
+  const CURRENCY_SYMBOLS   = { USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', JPY: '¥' };
+  const _rawCurrency       = window.__GRABBN_USER__?.currency;
+  const userCurrency       = (CURRENCY_SYMBOLS[_rawCurrency] ? _rawCurrency : null) || 'USD';
+  const currencySymbol     = CURRENCY_SYMBOLS[userCurrency];
+  let showFiat             = false;
+
+  function crToFiat(cr) { return cr / CREDITS_PER_DOLLAR; }
+  function fmtFiat(val) {
+    return val < 1
+      ? currencySymbol + val.toFixed(2)
+      : val < 1000
+        ? currencySymbol + val.toFixed(val % 1 === 0 ? 0 : 2)
+        : currencySymbol + (val / 1000).toFixed(1) + 'k';
+  }
+  function fmtValue(cr) {
+    return showFiat ? fmtFiat(crToFiat(cr)) : fmtCr(cr);
+  }
+
+  function fmtJwl(val) {
+    return val.toLocaleString() + ' GTK';
+  }
+
+  function fmtAmount(jwl) {
+    return showFiat ? fmtFiat(crToFiat(jwl)) : fmtJwl(jwl);
+  }
+
+  function syncCurrencyBtn() {
+    const btn = document.getElementById('currencyToggleBtn');
+    if (!btn) return;
+    const label = btn.querySelector('span');
+    if (!label) return;
+    label.textContent = showFiat ? userCurrency : 'GTK';
+    btn.classList.toggle('border-orchid-400',  showFiat);
+    btn.classList.toggle('text-orchid-600',    showFiat);
+    btn.classList.toggle('border-silver-200',  !showFiat);
+    btn.classList.toggle('text-woodsmoke-600', !showFiat);
+  }
+
+  function refreshPageAmounts() {
+    // Balance card
+    document.getElementById('balanceCr').textContent  = fmtAmount(currentBalance);
+    document.getElementById('balanceUsd').textContent = showFiat
+      ? fmtJwl(currentBalance)
+      : fmtFiat(crToFiat(currentBalance)) + ' ' + userCurrency + ' equivalent';
+
+    // Net change
+    const netEl = document.getElementById('balanceNet');
+    if (!netEl.classList.contains('hidden')) {
+      const sign = periodNet > 0 ? '+' : '';
+      netEl.textContent = sign + fmtAmount(periodNet) + ' net (' + currentPeriodLabel + ')';
+    }
+
+    // Earned / Spent stats
+    document.getElementById('earnedStat').textContent = '+' + fmtAmount(earnedTotal);
+    document.getElementById('spentStat').textContent  = fmtAmount(spentTotal);
+
+    // Pending notice
+    if (pendingCreditsAmt > 0 && pendingCreditsUntilStr) {
+      document.getElementById('pendingNoticeText').textContent =
+        fmtAmount(pendingCreditsAmt) + ' on hold until ' + pendingCreditsUntilStr +
+        ' — standard first-purchase verification period.';
+    }
+
+    // Table rows
+    renderTx();
+  }
+
+  // ── Chart ───────────────────────────────────────────────────────────────────
 
   let currentHover  = null;
   let lastChartArgs = null;
@@ -182,7 +334,7 @@
 
     // Measure widest Y label to set left padding
     ctx.font = FONT;
-    const padL = ctx.measureText(fmtCr(nMax)).width + 14;
+    const padL = ctx.measureText(fmtValue(nMax)).width + 14;
 
     const chartW = W - padL - padR;
     const chartH = H - padTop - padBot;
@@ -210,7 +362,7 @@
       ctx.font         = FONT;
       ctx.textAlign    = 'right';
       ctx.textBaseline = 'middle';
-      ctx.fillText(fmtCr(val), padL - 6, y);
+      ctx.fillText(fmtValue(val), padL - 6, y);
     }
 
     // Bars
@@ -309,8 +461,9 @@
 
       if (hit) {
         canvas.style.cursor = 'pointer';
-        const typeLabel = hit.type === 'earned' ? 'Earned' : 'Spent';
-        tooltip.innerHTML = `<span style="opacity:.7">${hit.label}</span><br><strong>${typeLabel}: ${hit.value.toLocaleString()} cr</strong>`;
+        const typeLabel  = hit.type === 'earned' ? 'Earned' : 'Spent';
+        const tipVal     = showFiat ? fmtFiat(crToFiat(hit.value)) : hit.value.toLocaleString() + ' GTK';
+        tooltip.innerHTML = `<span style="opacity:.7">${hit.label}</span><br><strong>${typeLabel}: ${tipVal}</strong>`;
         tooltip.classList.remove('hidden');
         tooltip.style.left = Math.min(e.clientX + 10, window.innerWidth - 130) + 'px';
         tooltip.style.top  = (e.clientY - 48) + 'px';
@@ -333,38 +486,28 @@
   async function loadChart(period) {
     activePeriod = period;
 
-    document.querySelectorAll('.period-btn').forEach(btn => {
-      const active = btn.dataset.period === period;
-      btn.classList.toggle('border',            active);
-      btn.classList.toggle('border-silver-200', active);
-      btn.classList.toggle('font-semibold',     active);
-      btn.classList.toggle('text-woodsmoke-700', active);
-      btn.classList.toggle('text-woodsmoke-400', !active);
-    });
-
-    document.getElementById('earnedLabel').textContent = `Earned (${period})`;
-    document.getElementById('spentLabel').textContent  = `Spent (${period})`;
+    const PERIOD_LABELS = { '7d': '7d', '30d': '30d', '90d': '90d', 'ytd': 'YTD', 'lifetime': 'Lifetime' };
+    const periodLabel = PERIOD_LABELS[period] ?? period;
+    document.getElementById('earnedLabel').textContent = `Earned (${periodLabel})`;
+    document.getElementById('spentLabel').textContent  = `Spent (${periodLabel})`;
 
     try {
       const data = await fetch(`/api/credits/chart?period=${period}`).then(r => r.json());
-      document.getElementById('earnedStat').textContent = '+' + (data.totalEarned ?? 0).toLocaleString();
-      document.getElementById('spentStat').textContent  = (data.totalSpent ?? 0).toLocaleString();
+
+      earnedTotal        = data.totalEarned ?? 0;
+      spentTotal         = data.totalSpent  ?? 0;
+      periodNet          = earnedTotal - spentTotal;
+      currentPeriodLabel = periodLabel;
+
       rawChartData = { labels: data.labels, earned: data.earned, spent: data.spent };
       redrawFiltered();
 
-      const net     = (data.totalEarned ?? 0) - (data.totalSpent ?? 0);
-      const netEl   = document.getElementById('balanceNet');
+      // Net badge colour
+      const netEl = document.getElementById('balanceNet');
       netEl.classList.remove('hidden', 'text-green-600', 'text-red-500', 'text-woodsmoke-400');
-      if (net > 0) {
-        netEl.textContent = '+' + net.toLocaleString() + ' net (' + period + ')';
-        netEl.classList.add('text-green-600');
-      } else if (net < 0) {
-        netEl.textContent = net.toLocaleString() + ' net (' + period + ')';
-        netEl.classList.add('text-red-500');
-      } else {
-        netEl.textContent = '0 net (' + period + ')';
-        netEl.classList.add('text-woodsmoke-400');
-      }
+      netEl.classList.add(periodNet > 0 ? 'text-green-600' : periodNet < 0 ? 'text-red-500' : 'text-woodsmoke-400');
+
+      refreshPageAmounts();
     } catch (err) {
       console.error('Failed to load chart:', err);
     }
@@ -380,16 +523,14 @@
       ]);
 
       currentBalance = summary.balance ?? 0;
-      document.getElementById('balanceCr').textContent  = currentBalance.toLocaleString() + ' cr';
-      document.getElementById('balanceUsd').textContent = '$' + (currentBalance / 100).toFixed(2) + ' USD equivalent';
 
       if ((summary.pendingCredits ?? 0) > 0 && summary.pendingCreditsUntil) {
-        const until = new Date(summary.pendingCreditsUntil).toLocaleString();
+        pendingCreditsAmt      = summary.pendingCredits;
+        pendingCreditsUntilStr = new Date(summary.pendingCreditsUntil).toLocaleString();
         document.getElementById('pendingNotice').classList.remove('hidden');
-        document.getElementById('pendingNoticeText').textContent =
-          summary.pendingCredits.toLocaleString() + ' credits are on hold until ' + until +
-          ' — standard first-purchase verification period.';
       }
+
+      refreshPageAmounts();
 
       const status = connect.stripeAccountStatus ?? 'none';
       const btn    = document.getElementById('cashoutBtn');
@@ -399,7 +540,7 @@
           btn.classList.remove('opacity-50', 'cursor-not-allowed');
           btn.classList.add('hover:border-woodsmoke-300', 'transition-colors');
         } else {
-          btn.title = 'Minimum cash out is 1,000 credits ($10.00)';
+          btn.title = 'Minimum cash out is 1,000 GTK (' + fmtFiat(crToFiat(1000)) + ')';
         }
       } else {
         document.getElementById('connectHint').classList.remove('hidden');
@@ -416,53 +557,102 @@
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  async function loadTxPage(p) {
-    if (txLoading) return;
-    txLoading = true;
-    try {
-      const data = await fetch('/api/credits/history?page=' + p).then(r => r.json());
-      txTotalPages = data.pages ?? 1;
-      txPage       = data.page  ?? p;
+  let allTx      = [];   // full unfiltered dataset
+  let txSort     = 'date-desc';
+  let txTypeFilter = '';
 
-      document.getElementById('txLoading').classList.add('hidden');
+  function renderTx() {
+    const search = (document.getElementById('txSearch')?.value ?? '').trim().toLowerCase();
 
-      if (!data.transactions?.length && p === 1) {
-        document.getElementById('txEmpty').classList.remove('hidden');
-        return;
+    let rows = allTx.filter(tx => {
+      if (txTypeFilter && tx.type !== txTypeFilter) return false;
+      if (search) {
+        const label  = (LABELS[tx.type] || tx.type).toLowerCase();
+        const bucket = (tx.relatedBucketId?.name ?? '').toLowerCase();
+        if (!label.includes(search) && !bucket.includes(search)) return false;
       }
+      return true;
+    });
 
-      const list = document.getElementById('txList');
-      data.transactions.forEach(tx => {
-        const label  = LABELS[tx.type]  || tx.type;
-        const sign   = SIGNS[tx.type]   || '';
-        const color  = COLORS[tx.type]  || 'text-woodsmoke-700';
-        const abs    = Math.abs(tx.amount);
-        const usd    = '$' + (abs / 100).toFixed(2);
-        const bucket = tx.relatedBucketId?.name;
-        const date   = new Date(tx.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    rows = rows.sort((a, b) => {
+      if (txSort === 'date-asc')    return new Date(a.createdAt) - new Date(b.createdAt);
+      if (txSort === 'amount-desc') return Math.abs(b.amount) - Math.abs(a.amount);
+      if (txSort === 'amount-asc')  return Math.abs(a.amount) - Math.abs(b.amount);
+      return new Date(b.createdAt) - new Date(a.createdAt); // date-desc default
+    });
 
-        const row = document.createElement('div');
-        row.className = 'px-5 py-3 flex items-center justify-between gap-4';
-        row.innerHTML = `
-          <div class="flex flex-col gap-0.5 min-w-0">
-            <span class="text-sm font-semibold text-woodsmoke-800 truncate">
-              ${esc(label)}${bucket ? '<span class="font-normal text-woodsmoke-400"> · ' + esc(bucket) + '</span>' : ''}
+    const tbody   = document.getElementById('txList');
+    const table   = document.getElementById('txTable');
+    const empty   = document.getElementById('txEmpty');
+    const noMatch = document.getElementById('txNoMatch');
+
+    tbody.innerHTML = '';
+    // Reset bulk header whenever rows are redrawn
+    document.getElementById('txHeaderNormal').classList.remove('hidden');
+    document.getElementById('txHeaderBulk').classList.add('hidden');
+    document.getElementById('txSelectAll').checked = false;
+
+    if (allTx.length === 0) {
+      table.classList.add('hidden');
+      empty.classList.remove('hidden');
+      noMatch.classList.add('hidden');
+      return;
+    }
+
+    if (rows.length === 0) {
+      table.classList.add('hidden');
+      empty.classList.add('hidden');
+      noMatch.classList.remove('hidden');
+      return;
+    }
+
+    empty.classList.add('hidden');
+    noMatch.classList.add('hidden');
+    table.classList.remove('hidden');
+
+    rows.forEach(tx => {
+      const label  = LABELS[tx.type]  || tx.type;
+      const sign   = SIGNS[tx.type]   || '';
+      const color  = COLORS[tx.type]  || 'text-woodsmoke-700';
+      const abs    = Math.abs(tx.amount);
+      const bucket = tx.relatedBucketId?.name;
+      const d      = new Date(tx.createdAt);
+      const date   = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                   + ' · ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+      const txId   = esc(tx._id);
+
+      const tr = document.createElement('tr');
+      tr.className = 'hover:bg-silver-50 transition-colors';
+      tr.dataset.id = tx._id;
+      tr.innerHTML = `
+        <td class="pl-5 pr-3 py-3 w-8">
+          <label class="relative w-4 h-4 flex shrink-0 cursor-pointer">
+            <input type="checkbox" class="tx-cb peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
+            <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+            <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+              <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </span>
-            <span class="text-xs text-woodsmoke-400">${esc(date)}</span>
-          </div>
-          <div class="text-right shrink-0">
-            <p class="text-sm font-semibold ${color}">${sign}${abs.toLocaleString()} cr</p>
-            <p class="text-xs text-woodsmoke-400">${esc(usd)}</p>
-          </div>
-        `;
-        list.appendChild(row);
-      });
+          </label>
+        </td>
+        <td class="px-3 py-3 text-base text-woodsmoke-800">
+          <span class="font-semibold">${esc(label)}</span>${bucket ? '<span class="text-woodsmoke-400 font-normal"> · ' + esc(bucket) + '</span>' : ''}
+        </td>
+        <td class="px-3 py-3 text-base text-woodsmoke-400 whitespace-nowrap">${esc(date)}</td>
+        <td class="px-3 py-3 text-base font-semibold text-right whitespace-nowrap ${color}">${sign}${showFiat ? fmtFiat(crToFiat(abs)) : abs.toLocaleString() + ' GTK'}</td>
+        <td class="pl-3 pr-5 py-3"></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
 
-      document.getElementById('loadMoreWrap').classList.toggle('hidden', txPage >= txTotalPages);
+  async function loadTxAll() {
+    try {
+      const data = await fetch('/api/credits/history?all=true').then(r => r.json());
+      document.getElementById('txLoading').classList.add('hidden');
+      allTx = data.transactions ?? [];
+      renderTx();
     } catch (err) {
       console.error('Failed to load transactions:', err);
-    } finally {
-      txLoading = false;
     }
   }
 
@@ -493,10 +683,41 @@
   setupSeriesToggle('toggleEarned', 'swatchEarned', () => showEarned, v => showEarned = v);
   setupSeriesToggle('toggleSpent',  'swatchSpent',  () => showSpent,  v => showSpent  = v);
 
+  syncCurrencyBtn();
+  document.getElementById('currencyToggleBtn').addEventListener('click', () => {
+    showFiat = !showFiat;
+    syncCurrencyBtn();
+    redrawFiltered();
+    refreshPageAmounts();
+  });
+
   // ── Event listeners ────────────────────────────────────────────────────────
 
-  document.querySelectorAll('.period-btn').forEach(btn => {
-    btn.addEventListener('click', () => loadChart(btn.dataset.period));
+  const periodBtn      = document.getElementById('periodBtn');
+  const periodDropdown = document.getElementById('periodDropdown');
+  const periodChevron  = document.getElementById('periodChevron');
+
+  periodBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const opening = periodDropdown.classList.contains('hidden');
+    periodDropdown.classList.toggle('hidden', !opening);
+    periodChevron.classList.toggle('rotate-180', opening);
+  });
+
+  periodDropdown.addEventListener('click', e => e.stopPropagation());
+
+  document.querySelectorAll('.period-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.getElementById('periodLabel').textContent = opt.dataset.label;
+      periodDropdown.classList.add('hidden');
+      periodChevron.classList.remove('rotate-180');
+      loadChart(opt.dataset.period);
+    });
+  });
+
+  document.addEventListener('click', () => {
+    periodDropdown.classList.add('hidden');
+    periodChevron.classList.remove('rotate-180');
   });
 
   document.getElementById('topupBtn').addEventListener('click', () => {
@@ -506,8 +727,8 @@
   document.getElementById('cashoutBtn').addEventListener('click', async () => {
     const btn = document.getElementById('cashoutBtn');
     if (btn.disabled) return;
-    const usd = '$' + (currentBalance / 100).toFixed(2);
-    if (!confirm('Cash out ' + currentBalance.toLocaleString() + ' credits (' + usd + ')?\n\nThis transfers your full balance to your connected bank account.')) return;
+    const fiat = fmtFiat(crToFiat(currentBalance));
+    if (!confirm('Cash out ' + currentBalance.toLocaleString() + ' GTK (' + fiat + ')?\n\nThis transfers your full balance to your connected bank account.')) return;
     btn.disabled = true;
     btn.textContent = 'Processing…';
     try {
@@ -520,9 +741,84 @@
     btn.textContent = 'Cash out';
   });
 
-  document.getElementById('loadMoreBtn').addEventListener('click', () => {
-    document.getElementById('loadMoreWrap').classList.add('hidden');
-    loadTxPage(txPage + 1);
+  // ── History table interactions ─────────────────────────────────────────────
+
+  function getCheckedIds() {
+    return [...document.querySelectorAll('.tx-cb:checked')].map(cb => cb.closest('tr').dataset.id);
+  }
+
+  function syncBulkHeader() {
+    const ids = getCheckedIds();
+    const any = ids.length > 0;
+    document.getElementById('txHeaderNormal').classList.toggle('hidden', any);
+    document.getElementById('txHeaderBulk').classList.toggle('hidden', !any);
+    if (any) {
+      document.getElementById('txSelectedCount').textContent = ids.length + ' selected';
+      document.getElementById('txSelectAllBulk').checked = ids.length === document.querySelectorAll('.tx-cb').length;
+    }
+  }
+
+  // Select-all (normal header)
+  document.getElementById('txSelectAll').addEventListener('change', function () {
+    document.querySelectorAll('.tx-cb').forEach(cb => { cb.checked = this.checked; });
+    syncBulkHeader();
+  });
+
+  // Select-all (bulk header)
+  document.getElementById('txSelectAllBulk').addEventListener('change', function () {
+    document.querySelectorAll('.tx-cb').forEach(cb => { cb.checked = this.checked; });
+    syncBulkHeader();
+  });
+
+  // Individual row checkbox — delegated
+  document.getElementById('txList').addEventListener('change', e => {
+    if (e.target.classList.contains('tx-cb')) syncBulkHeader();
+  });
+
+  // Bulk delete
+  document.getElementById('txBulkDelete').addEventListener('click', async () => {
+    const ids = getCheckedIds();
+    if (!ids.length) return;
+    if (!confirm('Delete ' + ids.length + ' transaction' + (ids.length > 1 ? 's' : '') + '? This cannot be undone.')) return;
+    try {
+      await Promise.all(ids.map(id => fetch('/api/credits/history/' + id, { method: 'DELETE' })));
+      allTx = allTx.filter(t => !ids.includes(t._id));
+      renderTx();
+      syncBulkHeader();
+    } catch (_) { alert('Could not delete transactions.'); }
+  });
+
+  // ── History filter / search ────────────────────────────────────────────────
+
+  document.getElementById('txSearch').addEventListener('input', renderTx);
+
+  const txFilterBtn      = document.getElementById('txFilterBtn');
+  const txFilterDropdown = document.getElementById('txFilterDropdown');
+  const txFilterChevron  = document.getElementById('txFilterChevron');
+
+  txFilterBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const opening = txFilterDropdown.classList.contains('hidden');
+    txFilterDropdown.classList.toggle('hidden', !opening);
+    txFilterChevron.classList.toggle('rotate-180', opening);
+  });
+
+  txFilterDropdown.addEventListener('click', e => e.stopPropagation());
+
+  document.querySelectorAll('.tx-filter-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      if (opt.dataset.sort) txSort = opt.dataset.sort;
+      if (opt.dataset.type !== undefined) txTypeFilter = opt.dataset.type;
+      document.getElementById('txFilterLabel').textContent = opt.dataset.label;
+      txFilterDropdown.classList.add('hidden');
+      txFilterChevron.classList.remove('rotate-180');
+      renderTx();
+    });
+  });
+
+  document.addEventListener('click', () => {
+    txFilterDropdown.classList.add('hidden');
+    txFilterChevron.classList.remove('rotate-180');
   });
 
   // Redraw chart on resize
@@ -535,7 +831,7 @@
   // ── Init ───────────────────────────────────────────────────────────────────
   loadSummary();
   loadChart('7d').then(setupChartHover);
-  loadTxPage(1);
+  loadTxAll();
 })();
 </script>
 

@@ -79,19 +79,37 @@
               <div class="notif-dropdown hidden absolute right-0 top-[42px] z-20 bg-white border border-silver-200 rounded-md shadow-md py-1.5 w-[160px]">
                 <% if (item.channels.includes('inapp')) { %>
                 <label class="flex items-center gap-2.5 px-4 py-2 cursor-pointer hover:bg-silver-50 select-none">
-                  <input type="checkbox" class="notif-cb-inapp w-4 h-4 accent-orchid-500" <%= inappOn ? 'checked' : '' %>>
+                  <span class="relative w-4 h-4 shrink-0">
+                    <input type="checkbox" class="notif-cb-inapp peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" <%= inappOn ? 'checked' : '' %>>
+                    <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+                    <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                      <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </span>
                   <span class="text-sm text-woodsmoke-800">In app</span>
                 </label>
                 <% } %>
                 <% if (item.channels.includes('email')) { %>
                 <label class="flex items-center gap-2.5 px-4 py-2 cursor-pointer hover:bg-silver-50 select-none">
-                  <input type="checkbox" class="notif-cb-email w-4 h-4 accent-orchid-500" <%= emailOn ? 'checked' : '' %>>
+                  <span class="relative w-4 h-4 shrink-0">
+                    <input type="checkbox" class="notif-cb-email peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" <%= emailOn ? 'checked' : '' %>>
+                    <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+                    <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                      <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </span>
                   <span class="text-sm text-woodsmoke-800">Email</span>
                 </label>
                 <% } %>
                 <div class="my-1 border-t border-silver-100"></div>
                 <label class="flex items-center gap-2.5 px-4 py-2 cursor-pointer hover:bg-silver-50 select-none">
-                  <input type="checkbox" class="notif-cb-none w-4 h-4 accent-orchid-500" <%= noneOn ? 'checked' : '' %>>
+                  <span class="relative w-4 h-4 shrink-0">
+                    <input type="checkbox" class="notif-cb-none peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" <%= noneOn ? 'checked' : '' %>>
+                    <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+                    <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                      <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </span>
                   <span class="text-sm text-woodsmoke-800">Not allowed</span>
                 </label>
               </div>

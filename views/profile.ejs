@@ -354,7 +354,7 @@
 
                 closeEditModal();
             } catch (err) {
-                if (editErrorEl) { editErrorEl.textContent = err.message; editErrorEl.classList.remove('hidden'); }
+                window.showToast(err.message || 'Failed to save changes', 'error');
                 if (editConfirmBtn) { editConfirmBtn.disabled = false; editConfirmBtn.textContent = 'Save Changes'; }
                 if (editInput) { editInput.disabled = false; editInput.focus(); }
             }
@@ -580,7 +580,7 @@
                     body: JSON.stringify({ name }),
                 });
                 const data = await res.json();
-                if (!res.ok) { errEl.textContent = data.error || 'Failed to rename.'; errEl.classList.remove('hidden'); return; }
+                if (!res.ok) { window.showToast(data.error || 'Failed to rename.', 'error'); return; }
 
                 // Update local data + DOM
                 const repo = repos.find(r => String(r._id) === String(repoId));
@@ -589,8 +589,7 @@
                 if (nameDisplay) nameDisplay.textContent = data.name;
                 card.querySelector('.repo-inline-rename').classList.add('hidden');
             } catch (_) {
-                errEl.textContent = 'Network error.';
-                errEl.classList.remove('hidden');
+                window.showToast('Network error.', 'error');
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save';
@@ -950,7 +949,13 @@
     <div class="flex flex-col gap-1" id="reportReasons">
       <% [['spam','Spam or fake account'],['inappropriate','Inappropriate content'],['harassment','Harassment or hate speech'],['malicious','Malicious links or phishing'],['other','Other']].forEach(([val,label]) => { %>
       <label class="flex items-center gap-2.5 px-3 py-2 rounded-md hover:bg-silver-50 cursor-pointer select-none">
-        <input type="radio" name="reportReason" value="<%= val %>" class="accent-orchid-600">
+        <span class="relative w-4 h-4 shrink-0">
+          <input type="radio" name="reportReason" value="<%= val %>" class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
+          <span class="absolute inset-0 rounded-full border-2 border-silver-300 peer-checked:border-orchid-500 transition-colors"></span>
+          <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+            <span class="w-2 h-2 rounded-full bg-orchid-500"></span>
+          </span>
+        </span>
         <span class="text-sm text-woodsmoke-700"><%= label %></span>
       </label>
       <% }) %>
@@ -1019,8 +1024,7 @@
       if (!r.ok) throw new Error(data.error || 'Failed');
       closeReport();
     } catch (err) {
-      reportError.textContent = err.message;
-      reportError.classList.remove('hidden');
+      window.showToast(err.message || 'Failed to submit report', 'error');
       reportSubmit.disabled = false;
       reportSubmit.textContent = 'Submit report';
     }

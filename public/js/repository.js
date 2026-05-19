@@ -165,9 +165,12 @@
             });
             if (res.ok) {
                 e.currentTarget.closest('.flex.flex-col')?.remove();
+            } else {
+                const d = await res.json().catch(() => ({}));
+                window.showToast(d.error || 'Failed to remove bucket', 'error');
             }
         } catch (err) {
-            console.error('Remove from repo error:', err);
+            window.showToast('Network error', 'error');
         }
     }
 

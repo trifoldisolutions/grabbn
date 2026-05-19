@@ -312,7 +312,6 @@
                 <svg data-pw-eye-off class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.010z"/><path fill="currentColor" d="M2.5 9a1.5 1.5 0 0 1 2.945-.404c1.947 6.502 11.158 6.503 13.109.005a1.5 1.5 0 1 1 2.877.85a10.1 10.1 0 0 1-1.623 3.236l.96.96a1.5 1.5 0 1 1-2.122 2.12l-1.01-1.01a9.6 9.6 0 0 1-1.67.915l.243.906a1.5 1.5 0 0 1-2.897.776l-.251-.935c-.705.073-1.417.073-2.122 0l-.25.935a1.5 1.5 0 0 1-2.898-.776l.242-.907a9.6 9.6 0 0 1-1.669-.914l-1.01 1.01a1.5 1.5 0 1 1-2.122-2.12l.96-.96a10.1 10.1 0 0 1-1.62-3.23A1.5 1.5 0 0 1 2.5 9"/></g></svg>
               </button>
             </div>
-            <p id="emailRequestError" class="hidden text-sm text-red-500"></p>
             <div class="flex gap-2">
               <button id="emailRequestSendBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Send code</button>
               <button id="emailRequestCancelBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
@@ -324,7 +323,6 @@
             <input id="emailOtpInput" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code"
               class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md outline-none focus:border-orchid-400 transition-colors tracking-widest text-center"
               placeholder="000000">
-            <p id="emailVerifyError" class="hidden text-sm text-red-500"></p>
             <div class="flex gap-2">
               <button id="emailVerifyBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Verify</button>
               <button id="emailResendBtn" class="flex items-center justify-center h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Resend</button>
@@ -649,13 +647,11 @@
   const emailPasswordInput    = document.getElementById('emailPasswordInput');
   const emailRequestSendBtn   = document.getElementById('emailRequestSendBtn');
   const emailRequestCancelBtn = document.getElementById('emailRequestCancelBtn');
-  const emailRequestError     = document.getElementById('emailRequestError');
   const emailOtpInput         = document.getElementById('emailOtpInput');
   const emailVerifyBtn        = document.getElementById('emailVerifyBtn');
   const emailResendBtn        = document.getElementById('emailResendBtn');
   const emailVerifyCancelBtn  = document.getElementById('emailVerifyCancelBtn');
   const emailVerifyTarget     = document.getElementById('emailVerifyTarget');
-  const emailVerifyError      = document.getElementById('emailVerifyError');
   const emailValue            = document.getElementById('emailValue');
   const emailBadge            = document.getElementById('emailBadge');
 
@@ -672,8 +668,6 @@
   function closeEmailForms() {
     emailRequestForm.classList.add('hidden');
     emailVerifyForm.classList.add('hidden');
-    emailRequestError.classList.add('hidden');
-    emailVerifyError.classList.add('hidden');
     emailNewInput.value = '';
     emailPasswordInput.value = '';
     emailOtpInput.value = '';
@@ -698,10 +692,8 @@
   emailRequestSendBtn.addEventListener('click', async () => {
     const newEmail = emailNewInput.value.trim();
     const password = emailPasswordInput.value;
-    emailRequestError.classList.add('hidden');
     if (!newEmail || !password) {
-      emailRequestError.textContent = 'Please fill in all fields.';
-      emailRequestError.classList.remove('hidden');
+      window.showToast('Please fill in all fields.', 'error');
       return;
     }
     emailRequestSendBtn.disabled = true;
@@ -714,15 +706,13 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        emailRequestError.textContent = data.error;
-        emailRequestError.classList.remove('hidden');
+        window.showToast(data.error, 'error');
         return;
       }
       _emailPending = newEmail;
       openEmailStep2(newEmail);
     } catch {
-      emailRequestError.textContent = 'Something went wrong. Try again.';
-      emailRequestError.classList.remove('hidden');
+      window.showToast('Something went wrong. Try again.', 'error');
     } finally {
       emailRequestSendBtn.disabled = false;
       emailRequestSendBtn.textContent = 'Send code';
@@ -733,10 +723,8 @@
 
   emailVerifyBtn.addEventListener('click', async () => {
     const code = emailOtpInput.value.trim();
-    emailVerifyError.classList.add('hidden');
     if (code.length !== 6) {
-      emailVerifyError.textContent = 'Enter the 6-digit code from your email.';
-      emailVerifyError.classList.remove('hidden');
+      window.showToast('Enter the 6-digit code from your email.', 'error');
       return;
     }
     emailVerifyBtn.disabled = true;
@@ -749,8 +737,7 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        emailVerifyError.textContent = data.error;
-        emailVerifyError.classList.remove('hidden');
+        window.showToast(data.error, 'error');
         return;
       }
       emailValue.textContent = data.email;
@@ -760,10 +747,9 @@
       emailEnterCodeBtn?.remove();
       _emailPending = null;
       closeEmailForms();
-      showFeedback('Email updated successfully.', true);
+      window.showToast('Email updated successfully.', 'success');
     } catch {
-      emailVerifyError.textContent = 'Something went wrong. Try again.';
-      emailVerifyError.classList.remove('hidden');
+      window.showToast('Something went wrong. Try again.', 'error');
     } finally {
       emailVerifyBtn.disabled = false;
       emailVerifyBtn.textContent = 'Verify';
@@ -777,12 +763,11 @@
       const res = await fetch('/api/user/email/resend', { method: 'POST', credentials: 'include' });
       const data = await res.json();
       if (res.ok) {
-        showFeedback('Code resent — check your inbox.', true);
+        window.showToast('Code resent — check your inbox.', 'success');
         emailResendBtn.textContent = 'Resend';
         setTimeout(() => { emailResendBtn.disabled = false; }, 60_000);
       } else {
-        emailVerifyError.textContent = data.error;
-        emailVerifyError.classList.remove('hidden');
+        window.showToast(data.error, 'error');
         emailResendBtn.disabled = false;
         emailResendBtn.textContent = 'Resend';
       }

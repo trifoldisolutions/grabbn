@@ -101,8 +101,11 @@
 
         <!-- ── Defaults ─────────────────────────────────────────────────────── -->
         <%
-          const allowComments = user.commentDefaults ? user.commentDefaults.allowComments !== false : true;
-          const allowGrabs    = user.commentDefaults ? user.commentDefaults.allowGrabs    !== false : true;
+          const _COMMENT_PERMS = ['everyone', 'followers', 'followees', 'no_one'];
+          const _rawCP = user.commentDefaults ? user.commentDefaults.allowComments : 'everyone';
+          const allowComments = (_rawCP === false) ? 'no_one' : (_COMMENT_PERMS.includes(_rawCP) ? _rawCP : 'everyone');
+          const _rawGP = user.commentDefaults ? user.commentDefaults.allowGrabs : 'everyone';
+          const allowGrabs = (_rawGP === false) ? 'no_one' : (_COMMENT_PERMS.includes(_rawGP) ? _rawGP : 'everyone');
         %>
         <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
 
@@ -110,32 +113,57 @@
             <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Defaults</p>
           </div>
 
+          <%
+            const permLabels = { everyone: 'Everyone', followers: 'Only followers', followees: 'Only followees', no_one: 'No one' };
+            const permOpts   = [['everyone','Everyone'],['followers','Only followers'],['followees','Only followees'],['no_one','No one']];
+          %>
+
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Allow comments by default</span>
-              <span class="text-sm text-woodsmoke-400">New buckets you create will have comments enabled</span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Default comment permission</span>
+              <span class="text-sm text-woodsmoke-400">Who can comment on new buckets by default</span>
             </div>
-            <button
-              id="toggleAllowComments"
-              data-on="<%= allowComments ? 'true' : 'false' %>"
-              class="relative w-10 h-6 rounded-full transition-colors shrink-0 <%= allowComments ? 'bg-orchid-500' : 'bg-silver-200' %>"
-            >
-              <span class="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform <%= allowComments ? 'left-5' : 'left-1' %>"></span>
-            </button>
+            <div class="relative shrink-0" id="def-comments-root">
+              <button id="def-comments-trigger" type="button"
+                class="flex items-center gap-2 h-9 px-3 rounded-md border border-silver-200 bg-white hover:border-orchid-300 transition-colors text-sm text-woodsmoke-900 min-w-[140px]">
+                <span id="def-comments-label" class="flex-1 text-left"><%= permLabels[allowComments] || 'Everyone' %></span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="shrink-0 text-woodsmoke-400"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
+              </button>
+              <div id="def-comments-panel" class="hidden absolute top-full right-0 mt-1 z-20 bg-white rounded-md border border-silver-200 shadow-md overflow-hidden min-w-[150px]">
+                <% permOpts.forEach(([val, lbl], i) => { %>
+                <button data-perm="<%= val %>" class="def-comments-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors <%= i > 0 ? 'border-t border-silver-100' : '' %>">
+                  <span class="def-comments-radio w-4 h-4 rounded-full border-2 <%= allowComments === val ? 'border-orchid-500' : 'border-silver-300' %> shrink-0 flex items-center justify-center">
+                    <span class="def-comments-dot w-2 h-2 rounded-full bg-orchid-500 <%= allowComments === val ? '' : 'hidden' %>"></span>
+                  </span>
+                  <%= lbl %>
+                </button>
+                <% }) %>
+              </div>
+            </div>
           </div>
 
           <div class="px-5 py-4 flex items-center justify-between gap-4">
             <div class="flex flex-col gap-0.5 min-w-0">
-              <span class="text-sm font-semibold text-woodsmoke-900">Allow grabs by default</span>
-              <span class="text-sm text-woodsmoke-400">Others can save your new buckets to their grabbed collection</span>
+              <span class="text-sm font-semibold text-woodsmoke-900">Default grab permission</span>
+              <span class="text-sm text-woodsmoke-400">Who can save new buckets to their collection by default</span>
             </div>
-            <button
-              id="toggleAllowGrabs"
-              data-on="<%= allowGrabs ? 'true' : 'false' %>"
-              class="relative w-10 h-6 rounded-full transition-colors shrink-0 <%= allowGrabs ? 'bg-orchid-500' : 'bg-silver-200' %>"
-            >
-              <span class="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform <%= allowGrabs ? 'left-5' : 'left-1' %>"></span>
-            </button>
+            <div class="relative shrink-0" id="def-grabs-root">
+              <button id="def-grabs-trigger" type="button"
+                class="flex items-center gap-2 h-9 px-3 rounded-md border border-silver-200 bg-white hover:border-orchid-300 transition-colors text-sm text-woodsmoke-900 min-w-[140px]">
+                <span id="def-grabs-label" class="flex-1 text-left"><%= permLabels[allowGrabs] || 'Everyone' %></span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="shrink-0 text-woodsmoke-400"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
+              </button>
+              <div id="def-grabs-panel" class="hidden absolute top-full right-0 mt-1 z-20 bg-white rounded-md border border-silver-200 shadow-md overflow-hidden min-w-[150px]">
+                <% permOpts.forEach(([val, lbl], i) => { %>
+                <button data-perm="<%= val %>" class="def-grabs-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors <%= i > 0 ? 'border-t border-silver-100' : '' %>">
+                  <span class="def-grabs-radio w-4 h-4 rounded-full border-2 <%= allowGrabs === val ? 'border-orchid-500' : 'border-silver-300' %> shrink-0 flex items-center justify-center">
+                    <span class="def-grabs-dot w-2 h-2 rounded-full bg-orchid-500 <%= allowGrabs === val ? '' : 'hidden' %>"></span>
+                  </span>
+                  <%= lbl %>
+                </button>
+                <% }) %>
+              </div>
+            </div>
           </div>
 
           <div class="px-5 py-4 flex items-center justify-between gap-4">
@@ -232,8 +260,89 @@
     });
   }
 
-  wireCommentToggle('toggleAllowComments', 'allowComments');
-  wireCommentToggle('toggleAllowGrabs',    'allowGrabs');
+  // Default comment permission dropdown
+  (function () {
+    const root    = document.getElementById('def-comments-root');
+    const trigger = document.getElementById('def-comments-trigger');
+    const panel   = document.getElementById('def-comments-panel');
+    const label   = document.getElementById('def-comments-label');
+    if (!root) return;
+    const LABELS = { everyone: 'Everyone', followers: 'Only followers', followees: 'Only followees', no_one: 'No one' };
+
+    function setVal(perm) {
+      label.textContent = LABELS[perm];
+      root.querySelectorAll('.def-comments-item').forEach(btn => {
+        const active = btn.dataset.perm === perm;
+        btn.querySelector('.def-comments-radio').classList.toggle('border-orchid-500', active);
+        btn.querySelector('.def-comments-radio').classList.toggle('border-silver-300', !active);
+        btn.querySelector('.def-comments-dot').classList.toggle('hidden', !active);
+      });
+    }
+
+    trigger.addEventListener('click', e => { e.stopPropagation(); panel.classList.toggle('hidden'); });
+    document.addEventListener('click', e => { if (!root.contains(e.target)) panel.classList.add('hidden'); });
+
+    root.querySelectorAll('.def-comments-item').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const val = btn.dataset.perm;
+        setVal(val);
+        panel.classList.add('hidden');
+        try {
+          const res = await fetch('/api/user/settings', {
+            method: 'PATCH', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ allowComments: val }),
+          });
+          if (!res.ok) throw new Error();
+          showFeedback('Saved.', true);
+        } catch {
+          showFeedback('Could not save. Try again.', false);
+        }
+      });
+    });
+  }());
+
+  // Default grabs permission dropdown
+  (function () {
+    const root    = document.getElementById('def-grabs-root');
+    const trigger = document.getElementById('def-grabs-trigger');
+    const panel   = document.getElementById('def-grabs-panel');
+    const label   = document.getElementById('def-grabs-label');
+    if (!root) return;
+    const LABELS = { everyone: 'Everyone', followers: 'Only followers', followees: 'Only followees', no_one: 'No one' };
+
+    function setVal(perm) {
+      label.textContent = LABELS[perm];
+      root.querySelectorAll('.def-grabs-item').forEach(btn => {
+        const active = btn.dataset.perm === perm;
+        btn.querySelector('.def-grabs-radio').classList.toggle('border-orchid-500', active);
+        btn.querySelector('.def-grabs-radio').classList.toggle('border-silver-300', !active);
+        btn.querySelector('.def-grabs-dot').classList.toggle('hidden', !active);
+      });
+    }
+
+    trigger.addEventListener('click', e => { e.stopPropagation(); panel.classList.toggle('hidden'); });
+    document.addEventListener('click', e => { if (!root.contains(e.target)) panel.classList.add('hidden'); });
+
+    root.querySelectorAll('.def-grabs-item').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const val = btn.dataset.perm;
+        setVal(val);
+        panel.classList.add('hidden');
+        try {
+          const res = await fetch('/api/user/settings', {
+            method: 'PATCH', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ allowGrabs: val }),
+          });
+          if (!res.ok) throw new Error();
+          showFeedback('Saved.', true);
+        } catch {
+          showFeedback('Could not save. Try again.', false);
+        }
+      });
+    });
+  }());
 
   // ── Muted tags ────────────────────────────────────────────────────────────
   (function () {

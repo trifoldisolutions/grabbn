@@ -45,8 +45,14 @@ const bucketSchema = new mongoose.Schema(
       default: false
     },
     allowComments: {
-      type: Boolean,
-      default: true
+      type: String,
+      enum: ['everyone', 'followers', 'followees', 'no_one'],
+      default: 'everyone'
+    },
+    allowGrabs: {
+      type: String,
+      enum: ['everyone', 'followers', 'followees', 'no_one'],
+      default: 'everyone'
     },
     sourceUrl: {
       type: String,
@@ -202,6 +208,17 @@ bucketSchema.index({ isPublic: 1, exploreScore: -1 });
 bucketSchema.pre('save', function () {
   if (!this.bucketOwningId) {
     this.bucketOwningId = randomBytes(16).toString('hex');
+  }
+});
+
+// Normalize legacy boolean allowComments / allowGrabs to the string enum
+bucketSchema.pre('validate', function () {
+  const PERMS = ['everyone', 'followers', 'followees', 'no_one'];
+  for (const field of ['allowComments', 'allowGrabs']) {
+    const v = this[field];
+    if (v === true || v === 'true') this[field] = 'everyone';
+    else if (v === false || v === 'false') this[field] = 'no_one';
+    else if (v !== undefined && v !== null && !PERMS.includes(v)) this[field] = 'everyone';
   }
 });
 

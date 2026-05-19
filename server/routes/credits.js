@@ -143,8 +143,8 @@ router.post('/topup', requireAuth, async (req, res) => {
         }
 
         const { credits } = req.body;
-        if (!Number.isInteger(credits) || credits < 100 || credits > 50000) {
-            return res.status(400).json({ error: 'Credits must be a whole number between 100 and 50,000' });
+        if (!Number.isInteger(credits) || credits < 800 || credits > 50000) {
+            return res.status(400).json({ error: 'GTK must be a whole number between 800 and 50,000' });
         }
 
         // R1 — per-transaction cap based on account age tier
@@ -168,8 +168,8 @@ router.post('/topup', requireAuth, async (req, res) => {
                     price_data: {
                         currency: 'usd',
                         product_data: {
-                            name: `${credits} Credits`,
-                            description: `Add ${credits} credits to your Grabbn account`
+                            name: `${credits} GTK`,
+                            description: `Add ${credits} GTK to your Grabbn account`
                         },
                         unit_amount: priceCents
                     },
@@ -331,14 +331,72 @@ router.get('/summary', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/credits/chart?period=7d|30d|90d — daily/weekly aggregates for charting
+// GET /api/credits/chart?period=7d|30d|90d|ytd|lifetime — aggregates for charting
 router.get('/chart', requireAuth, async (req, res) => {
     try {
-        const period = ['7d', '30d', '90d'].includes(req.query.period) ? req.query.period : '7d';
-        const days   = period === '90d' ? 90 : period === '30d' ? 30 : 7;
-        const step   = days === 90 ? 7 : 1; // weekly buckets for 90d
+        const VALID  = ['7d', '30d', '90d', 'ytd', 'lifetime'];
+        const period = VALID.includes(req.query.period) ? req.query.period : '7d';
+        const now    = new Date();
 
-        const now        = new Date();
+        // ── Month-bucket helper (ytd / lifetime) ──────────────────────────────
+        if (period === 'ytd' || period === 'lifetime') {
+            let since;
+
+            if (period === 'ytd') {
+                since = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+            } else {
+                // earliest transaction for this user, fallback to account start of year
+                const first = await Transaction.findOne({ userId: req.user._id }).sort({ createdAt: 1 }).lean();
+                since = first
+                    ? new Date(Date.UTC(new Date(first.createdAt).getUTCFullYear(), new Date(first.createdAt).getUTCMonth(), 1))
+                    : new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+            }
+
+            const txs = await Transaction.find({
+                userId: req.user._id,
+                type:   { $in: ['topup', 'earn', 'unlock', 'cashout'] },
+                createdAt: { $gte: since }
+            }).lean();
+
+            // Build month buckets from since → current month
+            const buckets = [];
+            let cur = new Date(since);
+            while (cur.getUTCFullYear() < now.getUTCFullYear() ||
+                   (cur.getUTCFullYear() === now.getUTCFullYear() && cur.getUTCMonth() <= now.getUTCMonth())) {
+                buckets.push({ year: cur.getUTCFullYear(), month: cur.getUTCMonth() });
+                cur = new Date(Date.UTC(cur.getUTCFullYear(), cur.getUTCMonth() + 1, 1));
+            }
+
+            const earned = new Array(buckets.length).fill(0);
+            const spent  = new Array(buckets.length).fill(0);
+            const multiYear = buckets[0].year !== buckets[buckets.length - 1].year;
+            const labels = buckets.map(b => {
+                const d = new Date(Date.UTC(b.year, b.month, 1));
+                return multiYear
+                    ? d.toLocaleDateString('en-US', { month: 'short', year: '2-digit', timeZone: 'UTC' })
+                    : d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+            });
+
+            for (const tx of txs) {
+                const d   = new Date(tx.createdAt);
+                const idx = buckets.findIndex(b => b.year === d.getUTCFullYear() && b.month === d.getUTCMonth());
+                if (idx === -1) continue;
+                if (tx.type === 'topup' || tx.type === 'earn') earned[idx] += tx.amount;
+                else spent[idx] += Math.abs(tx.amount);
+            }
+
+            return res.json({
+                labels,
+                earned,
+                spent,
+                totalEarned: earned.reduce((a, b) => a + b, 0),
+                totalSpent:  spent.reduce((a, b) => a + b, 0),
+            });
+        }
+
+        // ── Day/week buckets (7d / 30d / 90d) ────────────────────────────────
+        const days      = period === '90d' ? 90 : period === '30d' ? 30 : 7;
+        const step      = days === 90 ? 7 : 1;
         const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
         const since      = new Date(todayStart.getTime() - days * 86400000);
 
@@ -361,11 +419,8 @@ router.get('/chart', requireAuth, async (req, res) => {
         for (const tx of txs) {
             const offset = Math.floor((new Date(tx.createdAt).getTime() - since.getTime()) / (step * 86400000));
             const idx    = Math.min(Math.max(offset, 0), bucketCount - 1);
-            if (tx.type === 'topup' || tx.type === 'earn') {
-                earned[idx] += tx.amount;
-            } else {
-                spent[idx]  += Math.abs(tx.amount);
-            }
+            if (tx.type === 'topup' || tx.type === 'earn') earned[idx] += tx.amount;
+            else spent[idx] += Math.abs(tx.amount);
         }
 
         res.json({
@@ -399,7 +454,7 @@ router.get('/export', requireAuth, async (req, res) => {
             cashout: 'Cash out'
         };
 
-        const header = ['Date (UTC)', 'Transaction Type', 'Credits', 'USD Equivalent', 'Related Bucket'].join(',');
+        const header = ['Date (UTC)', 'Transaction Type', 'GTK', 'USD Equivalent', 'Related Bucket'].join(',');
         const rows = transactions.map(t => {
             const bucket = t.relatedBucketId?.name
                 ? '"' + t.relatedBucketId.name.replace(/"/g, '""') + '"'
@@ -424,9 +479,17 @@ router.get('/export', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/credits/history?page=1
+// GET /api/credits/history?page=1  (add ?all=true to skip pagination)
 router.get('/history', requireAuth, async (req, res) => {
     try {
+        if (req.query.all === 'true') {
+            const transactions = await Transaction.find({ userId: req.user._id, type: { $ne: 'platform_fee' } })
+                .sort({ createdAt: -1 })
+                .populate('relatedBucketId', 'name')
+                .lean();
+            return res.json({ transactions, total: transactions.length, page: 1, pages: 1 });
+        }
+
         const page = Math.max(parseInt(req.query.page) || 1, 1);
         const limit = 20;
         const skip = (page - 1) * limit;
@@ -445,6 +508,19 @@ router.get('/history', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error fetching transaction history:', error);
         res.status(500).json({ error: 'Failed to fetch history' });
+    }
+});
+
+// DELETE /api/credits/history/:id — soft-remove a transaction from user history view
+router.delete('/history/:id', requireAuth, async (req, res) => {
+    try {
+        const tx = await Transaction.findOne({ _id: req.params.id, userId: req.user._id });
+        if (!tx) return res.status(404).json({ error: 'Transaction not found' });
+        await Transaction.deleteOne({ _id: tx._id });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting transaction:', error);
+        res.status(500).json({ error: 'Failed to delete transaction' });
     }
 });
 

@@ -165,10 +165,9 @@
         let maxPage         = 1;
         let currentPage     = 1;
         let pagesCollected  = 1;
-        let anonId          = null; // resolved from popup session; avoids third-party cookie issues
+        let anonId          = null;
         let anchorHref      = null; // range-selection anchor (href of last normally-clicked row)
 
-        // Build fetch options, injecting X-Anonymous-Id when available
         function fetchOpts(extra = {}) {
             const headers = Object.assign({}, extra.headers);
             if (anonId) headers['X-Anonymous-Id'] = anonId;
