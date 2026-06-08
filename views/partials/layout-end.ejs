@@ -395,10 +395,18 @@
                     <div class="flex items-center justify-between py-3.5 border-b border-silver-100">
                         <div>
                             <p class="text-base font-medium text-woodsmoke-800">Monetization</p>
-                            <p id="monetizationLabel" class="text-sm text-woodsmoke-400 mt-0.5">Disabled</p>
+                            <p class="text-sm text-woodsmoke-400 mt-0.5"><span id="monetizationLabel">Disabled</span><span id="becomePartnerSep"> · </span><a id="becomePartnerLink" href="/partnership" class="text-sm text-orchid-500 underline hover:text-orchid-700 transition-colors">Become a Grabbn Partner</a></p>
                         </div>
                         <button id="monetizationToggle" data-state="off" class="relative w-14 h-7 rounded-full bg-silver-200 transition-colors shrink-0 focus:outline-none opacity-40 cursor-not-allowed">
                             <span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow transition-transform"></span>
+                        </button>
+                    </div>
+
+                    <!-- Promote this Bucket -->
+                    <div class="py-3.5 border-b border-silver-100">
+                        <button id="promoteBucketBtn" type="button" class="w-full h-10 flex items-center justify-center gap-2 rounded-lg border border-orchid-300 text-sm font-semibold text-orchid-600 hover:bg-orchid-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="M24 0v24H0V0zM12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17 6a1 1 0 1 0 0 2h1.586L14 12.586l-3.793-3.793a1 1 0 0 0-1.414 0l-6.5 6.5a1 1 0 1 0 1.414 1.414L9.5 10.914l3.793 3.793a1 1 0 0 0 1.414 0L20 9.414V11a1 1 0 1 0 2 0V7a1 1 0 0 0-1-1z"/></g></svg>
+                            Promote this Bucket
                         </button>
                     </div>
 
@@ -453,15 +461,6 @@
                                 <button data-perm="no_one"    class="grabs-dd-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-woodsmoke-900 hover:bg-orchid-50 transition-colors border-t border-silver-100"><span class="grabs-dd-radio w-4 h-4 rounded-full border-2 border-silver-300 shrink-0 flex items-center justify-center"><span class="grabs-dd-dot w-2 h-2 rounded-full bg-orchid-500 hidden"></span></span>No one</button>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Promote this Bucket -->
-                    <div class="py-3.5 border-b border-silver-100">
-                        <button id="promoteBucketBtn" type="button" class="w-full h-10 flex items-center justify-center gap-2 rounded-lg border border-orchid-300 text-sm font-semibold text-orchid-600 hover:bg-orchid-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent" disabled>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M3.783 2.826C5.496 1.949 8.5 1.5 12 1.5s6.504.449 8.217 1.326c.862.44 1.783 1.2 1.783 2.424v11c0 1.133-.812 1.87-1.618 2.297l-2.843 5.547a.75.75 0 0 1-1.078 0L12 19.054l-4.461 5.04a.75.75 0 0 1-1.078 0L3.618 18.547C2.812 18.12 2 17.383 2 16.25v-11c0-1.224.921-1.983 1.783-2.424"/></g></svg>
-                            Promote this Bucket
-                        </button>
-                        <a id="becomePartnerLink" href="/partnership" class="mt-2 text-xs text-orchid-500 underline hover:text-orchid-700 transition-colors w-full text-center block">Become a Grabbn Partner</a>
                     </div>
 
                 </div>
@@ -572,8 +571,13 @@
 <!-- Hidden file input for per-link thumbnail uploads -->
 <input id="linkThumbFileInput" type="file" accept=".jpg,.jpeg,.png" class="hidden" />
 
+<!-- ── Global Bookmarklet FAB ─────────────────────────────────────────────── -->
+<button id="bookmarkletToolBtn" title="Grabbn Bookmarklet Tool" class="fixed bottom-6 right-6 z-9990 w-13 h-13 flex items-center justify-center rounded-md bg-orchid-100 text-orchid-600 shadow-lg hover:bg-orchid-200 transition-colors" style="width:52px;height:52px;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.594 23.258l-.012.002l-.071.035l-.02.004l-.014-.004l-.071-.036q-.016-.004-.024.006l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.016-.018m.264-.113l-.014.002l-.184.093l-.01.01l-.003.011l.018.43l.005.012l.008.008l.201.092q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.003-.011l.018-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M5 5a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6a1 1 0 1 1-2 0V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v14.131l4.168-2.778a1.5 1.5 0 0 1 1.664 0l.723.482a1 1 0 0 1-1.11 1.664L12 18.202l-4.668 3.112C6.335 21.978 5 21.264 5 20.066zm14 10a1 1 0 0 1 1 1v2h2a1 1 0 1 1 0 2h-2v2a1 1 0 1 1-2 0v-2h-2a1 1 0 1 1 0-2h2v-2a1 1 0 0 1 1-1"/></g></svg>
+</button>
+
 <!-- ── Global Toast Container ────────────────────────────────────────────── -->
-<div id="toastContainer" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-end gap-2 pointer-events-none" style="transform:translateX(-50%)"></div>
+<div id="toastContainer" class="fixed bottom-4 left-0 right-0 z-[9999] flex flex-col items-center gap-2 pointer-events-none"></div>
 
 <script>
 window.showToast = (function () {
@@ -1171,10 +1175,11 @@ window.showToast = (function () {
         if (e.key === 'Enter') { e.preventDefault(); confirmCreateRepo(); }
     });
 
-    // Promote button — enabled for partners only; hide the upgrade CTA for partners
+    // Promote button — enabled for partners only; hide the partner link next to Monetization for partners
     if (isPartner) {
         promoteBucketBtn.disabled = false;
         becomePartnerLink.classList.add('hidden');
+        document.getElementById('becomePartnerSep').classList.add('hidden');
     }
 
     // GTK ↔ USD rate: 100 GTK = $1.00, so 1 GTK = $0.01 USD
@@ -2254,6 +2259,9 @@ window.showToast = (function () {
         '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M16.735 2.835a2 2 0 0 0-2.615-.186l-2.913 2.185a9 9 0 0 1-4.127 1.71l-2.177.31c-.73.105-1.265.891-.913 1.662c.331.723 1.385 2.629 4.36 5.72l-4.178 4.178a1 1 0 1 0 1.414 1.414l4.178-4.178c3.091 2.975 4.997 4.029 5.72 4.36c.77.352 1.557-.183 1.661-.913l.311-2.177a9 9 0 0 1 1.71-4.127L21.35 9.88a2 2 0 0 0-.186-2.615zM15.32 4.25l4.43 4.43l-2.184 2.914a11 11 0 0 0-2.09 5.044l-.143 1.001c-.98-.624-2.603-1.837-4.869-4.103C8.2 11.27 6.986 9.648 6.362 8.668l1-.143a11 11 0 0 0 5.045-2.09z"/></g></svg>';
 
     // mingcute:more-2-line — vertical 3-dot menu trigger
+    var ICON_INFO =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"/><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12S6.477 2 12 2m0 2a8 8 0 1 0 0 16a8 8 0 0 0 0-16m-.01 6c.558 0 1.01.452 1.01 1.01v5.124A1 1 0 0 1 12.5 18h-.49A1.01 1.01 0 0 1 11 16.99V12a1 1 0 1 1 0-2zM12 7a1 1 0 1 1 0 2a1 1 0 0 1 0-2"/></g></svg>'
+
     var ICON_MORE =
         '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3m0 7.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3m0 7.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3"/></g></svg>'
 
@@ -2261,13 +2269,54 @@ window.showToast = (function () {
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    var _nbDragId        = null;
+    var _nbDropInsertIdx = -1;
+    var _nbDropStrip = (function () {
+        var el = document.createElement('div');
+        el.className = 'nb-drop-strip';
+        el.style.height          = '40px';
+        el.style.minHeight       = '40px';
+        el.style.flexShrink      = '0';
+        el.style.borderRadius    = '6px';
+        el.style.backgroundColor = '#f1f2f4';
+        el.style.display         = 'flex';
+        el.style.alignItems      = 'center';
+        el.style.justifyContent  = 'center';
+        el.innerHTML = '<span style="font-size:12px;color:#9ca3af;user-select:none;">Release to confirm</span>';
+        el.addEventListener('dragover', function (e) { if (_nbDragId) e.preventDefault(); });
+        return el;
+    }());
+    function _removeDropStrip() { if (_nbDropStrip.parentNode) _nbDropStrip.parentNode.removeChild(_nbDropStrip); }
+
+    linksList.addEventListener('dragover', function (e) { if (_nbDragId) e.preventDefault(); });
+    linksList.addEventListener('drop', function (e) {
+        e.preventDefault();
+        var srcId = e.dataTransfer.getData('text/plain');
+        _removeDropStrip();
+        if (!srcId || !_nbDragId || _nbDropInsertIdx < 0) { _nbDragId = null; _nbDropInsertIdx = -1; return; }
+        var srcIdx = state.links.findIndex(function (l) { return l.id === srcId; });
+        if (srcIdx === -1) { _nbDragId = null; _nbDropInsertIdx = -1; return; }
+        var insertIdx = _nbDropInsertIdx > srcIdx ? _nbDropInsertIdx - 1 : _nbDropInsertIdx;
+        var dragged = state.links.splice(srcIdx, 1)[0];
+        state.links.splice(insertIdx, 0, dragged);
+        _nbDragId = null;
+        _nbDropInsertIdx = -1;
+        renderLinks();
+    });
+
     function buildLinkRow(link, rank) {
         var row = document.createElement('div');
         row.className = 'flex items-center gap-3 p-3 rounded-lg border transition-colors group ' +
             (link.checked ? 'bg-orchid-50/40 border-orchid-200' : 'border-silver-100 hover:bg-silver-50/70');
         row.setAttribute('data-link-id', link.id);
+        row.setAttribute('draggable', 'true');
 
         row.innerHTML =
+            // Drag handle
+            '<div class="link-drag-handle shrink-0 cursor-grab active:cursor-grabbing text-silver-300 hover:text-silver-500 transition-colors">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="8.5" cy="6" r="1.5"/><circle cx="15.5" cy="6" r="1.5"/><circle cx="8.5" cy="12" r="1.5"/><circle cx="15.5" cy="12" r="1.5"/><circle cx="8.5" cy="18" r="1.5"/><circle cx="15.5" cy="18" r="1.5"/></svg>' +
+            '</div>' +
+
             // Checkbox
             '<button class="link-checkbox mt-0.5 shrink-0 ' + (link.checked ? 'text-orchid-600' : 'text-silver-300 hover:text-orchid-600') + ' transition-colors">' +
                 (link.checked ? ICON_CHECKBOX_FILL : ICON_SQUARE_LINE) +
@@ -2286,6 +2335,7 @@ window.showToast = (function () {
             '<div class="flex-1 flex flex-col gap-1 min-w-0">' +
                 '<p class="text-base font-medium text-woodsmoke-950 truncate link-title">' + escapeHtml(link.title) + '</p>' +
                 '<p class="text-sm text-woodsmoke-400 truncate link-url">' + escapeHtml(link.url) + '</p>' +
+                (link.addedAt ? '<p class="text-xs text-woodsmoke-300">' + new Date(link.addedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) + '</p>' : '') +
                 '<div class="flex items-center gap-2">' +
                     '<button class="link-copy w-10 h-10 flex items-center justify-center rounded-md text-woodsmoke-400 transition-colors" title="Copy URL">' +
                         ICON_COPY +
@@ -2306,6 +2356,17 @@ window.showToast = (function () {
                         '" title="' + (link.pinned ? 'Unpin' : 'Pin to top') + '">' +
                         (link.pinned ? ICON_PIN_ON : ICON_PIN_OFF) +
                     '</button>' +
+                    '<div class="link-reg-info-wrap relative flex items-center gap-1 text-sm text-woodsmoke-400">' +
+                        '<button class="link-reg-info flex items-center justify-center hover:text-woodsmoke-600 transition-colors">' + ICON_INFO + '</button>' +
+                        '<div class="link-reg-tooltip hidden fixed w-64 bg-woodsmoke-900 text-white text-xs rounded-md p-3 leading-relaxed shadow-xl z-50 pointer-events-none">' +
+                            'Registering a link claims ownership of it on Grabbn. Other users won\'t be able to monetize it in their own buckets. If you don\'t monetize it, they can still add it — with your username as attribution.' +
+                        '</div>' +
+                        (link.pendingRegistration
+                            ? '<button class="link-pending-reg text-orchid-500 hover:text-orchid-700 transition-colors">Registered · undo</button>'
+                            : link.registered
+                                ? '<button class="link-drop-reg text-orchid-500 hover:text-red-400 transition-colors">Registered Link · Drop Ownership</button>'
+                                : '<button class="link-register hover:text-woodsmoke-700 transition-colors">Register Link</button>') +
+                    '</div>' +
                 '</div>' +
             '</div>' +
 
@@ -2435,6 +2496,139 @@ window.showToast = (function () {
             renderLinks();
         });
 
+        // Info tooltip
+        var infoWrap    = row.querySelector('.link-reg-info-wrap');
+        var infoTooltip = row.querySelector('.link-reg-tooltip');
+        if (infoWrap && infoTooltip) {
+            var infoIconBtn = row.querySelector('.link-reg-info');
+            infoIconBtn.addEventListener('mouseenter', function () {
+                var rect = infoIconBtn.getBoundingClientRect();
+                infoTooltip.classList.remove('hidden');
+                var tipH = infoTooltip.offsetHeight;
+                infoTooltip.style.top  = (rect.top >= tipH + 8 ? rect.top - tipH - 8 : rect.bottom + 8) + 'px';
+                infoTooltip.style.left = rect.left + 'px';
+            });
+            infoIconBtn.addEventListener('mouseleave', function () { infoTooltip.classList.add('hidden'); });
+            infoIconBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isHidden = infoTooltip.classList.contains('hidden');
+                infoTooltip.classList.toggle('hidden');
+                if (isHidden) {
+                    var rect = infoIconBtn.getBoundingClientRect();
+                    var tipH = infoTooltip.offsetHeight;
+                    infoTooltip.style.top  = (rect.top >= tipH + 8 ? rect.top - tipH - 8 : rect.bottom + 8) + 'px';
+                    infoTooltip.style.left = rect.left + 'px';
+                }
+            });
+        }
+
+        function attachRegLinkHandler(btn) {
+            btn.addEventListener('click', function handler() {
+                if (!link.isSaved) {
+                    link.pendingRegistration = true;
+                    btn.removeEventListener('click', handler);
+                    btn.className = 'link-pending-reg text-orchid-500 hover:text-orchid-700 transition-colors';
+                    btn.textContent = 'Registered · undo';
+                    attachPendingRegHandler(btn);
+                    return;
+                }
+                btn.textContent = 'Registering…';
+                btn.disabled = true;
+                fetch('/api/registered-links', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ href: link.url })
+                }).then(function (r) { return r.json(); }).then(function (data) {
+                    if (data.error) {
+                        btn.textContent = data.error;
+                        setTimeout(function () { btn.textContent = 'Register Link'; btn.disabled = false; }, 3000);
+                    } else {
+                        link.registered = true;
+                        btn.removeEventListener('click', handler);
+                        btn.className = 'link-drop-reg text-orchid-500 hover:text-red-400 transition-colors';
+                        btn.textContent = 'Registered Link · Drop Registration';
+                        btn.disabled = false;
+                        attachDropRegHandler(btn, null);
+                    }
+                }).catch(function () { btn.textContent = 'Register Link'; btn.disabled = false; });
+            });
+        }
+
+        function attachPendingRegHandler(btn) {
+            btn.addEventListener('click', function handler() {
+                link.pendingRegistration = false;
+                btn.removeEventListener('click', handler);
+                btn.className = 'link-register hover:text-woodsmoke-700 transition-colors';
+                btn.textContent = 'Register Link';
+                attachRegLinkHandler(btn);
+            });
+        }
+
+        function attachDropRegHandler(btn) {
+            btn.addEventListener('click', function handler() {
+                btn.textContent = 'Dropping…';
+                btn.disabled = true;
+                fetch('/api/registered-links', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ href: link.url })
+                }).then(function (r) { return r.json(); }).then(function (data) {
+                    if (data.error) {
+                        btn.textContent = data.error;
+                        setTimeout(function () { btn.textContent = 'Registered Link · Drop Registration'; btn.disabled = false; }, 3000);
+                    } else {
+                        link.registered = false;
+                        btn.removeEventListener('click', handler);
+                        btn.className = 'link-register hover:text-woodsmoke-700 transition-colors';
+                        btn.textContent = 'Register Link';
+                        btn.disabled = false;
+                        attachRegLinkHandler(btn);
+                    }
+                }).catch(function () { btn.textContent = 'Registered Link · Drop Registration'; btn.disabled = false; });
+            });
+        }
+
+        var regBtn = row.querySelector('.link-register');
+        if (regBtn) attachRegLinkHandler(regBtn);
+
+        var pendingRegBtn = row.querySelector('.link-pending-reg');
+        if (pendingRegBtn) attachPendingRegHandler(pendingRegBtn);
+
+        var dropRegBtn = row.querySelector('.link-drop-reg');
+        if (dropRegBtn) attachDropRegHandler(dropRegBtn);
+
+        // ── Drag-to-reorder ──
+        row.addEventListener('dragstart', function (e) {
+            _nbDragId = link.id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', link.id);
+            var ghost = row.cloneNode(true);
+            ghost.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:' + row.offsetWidth + 'px;opacity:1;pointer-events:none;';
+            document.body.appendChild(ghost);
+            e.dataTransfer.setDragImage(ghost, e.offsetX, e.offsetY);
+            requestAnimationFrame(function () { document.body.removeChild(ghost); });
+        });
+
+        row.addEventListener('dragend', function () {
+            _nbDragId = null;
+            _removeDropStrip();
+        });
+
+        row.addEventListener('dragover', function (e) {
+            if (!_nbDragId || _nbDragId === link.id) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            var rect   = row.getBoundingClientRect();
+            var isAbove = e.clientY < rect.top + rect.height / 2;
+            var tgtIdx  = state.links.findIndex(function (l) { return l.id === link.id; });
+            _nbDropInsertIdx = isAbove ? tgtIdx : tgtIdx + 1;
+            if (isAbove) {
+                row.parentNode.insertBefore(_nbDropStrip, row);
+            } else {
+                row.parentNode.insertBefore(_nbDropStrip, row.nextSibling);
+            }
+        });
+
         return row;
     }
 
@@ -2479,10 +2673,22 @@ window.showToast = (function () {
             var data = await res.json();
 
             var newLinks = (data.links || []).map(function (l) {
-                return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: !!state._allSelected, clickCount: l.clickCount || 0, pinned: l.isPinned || false, archived: !!l.isArchived };
+                return { id: uid(), title: l.text || '', url: l.href || '', thumb: l.image || null, monetized: !l.isFree, checked: !!state._allSelected, clickCount: l.clickCount || 0, pinned: l.isPinned || false, archived: !!l.isArchived, registered: false, isSaved: true, pendingRegistration: false, addedAt: l.addedAt || null };
             });
             state.links         = state.links.concat(newLinks.filter(function (l) { return !l.archived; }));
             state.archivedLinks = state.archivedLinks.concat(newLinks.filter(function (l) { return l.archived; }));
+
+            // Fetch which of these URLs the current user has registered
+            var activeHrefs = newLinks.filter(function (l) { return !l.archived; }).map(function (l) { return l.url; });
+            if (activeHrefs.length > 0) {
+                fetch('/api/registered-links?hrefs=' + encodeURIComponent(activeHrefs.join(',')), { credentials: 'include' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (regData) {
+                        var regSet = new Set(regData.registeredByMe || []);
+                        state.links.forEach(function (l) { if (regSet.has(l.url)) l.registered = true; });
+                        renderLinks();
+                    }).catch(function () {});
+            }
             // On the first page, override _initialLinkCount with the server's authoritative total.
             // The profile page payload uses a links._id projection that may be unreliable when
             // the link schema has _id:false, so this ensures the guard count is always correct.
@@ -2499,9 +2705,11 @@ window.showToast = (function () {
                     state._linksScrollHandler = null;
                 }
                 if (state._originalSnapshot) {
-                    state._originalSnapshot.links = state.links.concat(state.archivedLinks)
-                        .map(function (l) { return (l.url || '') + ':' + (l.monetized ? '0' : '1'); })
-                        .sort().join('|');
+                    state._originalSnapshot.links = state.links.slice().sort(function (a, b) {
+                        if (a.pinned && !b.pinned) return -1;
+                        if (!a.pinned && b.pinned) return 1;
+                        return 0;
+                    }).map(function (l) { return (l.url || '') + ':' + (l.monetized ? '0' : '1'); }).join('|');
                 }
             }
 
@@ -2543,11 +2751,11 @@ window.showToast = (function () {
         var rankMap = {};
         byClicks.forEach(function (l, i) { rankMap[l.id] = i + 1; });
 
-        // Sort for display: pinned first (by click count desc), then rest by click count desc
+        // Sort for display: pinned first, then preserve user's drag order
         var sorted = state.links.slice().sort(function (a, b) {
             if (a.pinned && !b.pinned) return -1;
             if (!a.pinned && b.pinned) return 1;
-            return (b.clickCount || 0) - (a.clickCount || 0);
+            return 0;
         });
 
         linksEmptyState.classList.add('hidden');
@@ -2811,8 +3019,10 @@ window.showToast = (function () {
         if (state._editBucket && !state._editBucketIsDraft && state._originalSnapshot) {
             var snap = state._originalSnapshot;
             var currentLinks = state.links.slice().sort(function (a, b) {
-                return (a.url > b.url ? 1 : -1);
-            }).map(function (l) { return (l.url || '') + ':' + (l.monetized ? '0' : '1'); }).sort().join('|');
+                if (a.pinned && !b.pinned) return -1;
+                if (!a.pinned && b.pinned) return 1;
+                return 0;
+            }).map(function (l) { return (l.url || '') + ':' + (l.monetized ? '0' : '1'); }).join('|');
             var currentTags  = state.tags.slice().sort().join('|');
             var currentThumb = state.thumbnail ? state.thumbnail.dataUrl : '';
             var nothingChanged =
@@ -2854,7 +3064,7 @@ window.showToast = (function () {
                 links:       state.links.slice().sort(function (a, b) {
                     if (a.pinned && !b.pinned) return -1;
                     if (!a.pinned && b.pinned) return 1;
-                    return (b.clickCount || 0) - (a.clickCount || 0);
+                    return 0;
                 }).map(function (l) { return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: l.pinned, archived: false }; })
                 .concat(state.archivedLinks.map(function (l) { return { title: l.title, url: l.url, thumb: l.thumb, monetized: l.monetized, pinned: false, archived: true }; }))
             };
@@ -2878,6 +3088,17 @@ window.showToast = (function () {
             var data = await res.json();
 
             if (res.ok) {
+                // Fire pending link registrations now that the bucket is saved
+                var pendingRegs = state.links.filter(function (l) { return l.pendingRegistration; });
+                if (pendingRegs.length > 0) {
+                    await Promise.allSettled(pendingRegs.map(function (l) {
+                        return fetch('/api/registered-links', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ href: l.url })
+                        });
+                    }));
+                }
                 clearDraft(); // prevent closeModal() from deleting the just-saved bucket
                 closeModal();
                 // Reload the profile page to reflect changes
@@ -3137,7 +3358,7 @@ window.showToast = (function () {
 
     function buildCode(anonId) {
         var safeAnon = String(anonId || '').replace(/['"\\]/g, '');
-        return `javascript:(function(){var ex=document.getElementById('grabbn-widget');if(ex){ex.remove();return;}function xi(a,base){var el=a,img,src,attrs=['data-src','data-lazy','data-original','data-srcset','src'],depth=0;while(el&&depth<5){img=el.querySelector('img');if(img){for(var k=0;k<attrs.length;k++){src=(img.getAttribute(attrs[k])||'').trim();if(src.indexOf(' ')!==-1)src=src.split(',')[0].trim().split(' ')[0];if(src&&src.indexOf('data:')!==0&&src.indexOf('.svg')===-1){try{return new URL(src,base).href;}catch{}}}}el=el.parentElement;depth++;}return null;}function xl(doc,base){var l=[],s=new Set();doc.querySelectorAll('a[href]').forEach(function(a){var r=a.getAttribute('href');if(!r||r[0]==='#'||/^(javascript|mailto|tel):/.test(r))return;try{var h=new URL(r,base).href;if(s.has(h))return;s.add(h);var t=(a.title||a.getAttribute('aria-label')||'').trim();if(!t){var i=a.querySelector('img');if(i)t=(i.alt||'').trim();}if(!t){var f=a.textContent.trim().replace(/\\s+/g,' ');t=f.replace(/[$€£¥][\\d\\s,.]+.*/,'').trim()||f;}t=t.slice(0,120);if(t.length>2)l.push({href:h,text:t,image:xi(a,base)});}catch{}});return l;}var WN_KEY='grabbn:'+location.hostname+':';var acc=null;try{if(window.name&&window.name.indexOf(WN_KEY)===0)acc=JSON.parse(window.name.slice(WN_KEY.length));}catch{}if(acc&&acc.pagesCollected>=50){alert('Grabbn: 50-page limit reached. Save your current collection first, then continue grabbing.');return;}var curLinks=xl(document,location.href);var seen=new Set(acc?acc.links.map(function(l){return l.href;}):[]);var merged=acc?acc.links.slice():[];curLinks.forEach(function(l){if(!seen.has(l.href)){merged.push(l);seen.add(l.href);}});if(merged.length>2000)merged=merged.slice(0,2000);var pagesCollected=(acc?acc.pagesCollected:0)+1;try{window.name=WN_KEY+JSON.stringify({links:merged,pagesCollected:pagesCollected});}catch{}var maxPage=1,cp=parseInt(new URLSearchParams(location.search).get('page')||'1',10);document.querySelectorAll('a[href]').forEach(function(a){var m=(a.getAttribute('href')||'').match(/[?&]page=(\\d+)/i);if(m){var n=parseInt(m[1],10);if(n>maxPage)maxPage=n;}});var sty=document.createElement('style');sty.textContent='@keyframes grabbn-spin{to{transform:rotate(360deg)}}';document.head.appendChild(sty);var ov=document.createElement('div');ov.id='grabbn-widget';ov.style.cssText='position:fixed;bottom:20px;right:20px;width:380px;height:560px;z-index:2147483647;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);overflow:hidden;background:#fff;border:1px solid #e5e7eb;';var xb=document.createElement('button');xb.title='Close';xb.textContent='\u00d7';xb.style.cssText='position:absolute;top:9px;right:9px;z-index:10;background:rgba(255,255,255,.95);border:1px solid #e5e7eb;border-radius:6px;width:24px;height:24px;font-size:16px;cursor:pointer;color:#6b7280;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;';xb.onclick=function(){ov.remove();};ov.appendChild(xb);var ld=document.createElement('div');ld.style.cssText='display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:8px;color:#9ca3af;font-size:13px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';ld.innerHTML='<div style="width:20px;height:20px;border:2px solid #f3e8ff;border-top-color:#b346b3;border-radius:50%;animation:grabbn-spin .8s linear infinite;"></div><span>Loading Grabbn\u2026</span>';ov.appendChild(ld);document.body.appendChild(ov);var wf=null;window.addEventListener('message',function(e){if(e.origin!=='${origin}')return;if(e.data==='grabbn-close'){ov.remove();return;}if(e.data==='grabbn-reset'){try{window.name='';}catch{}return;}if(e.data&&e.data.type==='grabbn-fetch-pages'){var urls=e.data.urls;urls.forEach(function(u,i){fetch(u).then(function(r){return r.text();}).then(function(html){var d2=new DOMParser().parseFromString(html,'text/html');var pl=xl(d2,u);if(wf)wf.contentWindow.postMessage({type:'grabbn-page-links',links:pl,pageUrl:u,index:i,total:urls.length},'${origin}');}).catch(function(){if(wf)wf.contentWindow.postMessage({type:'grabbn-page-links',links:[],pageUrl:u,index:i,total:urls.length,error:true},'${origin}');});});}if(e.data&&e.data.type==='grabbn-rescan'){var fr2=xl(document,location.href);var ac2=null;try{if(window.name&&window.name.indexOf(WN_KEY)===0)ac2=JSON.parse(window.name.slice(WN_KEY.length));}catch{}var ex2=new Set(ac2?ac2.links.map(function(l){return l.href;}):[]);var nw=fr2.filter(function(l){return!ex2.has(l.href);});if(ac2&&nw.length){nw.forEach(function(l){ac2.links.push(l);});try{window.name=WN_KEY+JSON.stringify(ac2);}catch{}}if(wf)wf.contentWindow.postMessage({type:'grabbn-rescan-result',links:nw},'${origin}');return;}});fetch('${origin}/api/popup-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({links:merged,sourceUrl:location.href,maxPage:maxPage,currentPage:cp,pagesCollected:pagesCollected,anon:'${safeAnon}'})}).then(function(r){return r.json();}).then(function(d){if(!d.token){ld.querySelector('span').textContent='Server error.';return;}ld.remove();var fr=document.createElement('iframe');fr.src='${origin}/popup.html?session='+d.token;fr.style.cssText='width:100%;height:100%;border:none;display:block;';ov.appendChild(fr);wf=fr;}).catch(function(){ld.querySelector('span').textContent='Could not connect.';});})();`;
+        return `javascript:(function(){if(document.getElementById('grabbn-widget')){document.getElementById('grabbn-widget').remove();return;}function extractData(el){var a=el.querySelector('a[href]');if(!a||!a.href)return null;var href=a.href;var title='';var h=el.querySelector('h1,h2,h3,h4,h5,h6');if(h)title=h.textContent.trim();if(!title)title=(a.title||a.getAttribute('aria-label')||'').trim();if(!title)title=el.textContent.trim().replace(/\\s+/g,' ').slice(0,120);var image=null;var img=el.querySelector('img');if(img){var attrs=['data-src','data-lazy','data-original','src'];for(var k=0;k<attrs.length;k++){var s=(img.getAttribute(attrs[k])||'').trim();if(s&&s.indexOf('data:')!==0&&s.indexOf('.svg')===-1){try{image=new URL(s,location.href).href;break;}catch(ex){}}}}return{href:href,text:title.slice(0,120),image:image};}var ORIGIN='${origin}';var anchorEl=null;var highlightedEls=[];var checkedEls=new Set();var lastCheckedEl=null;var siblingsActive=false;var siblingHighlights=[];var pickMode=false;var hoverEl=null;var shield=null;var wf=null;function postPopup(msg){if(wf&&wf.contentWindow)wf.contentWindow.postMessage(msg,ORIGIN);}function notifyCheckChange(){postPopup({type:'grabbn-check-change',count:checkedEls.size});}function clearHighlights(){highlightedEls.forEach(function(el){el.style.outline='';el.style.outlineOffset='';var cb=el.querySelector('.grabbn-cb-wrap');if(cb)cb.remove();});highlightedEls=[];checkedEls.clear();lastCheckedEl=null;notifyCheckChange();}function injectCheckbox(el){var pos=window.getComputedStyle(el).position;if(pos==='static')el.style.position='relative';var wrap=document.createElement('div');wrap.className='grabbn-cb-wrap';wrap.style.cssText='position:absolute;top:6px;left:6px;z-index:2147483646;pointer-events:auto;background:rgba(255,255,255,0.88);border-radius:4px;padding:2px;line-height:0;';var cb=document.createElement('input');cb.type='checkbox';cb.style.cssText='width:15px;height:15px;cursor:pointer;accent-color:#9333ea;margin:0;display:block;';cb.addEventListener('click',function(e){e.stopPropagation();if(e.shiftKey&&lastCheckedEl!==null){var from=highlightedEls.indexOf(lastCheckedEl);var to=highlightedEls.indexOf(el);if(from!==-1&&to!==-1){var s=Math.min(from,to),end=Math.max(from,to);for(var j=s;j<=end;j++){checkedEls.add(highlightedEls[j]);var jcb=highlightedEls[j].querySelector('.grabbn-cb-wrap input');if(jcb)jcb.checked=true;}}}else{if(cb.checked)checkedEls.add(el);else checkedEls.delete(el);lastCheckedEl=el;}notifyCheckChange();});wrap.appendChild(cb);el.appendChild(wrap);}function addBorder(el){if(highlightedEls.indexOf(el)!==-1)return;el.style.outline='2px solid #9333ea';el.style.outlineOffset='2px';highlightedEls.push(el);injectCheckbox(el);}function addSiblings(anchor){var tag=anchor.tagName.toLowerCase();var cls=anchor.classList&&anchor.classList.length>0?anchor.classList[0]:null;var sel=tag.indexOf('-')!==-1?tag:(cls?tag+'.'+CSS.escape(cls):null);if(!sel)return;var widget=document.getElementById('grabbn-widget');document.querySelectorAll(sel).forEach(function(el){if(el===anchor)return;if(widget&&widget.contains(el))return;addBorder(el);});}function onMouseOver(e){if(!pickMode)return;var widget=document.getElementById('grabbn-widget');var els=document.elementsFromPoint(e.clientX,e.clientY);var t=null;for(var i=0;i<els.length;i++){var el=els[i];if(el===shield)continue;if(widget&&widget.contains(el))continue;if(el.closest&&el.closest('.grabbn-cb-wrap'))continue;t=el;break;}if(!t){if(hoverEl){hoverEl.style.outline='';hoverEl.style.outlineOffset='';hoverEl=null;}clearSiblingHighlights();return;}if(t===hoverEl)return;if(hoverEl){hoverEl.style.outline='';hoverEl.style.outlineOffset='';}hoverEl=siblingsActive?findRepeatingAncestor(t):t;hoverEl.style.outline='2px dashed #9333ea';hoverEl.style.outlineOffset='2px';if(siblingsActive){highlightSimilar(hoverEl);}else{clearSiblingHighlights();}}function onPageClick(e){if(!pickMode)return;var widget=document.getElementById('grabbn-widget');var els=document.elementsFromPoint(e.clientX,e.clientY);var t=null;for(var i=0;i<els.length;i++){var el=els[i];if(el===shield)continue;if(widget&&widget.contains(el))continue;if(el.closest&&el.closest('.grabbn-cb-wrap'))continue;t=el;break;}if(!t)return;if(hoverEl){hoverEl.style.outline='';hoverEl.style.outlineOffset='';hoverEl=null;}anchorEl=siblingsActive?findRepeatingAncestor(t):t;exitPickMode(false);addBorder(anchorEl);if(siblingsActive)addSiblings(anchorEl);postPopup({type:'grabbn-element-picked'});}function onKeyDown(e){if(e.key==='Escape'&&pickMode){exitPickMode(true);postPopup({type:'grabbn-pick-aborted'});}}function findRepeatingAncestor(el){var cur=el;for(var i=0;i<10;i++){var par=cur.parentElement;if(!par||par===document.body||par===document.documentElement)break;var n=0;for(var j=0;j<par.children.length;j++){if(par.children[j].tagName===cur.tagName)n++;}if(n>=2)return cur;cur=par;}return el;}function clearSiblingHighlights(){siblingHighlights.forEach(function(el){el.style.outline='';el.style.outlineOffset='';});siblingHighlights=[];}function highlightSimilar(el){clearSiblingHighlights();var tag=el.tagName.toLowerCase();var cls=el.classList&&el.classList.length>0?el.classList[0]:null;var sel=tag.indexOf('-')!==-1?tag:(cls?tag+'.'+CSS.escape(cls):null);if(!sel)return;var widget=document.getElementById('grabbn-widget');document.querySelectorAll(sel).forEach(function(match){if(match===el)return;if(widget&&widget.contains(match))return;match.style.outline='2px dashed rgba(147,51,234,0.35)';match.style.outlineOffset='2px';siblingHighlights.push(match);});}function enterPickMode(){pickMode=true;shield=document.createElement('div');shield.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483646;cursor:crosshair;';document.body.appendChild(shield);shield.addEventListener('mousemove',onMouseOver);shield.addEventListener('click',onPageClick);document.addEventListener('keydown',onKeyDown,true);}function exitPickMode(abort){clearSiblingHighlights();pickMode=false;if(shield){shield.remove();shield=null;}document.removeEventListener('keydown',onKeyDown,true);if(abort&&hoverEl){hoverEl.style.outline='';hoverEl.style.outlineOffset='';hoverEl=null;}}var sty=document.createElement('style');sty.textContent='@keyframes grabbn-spin{to{transform:rotate(360deg)}}';document.head.appendChild(sty);var ov=document.createElement('div');ov.id='grabbn-widget';ov.style.cssText='position:fixed;bottom:20px;right:20px;width:280px;height:160px;z-index:2147483647;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;background:#fff;border:1px solid #e5e7eb;';var db=document.createElement('div');db.style.cssText='height:20px;background:#f9fafb;border-bottom:1px solid #f3f4f6;cursor:move;display:flex;align-items:center;justify-content:center;user-select:none;flex-shrink:0;';var grip=document.createElement('div');grip.style.cssText='width:28px;height:3px;border-radius:2px;background:#d1d5db;';db.appendChild(grip);ov.appendChild(db);var iw=document.createElement('div');iw.style.cssText='position:absolute;top:20px;left:0;right:0;bottom:0;';ov.appendChild(iw);var ld=document.createElement('div');ld.style.cssText='display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;font-size:12px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;gap:8px;';var sp=document.createElement('div');sp.style.cssText='width:16px;height:16px;border:2px solid #f3e8ff;border-top-color:#9333ea;border-radius:50%;animation:grabbn-spin .8s linear infinite;flex-shrink:0;';ld.appendChild(sp);ld.appendChild(document.createTextNode('Loading…'));iw.appendChild(ld);document.body.appendChild(ov);var dragging=false,dragX=0,dragY=0,startL=0,startT=0;db.addEventListener('mousedown',function(e){dragging=true;dragX=e.clientX;dragY=e.clientY;var r=ov.getBoundingClientRect();startL=r.left;startT=r.top;ov.style.right='auto';ov.style.bottom='auto';ov.style.left=startL+'px';ov.style.top=startT+'px';e.preventDefault();});document.addEventListener('mousemove',function(e){if(!dragging)return;ov.style.left=(startL+(e.clientX-dragX))+'px';ov.style.top=(startT+(e.clientY-dragY))+'px';});document.addEventListener('mouseup',function(){dragging=false;});window.addEventListener('message',function(e){if(e.origin!==ORIGIN)return;var d=e.data;if(!d)return;if(d==='grabbn-close'){exitPickMode(true);clearHighlights();ov.remove();return;}if(d.type==='grabbn-enter-pick'){enterPickMode();return;}if(d.type==='grabbn-abort-pick'){exitPickMode(true);return;}if(d.type==='grabbn-toggle-siblings'){siblingsActive=d.active;if(anchorEl){highlightedEls.filter(function(el){return el!==anchorEl;}).forEach(function(el){el.style.outline='';el.style.outlineOffset='';var cb=el.querySelector('.grabbn-cb-wrap');if(cb)cb.remove();checkedEls.delete(el);});highlightedEls=highlightedEls.filter(function(el){return el===anchorEl;});if(siblingsActive)addSiblings(anchorEl);notifyCheckChange();}return;}if(d.type==='grabbn-get-selected'){var items=[];checkedEls.forEach(function(el){var data=extractData(el);if(data&&data.href)items.push(data);});postPopup({type:'grabbn-selected-items',items:items});return;}if(d.type==='grabbn-resize'){ov.style.width=d.width+'px';ov.style.height=(d.height+20)+'px';return;}});var fr=document.createElement('iframe');fr.src='${origin}/popup.html?source='+encodeURIComponent(location.href)+'&anon=${safeAnon}';fr.style.cssText='width:100%;height:100%;border:none;display:block;';fr.onload=function(){if(ld.parentNode)ld.remove();wf=fr;};iw.appendChild(fr);})();`;
     }
 
     async function openBookmarkletModal(triggerBtn) {
@@ -3180,6 +3401,278 @@ window.showToast = (function () {
             setTimeout(function () { copyBookmarkletBtn.textContent = 'Copy'; }, 2000);
         } catch {}
     });
+})();
+</script>
+
+<!-- ── Sidebar bucket shortcuts ──────────────────────────────────────────── -->
+<script>
+(function () {
+    var user = window.__GRABBN_USER__;
+    if (!user || user.isAnonymous || !user.username) return;
+
+    function init() {
+        var LS_KEY   = 'grabbn_bk_shortcuts_' + user.username;
+        var PREF_KEY = 'grabbn_sidebar_prefs_' + user.username;
+        var MAX_STORE = 6;
+        var container = document.getElementById('sidebarBucketShortcuts');
+
+        function getStored() {
+            try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch (e) { return []; }
+        }
+        function setStored(list) {
+            try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch (e) {}
+        }
+        function getMyPrefs() {
+            try {
+                var p = (JSON.parse(localStorage.getItem(PREF_KEY)) || {}).myBuckets || {};
+                return {
+                    show:  p.show !== false,
+                    count: Math.min(6, Math.max(1, p.count || 5)),
+                    sort:  p.sort || 'recent_seen'
+                };
+            } catch (e) { return { show: true, count: 5, sort: 'recent_seen' }; }
+        }
+
+        function buildLink(b) {
+            var wrap = document.createElement('div');
+            wrap.className = 'relative group';
+
+            var a = document.createElement('a');
+            a.href  = '/b/' + b._id;
+            a.title = b.name;
+            a.className = 'block w-9 h-9 rounded-md overflow-hidden shrink-0 ring-1 ring-woodsmoke-100 hover:ring-orchid-400 transition-shadow';
+            a.addEventListener('click', function (e) {
+                if (typeof window.openBucketModal === 'function') {
+                    e.preventDefault();
+                    fetch('/api/buckets/' + b._id + '/edit', { credentials: 'include' })
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .then(function (data) {
+                            if (data) window.openBucketModal(data, { skipPushRecent: true });
+                        })
+                        .catch(function () {});
+                }
+            });
+            if (b.hasThumbnail) {
+                var img = document.createElement('img');
+                img.src     = '/b/' + b._id + '/thumbnail.jpg';
+                img.alt     = b.name;
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                img.className = 'w-full h-full object-cover';
+                a.appendChild(img);
+            } else {
+                a.className += ' bg-orchid-50 flex items-center justify-center';
+                a.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="text-orchid-300"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zm3-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/></svg>';
+            }
+            wrap.appendChild(a);
+
+            var rmBtn = document.createElement('button');
+            rmBtn.title = 'Remove from sidebar';
+            rmBtn.className = 'absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-woodsmoke-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10';
+            rmBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24"><path fill="currentColor" d="m12 13.414 4.243 4.243a1 1 0 0 0 1.414-1.414L13.414 12l4.243-4.243a1 1 0 0 0-1.414-1.414L12 10.586 7.757 6.343a1 1 0 0 0-1.414 1.414L10.586 12l-4.243 4.243a1 1 0 1 0 1.414 1.414z"/></svg>';
+            rmBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var id = String(b._id);
+                var list = getStored().filter(function (x) { return x._id !== id; });
+                setStored(list);
+                renderMyBuckets();
+            });
+            wrap.appendChild(rmBtn);
+
+            return wrap;
+        }
+
+        function paintList(buckets) {
+            if (!container) return;
+            container.innerHTML = '';
+            buckets.forEach(function (b) { container.appendChild(buildLink(b)); });
+        }
+
+        function renderMyBuckets() {
+            if (!container) return;
+            var prefs = getMyPrefs();
+            if (!prefs.show) { container.innerHTML = ''; return; }
+            if (prefs.sort === 'recent_seen') {
+                paintList(getStored().slice(0, prefs.count));
+            } else {
+                fetch('/api/buckets/mine', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (list) {
+                        list.sort(function (a, b) {
+                            var ai = String(a._id), bi = String(b._id);
+                            return prefs.sort === 'newest' ? (bi < ai ? -1 : bi > ai ? 1 : 0)
+                                                           : (ai < bi ? -1 : ai > bi ? 1 : 0);
+                        });
+                        paintList(list.slice(0, prefs.count).map(function (b) {
+                            return { _id: b._id, name: b.name, hasThumbnail: !!b.thumbnail };
+                        }));
+                    })
+                    .catch(function () {});
+            }
+        }
+
+        window.__grabbnRenderMyBuckets = renderMyBuckets;
+
+        function pushRecent(bucket) {
+            if (!bucket || !bucket._id) return;
+            var id   = String(bucket._id);
+            var list = getStored().filter(function (b) { return b._id !== id; });
+            list.unshift({ _id: id, name: bucket.name || '', hasThumbnail: !!bucket.thumbnail });
+            if (list.length > MAX_STORE) list.length = MAX_STORE;
+            setStored(list);
+            if (getMyPrefs().sort === 'recent_seen') renderMyBuckets();
+        }
+
+        var _origOpen = window.openBucketModal;
+        if (typeof _origOpen === 'function') {
+            window.openBucketModal = function (bucket, opts) {
+                if (bucket && bucket._id && !(opts && opts.skipPushRecent)) pushRecent(bucket);
+                return _origOpen.call(this, bucket);
+            };
+        }
+
+        var cached = getStored();
+        if (cached.length || getMyPrefs().sort !== 'recent_seen') {
+            renderMyBuckets();
+        } else {
+            fetch('/api/buckets/mine', { credentials: 'include' })
+                .then(function (r) { return r.ok ? r.json() : []; })
+                .then(function (list) {
+                    var prefs = getMyPrefs();
+                    var shortcuts = list.slice(0, prefs.count).map(function (b) {
+                        return { _id: b._id, name: b.name, hasThumbnail: !!b.thumbnail };
+                    });
+                    setStored(shortcuts);
+                    if (prefs.show) paintList(shortcuts);
+                })
+                .catch(function () {});
+        }
+
+        // ── Drag-and-drop: pin owned bucket to sidebar shortcuts ─────────────────
+        if (container) {
+            document.addEventListener('dragstart', function (e) {
+                var card = e.target && e.target.closest ? e.target.closest('[data-drag-bucket]') : null;
+                if (!card) return;
+                var raw = card.getAttribute('data-drag-bucket');
+                if (!raw) return;
+                try {
+                    var bkt = JSON.parse(raw);
+                    e.dataTransfer.setData('application/x-grabbn-bucket', JSON.stringify(bkt));
+                    e.dataTransfer.effectAllowed = 'copy';
+                } catch (err) { return; }
+                container.style.outline = '2px dashed #e090e2';
+                container.style.minHeight = '40px';
+                container.style.borderRadius = '6px';
+            });
+
+            document.addEventListener('dragend', function () {
+                container.style.outline = '';
+                container.style.minHeight = '';
+                container.style.borderRadius = '';
+                container.style.backgroundColor = '';
+            });
+
+            container.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                container.style.backgroundColor = '#faecfb';
+            });
+
+            container.addEventListener('dragleave', function (e) {
+                if (!container.contains(e.relatedTarget)) {
+                    container.style.backgroundColor = '';
+                }
+            });
+
+            container.addEventListener('drop', function (e) {
+                e.preventDefault();
+                container.style.outline = '';
+                container.style.minHeight = '';
+                container.style.borderRadius = '';
+                container.style.backgroundColor = '';
+                var raw = e.dataTransfer.getData('application/x-grabbn-bucket');
+                if (!raw) return;
+                var bkt;
+                try { bkt = JSON.parse(raw); } catch (err) { return; }
+                if (!bkt || !bkt._id) return;
+                var list = getStored();
+                var id   = String(bkt._id);
+                list = list.filter(function (x) { return x._id !== id; });
+                list.unshift({ _id: id, name: bkt.name || '', hasThumbnail: !!bkt.hasThumbnail });
+                if (list.length > MAX_STORE) list.length = MAX_STORE;
+                setStored(list);
+                renderMyBuckets();
+                if (typeof window.showToast === 'function') window.showToast('Bucket pinned to sidebar', 'success');
+            });
+        }
+    }
+
+    if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(init);
+    } else {
+        setTimeout(init, 0);
+    }
+})();
+</script>
+
+<!-- ── Sidebar recently-visited other buckets ────────────────────────────── -->
+<script>
+(function () {
+    var user = window.__GRABBN_USER__;
+    if (!user || user.isAnonymous || !user.username) return;
+
+    function init() {
+        var LS_KEY   = 'grabbn_bk_recent_other_' + user.username;
+        var PREF_KEY = 'grabbn_sidebar_prefs_' + user.username;
+        var container = document.getElementById('sidebarRecentOtherBuckets');
+        if (!container) return;
+
+        function getStored() {
+            try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch (e) { return []; }
+        }
+        function getOtherPrefs() {
+            try {
+                var p = (JSON.parse(localStorage.getItem(PREF_KEY)) || {}).otherBuckets || {};
+                return { show: p.show !== false, count: Math.min(6, Math.max(1, p.count || 5)) };
+            } catch (e) { return { show: true, count: 5 }; }
+        }
+
+        function renderOtherBuckets() {
+            var prefs   = getOtherPrefs();
+            var buckets = prefs.show ? getStored().slice(0, prefs.count) : [];
+            if (!buckets.length) { container.innerHTML = ''; return; }
+            container.innerHTML = '<hr class="w-8 border-woodsmoke-100 mx-auto mt-1">';
+            buckets.forEach(function (b) {
+                var a = document.createElement('a');
+                a.href  = '/b/' + b._id;
+                a.title = b.name;
+                a.className = 'block w-9 h-9 rounded-md overflow-hidden shrink-0 ring-1 ring-woodsmoke-100 hover:ring-orchid-400 transition-shadow';
+                if (b.hasThumbnail) {
+                    var img = document.createElement('img');
+                    img.src      = '/b/' + b._id + '/thumbnail.jpg';
+                    img.alt      = b.name;
+                    img.loading  = 'lazy';
+                    img.decoding = 'async';
+                    img.className = 'w-full h-full object-cover';
+                    a.appendChild(img);
+                } else {
+                    a.className += ' bg-woodsmoke-50 flex items-center justify-center';
+                    a.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="text-woodsmoke-300"><path fill="currentColor" d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3zm3-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/></svg>';
+                }
+                container.appendChild(a);
+            });
+        }
+
+        window.__grabbnRenderOtherBuckets = renderOtherBuckets;
+        renderOtherBuckets();
+    }
+
+    if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(init);
+    } else {
+        setTimeout(init, 0);
+    }
 })();
 </script>
 

@@ -35,6 +35,9 @@ import bucketCommentsRouter from './server/routes/bucketComments.js';
 import dmRouter from './server/routes/dm.js';
 import blockRouter from './server/routes/block.js';
 import partnershipRouter from './server/routes/partnership.js';
+import documentsRouter   from './server/routes/documents.js';
+import faqRouter         from './server/routes/faq.js';
+import contactRouter     from './server/routes/contact.js';
 import PartnerApplication from './server/models/partnerApplication.js';
 import adminRouter     from './server/routes/admin.js';
 import adminAuthRouter from './server/routes/admin/auth.js';
@@ -57,6 +60,7 @@ import UserRepo     from './server/models/userRepo.js';
 import CommentAgreement from './server/models/commentAgreement.js';
 import Link from './server/models/link.js';
 import Transaction from './server/models/transaction.js';
+import RegisteredLink from './server/models/registeredLink.js';
 import { wsClients, pushNotification } from './server/ws.js';
 
 dotenv.config();
@@ -262,6 +266,9 @@ app.use('/api/buckets/:id/comments', bucketCommentsRouter);
 app.use('/api/dm', dmRouter);
 app.use('/api/users', blockRouter);
 app.use('/api/partnership', partnershipRouter);
+app.use('/api/documents',  documentsRouter);
+app.use('/api/faq',        faqRouter);
+app.use('/api/contact',   contactRouter);
 
 // Online presence — checks wsClients for an active connection
 app.get('/api/users/:userId/online-status', anonymousAuth, async (req, res) => {
@@ -1714,9 +1721,10 @@ app.get('/api/buckets/mine', requireAuth, requireVerification, async (req, res) 
             .lean();
 
         res.json(buckets.map(b => ({
-            name:      b.name,
-            thumbnail: b.thumbnail || null,
-            linkCount: (b.links || []).length,
+            _id:          String(b._id),
+            name:         b.name,
+            thumbnail:    b.thumbnail || null,
+            linkCount:    (b.links || []).length,
         })));
     } catch (err) {
         console.error('Error fetching user buckets:', err);
@@ -2935,6 +2943,42 @@ app.post('/api/users/:userId/report', requireAuth, requireVerification, async (r
 });
 
 // Return paginated link data for a single owned bucket (used by the edit modal)
+app.get('/api/buckets/:id/edit', requireAuth, requireVerification, async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id))
+            return res.status(400).json({ error: 'Invalid bucket id' });
+        const b = await Bucket.findOne({ _id: req.params.id, userId: req.user._id })
+            .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft allowComments allowGrabs repoIds bucketOwningId')
+            .lean();
+        if (!b) return res.status(404).json({ error: 'Bucket not found' });
+        res.json({
+            _id:            String(b._id),
+            name:           b.name,
+            description:    b.description || '',
+            thumbnail:      b.thumbnail   || null,
+            visibility:     b.visibility  || (b.isPublic ? 'public' : 'private'),
+            isPublic:       b.isPublic,
+            isPaywalled:    b.isPaywalled || false,
+            price:          b.price       || 0,
+            hashtags:       b.hashtags    || [],
+            mature:         !!b.mature,
+            isDraft:        !!b.isDraft,
+            allowComments:  b.allowComments  || 'everyone',
+            allowGrabs:     b.allowGrabs     || 'everyone',
+            sourceUrl:      b.sourceUrl      || '',
+            repoIds:        (b.repoIds || []).map(String),
+            bucketOwningId: b.bucketOwningId || null,
+            viewCount:      b.viewCount      || 0,
+            shareCount:     b.shareCount     || 0,
+            grabbedBy:      b.grabbedBy      || [],
+            links:          b.links          || [],
+        });
+    } catch (err) {
+        console.error('Error fetching bucket for edit:', err);
+        res.status(500).json({ error: 'Failed to fetch bucket' });
+    }
+});
+
 app.get('/api/buckets/:id/links', requireAuth, requireVerification, async (req, res) => {
     try {
         const skip  = Math.max(0, parseInt(req.query.skip)  || 0);
@@ -3004,6 +3048,39 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
             return res.status(400).json({ error: 'At least one bucket is required' });
         }
 
+        // Block links that are registered and monetized by another user
+        const hrefs = links.map(l => l.href);
+        const existingRegs = await RegisteredLink.find({ url: { $in: hrefs } }).lean();
+        const regMap = new Map(existingRegs.map(r => [r.url, r]));
+
+        const blockedByRegistration = [];
+        const allowedLinks = [];
+
+        for (const link of links) {
+            const reg = regMap.get(link.href);
+            if (!reg || reg.registeredBy.toString() === req.user._id.toString()) {
+                allowedLinks.push(link);
+            } else {
+                const isMonetized = await Bucket.exists({
+                    userId: reg.registeredBy,
+                    isPaywalled: true,
+                    'links.href': link.href
+                });
+                if (isMonetized) {
+                    blockedByRegistration.push({ href: link.href, registrantUsername: reg.registrantUsername });
+                } else {
+                    allowedLinks.push(link);
+                }
+            }
+        }
+
+        if (blockedByRegistration.length > 0 && allowedLinks.length === 0) {
+            return res.status(403).json({
+                error: 'These links are registered and monetized by another creator',
+                blockedByRegistration
+            });
+        }
+
         // Filter out 'Singletons' from buckets
         // const realBuckets = buckets.filter(b => b !== 'Singletons');
 
@@ -3032,7 +3109,7 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
 
             // Convert all new link images to base64 in parallel (avoids hotlink failures later)
             const newLinks = await Promise.all(
-                links
+                allowedLinks
                     .filter(link => !bucket.links.some(l => l.href === link.href))
                     .map(async link => ({
                         href:     link.href,
@@ -3057,18 +3134,85 @@ app.post('/api/links', requireAuth, requireVerification, async (req, res) => {
             }
 
             // Update sourceUrl if provided
-            if (links[0]?.sourceUrl && !bucket.sourceUrl) {
-                bucket.sourceUrl = links[0].sourceUrl;
+            if (allowedLinks[0]?.sourceUrl && !bucket.sourceUrl) {
+                bucket.sourceUrl = allowedLinks[0].sourceUrl;
             }
 
             await bucket.save({ timestamps: newLinks.length > 0 });
             results.push(bucket);
         }
 
-        res.status(201).json(results);
+        const response = { results };
+        if (blockedByRegistration.length > 0) response.blockedByRegistration = blockedByRegistration;
+        res.status(201).json(response);
     } catch (error) {
         console.error('Error adding links:', error);
         res.status(500).json({ error: 'Failed to add links' });
+    }
+});
+
+// Get registration status for a set of URLs (current user only)
+app.get('/api/registered-links', requireAuth, async (req, res) => {
+    try {
+        const hrefs = String(req.query.hrefs || '').split(',').map(s => s.trim()).filter(Boolean);
+        if (hrefs.length === 0) return res.json({ registeredByMe: [] });
+        const regs = await RegisteredLink.find({ url: { $in: hrefs }, registeredBy: req.user._id }).select('url').lean();
+        res.json({ registeredByMe: regs.map(r => r.url) });
+    } catch (error) {
+        console.error('Error fetching registered links:', error);
+        res.status(500).json({ error: 'Failed to fetch registered links' });
+    }
+});
+
+// Register a link — intentional ownership claim
+app.post('/api/registered-links', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { href } = req.body;
+        if (!href) return res.status(400).json({ error: 'href is required' });
+
+        const ownsLink = await Bucket.exists({ userId: req.user._id, 'links.href': href });
+        if (!ownsLink) return res.status(403).json({ error: 'You can only register links that are in one of your buckets' });
+
+        const existing = await RegisteredLink.findOne({ url: href }).lean();
+        if (existing) {
+            if (existing.registeredBy.toString() === req.user._id.toString()) {
+                return res.status(409).json({ error: 'You have already registered this link' });
+            }
+            return res.status(409).json({ error: 'This link is already registered by another user', registrantUsername: existing.registrantUsername });
+        }
+
+        const reg = await RegisteredLink.create({
+            url:                href,
+            registeredBy:       req.user._id,
+            registrantUsername: req.user.username
+        });
+        res.status(201).json({ url: reg.url, registrantUsername: reg.registrantUsername, status: reg.status });
+    } catch (error) {
+        console.error('Error registering link:', error);
+        res.status(500).json({ error: 'Failed to register link' });
+    }
+});
+
+// Drop a link registration
+app.delete('/api/registered-links', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { href } = req.body;
+        if (!href) return res.status(400).json({ error: 'href is required' });
+
+        const reg = await RegisteredLink.findOne({ url: href });
+        if (!reg) return res.status(404).json({ error: 'This link is not registered' });
+        if (reg.registeredBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: 'You can only drop registrations you own' });
+        }
+        if (reg.status === 'disputed') {
+            return res.status(403).json({ error: 'Cannot drop a registration while it is under review' });
+        }
+
+        await reg.deleteOne();
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error dropping link registration:', error);
+        res.status(500).json({ error: 'Failed to drop registration' });
     }
 });
 
@@ -4692,6 +4836,11 @@ app.get('/admin/login', adminSessionAuth, (req, res) => {
     res.render('admin/login');
 });
 
+// /admin/reset-password  →  standalone password reset page (no auth guard)
+app.get('/admin/reset-password', (req, res) => {
+    res.render('admin/reset-password', { token: req.query.token || '' });
+});
+
 // /admin  →  redirect to overview (users for now)
 app.get('/admin', adminPage(), (req, res) => res.redirect('/admin/users'));
 
@@ -4764,6 +4913,11 @@ app.get('/admin/partners/applications/:appId', adminPage('superadmin'), async (r
         console.error('[admin/partners/applications/:id page]', err);
         res.status(500).send('Server error');
     }
+});
+
+// /admin/faq — FAQ management
+app.get('/admin/faq', adminPage(), (req, res) => {
+    res.render('admin/faq', { admin: req.user });
 });
 
 // ── Search: JSON pagination API ──────────────────────────────────────────────
@@ -5608,6 +5762,16 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
         const hasThumbnail = !!(bucket.thumbnail || bucket.links?.some(l => l.image));
         const ogImage = hasThumbnail ? `${shareBaseUrl}/b/${bucketId}/thumbnail.jpg` : null;
 
+        // Fetch registration info for links not owned by this bucket's creator (for attribution display)
+        const bucketHrefs = bucket.links.map(l => l.href);
+        const foreignRegs = await RegisteredLink.find({
+            url:          { $in: bucketHrefs },
+            registeredBy: { $ne: bucket.userId }
+        }).select('url registrantUsername status').lean();
+        const linkRegistrations = Object.fromEntries(
+            foreignRegs.map(r => [r.url, { registrantUsername: r.registrantUsername, status: r.status }])
+        );
+
         res.render('bucket', {
             title: bucket.name,
             page: 'explore',
@@ -5637,6 +5801,7 @@ app.get('/b/:bucketId', anonymousAuth, async (req, res) => {
             ogDescription: '',
             ogUrl: bucketUrl,
             ogImage,
+            linkRegistrations,
         });
     } catch (err) {
         console.error('Error loading bucket view:', err);

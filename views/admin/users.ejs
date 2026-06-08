@@ -8,7 +8,7 @@
 <div class="p-6 space-y-5">
 
     <!-- ── Filters ──────────────────────────────────────────────────────────── -->
-    <div class="bg-white border border-silver-100 rounded-xl p-4 flex flex-wrap items-end gap-3">
+    <div class="bg-white border border-silver-100 rounded-md p-4 flex flex-wrap items-end gap-3">
 
         <div class="flex flex-col gap-1">
             <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Search</label>
@@ -54,11 +54,11 @@
         </div>
 
         <button id="applyFiltersBtn"
-            class="h-9 px-4 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+            class="h-9 px-4 flex items-center justify-center bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
             Apply
         </button>
         <button id="clearFiltersBtn"
-            class="h-9 px-4 bg-silver-100 hover:bg-silver-200 text-woodsmoke-700 text-sm font-medium rounded-md transition-colors">
+            class="h-9 px-4 flex items-center justify-center bg-silver-100 hover:bg-silver-200 text-woodsmoke-700 text-sm font-medium rounded-md transition-colors">
             Clear
         </button>
 
@@ -67,7 +67,7 @@
     </div>
 
     <!-- ── Table ─────────────────────────────────────────────────────────────── -->
-    <div class="bg-white border border-silver-100 rounded-xl overflow-hidden">
+    <div class="bg-white border border-silver-100 rounded-md overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
@@ -92,12 +92,12 @@
         <!-- Pagination -->
         <div class="flex items-center justify-between px-4 py-3 border-t border-silver-100">
             <button id="prevPageBtn"
-                class="h-8 px-3 text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                class="h-8 px-3 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                 ← Prev
             </button>
             <span id="pageIndicator" class="text-xs text-woodsmoke-400"></span>
             <button id="nextPageBtn"
-                class="h-8 px-3 text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                class="h-8 px-3 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                 Next →
             </button>
         </div>
@@ -106,16 +106,16 @@
 
 <!-- ── Quick-action modal (suspend/verify/credits) ───────────────────────── -->
 <div id="actionModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-woodsmoke-950/50">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 space-y-4">
+    <div class="bg-white rounded-md shadow-2xl w-full max-w-sm mx-4 p-6 space-y-4">
         <h2 id="modalTitle" class="text-base font-semibold text-woodsmoke-950"></h2>
         <div id="modalBody" class="space-y-3"></div>
         <div class="flex gap-2 pt-1">
             <button id="modalConfirmBtn"
-                class="flex-1 h-9 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+                class="flex-1 h-9 flex items-center justify-center bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
                 Confirm
             </button>
             <button id="modalCancelBtn"
-                class="flex-1 h-9 bg-silver-100 hover:bg-silver-200 text-woodsmoke-700 text-sm font-medium rounded-md transition-colors">
+                class="flex-1 h-9 flex items-center justify-center bg-silver-100 hover:bg-silver-200 text-woodsmoke-700 text-sm font-medium rounded-md transition-colors">
                 Cancel
             </button>
         </div>
@@ -172,17 +172,17 @@ async function fetchUsers(page = 1) {
                     </a>
                 </td>
                 <td class="px-4 py-3">
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${roleBadge(u.role)}">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${roleBadge(u.role)}">
                         ${esc(u.role)}
                     </span>
-                    ${u.isPartner ? `<span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700">partner</span>` : ''}
+                    ${u.isPartner ? `<span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-100 text-amber-700">partner</span>` : ''}
                 </td>
                 <td class="px-4 py-3">
                     ${u.accountSuspendedAt
-                        ? `<span class="inline-flex items-center gap-1 text-xs font-medium text-red-600"><span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>Suspended</span>`
+                        ? `<span class="inline-flex items-center gap-1 text-xs font-medium text-red-600"><span class="w-1.5 h-1.5 rounded-md bg-red-500 shrink-0"></span>Suspended</span>`
                         : u.isEmailVerified
-                            ? `<span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>Active</span>`
-                            : `<span class="inline-flex items-center gap-1 text-xs font-medium text-amber-600"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>Unverified</span>`
+                            ? `<span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600"><span class="w-1.5 h-1.5 rounded-md bg-emerald-500 shrink-0"></span>Active</span>`
+                            : `<span class="inline-flex items-center gap-1 text-xs font-medium text-amber-600"><span class="w-1.5 h-1.5 rounded-md bg-amber-400 shrink-0"></span>Unverified</span>`
                     }
                 </td>
                 <td class="px-4 py-3 text-woodsmoke-700">${u.credits ?? 0}</td>
@@ -196,11 +196,11 @@ async function fetchUsers(page = 1) {
                         </a>
                         ${u.accountSuspendedAt
                             ? `<button onclick="quickUnsuspend('${u._id}', this)"
-                                class="h-7 px-2.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded transition-colors">
+                                class="h-7 px-2.5 flex items-center justify-center text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded transition-colors">
                                 Unsuspend
                                </button>`
                             : `<button onclick="quickSuspend('${u._id}', this)"
-                                class="h-7 px-2.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded transition-colors">
+                                class="h-7 px-2.5 flex items-center justify-center text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded transition-colors">
                                 Suspend
                                </button>`
                         }

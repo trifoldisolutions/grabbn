@@ -27,6 +27,7 @@
     class="flex flex-col rounded-md bg-white cursor-pointer <%= (typeof plain === 'undefined' || !plain) ? 'border border-silver-100 hover:shadow-md transition-shadow' : '' %>"
     data-bucket-id="<%= b._id %>"
     data-repo-ids="<%= JSON.stringify((b.repoIds || []).map(String)) %>"
+    <% if (typeof isOwn !== 'undefined' && isOwn) { %>draggable="true" data-drag-bucket="<%= JSON.stringify({_id: String(b._id), name: b.name || '', hasThumbnail: !!b.displayThumb}) %>"<% } %>
 >
     <!-- Thumbnail section -->
     <% const realGrabbers = (b.grabbedBy || []).filter(function(g) { return !!g.avatar; }).slice(0, 4); %>

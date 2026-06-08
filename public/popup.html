@@ -7,478 +7,449 @@
     <title>Grabbn</title>
     <link rel="stylesheet" href="/tailwind/output.css">
     <style>
-        html, body { height: 100%; overflow: hidden; }
+        html, body { height: 100%; overflow: hidden; margin: 0; }
         .link-row { cursor: pointer; transition: background 0.08s; }
         .link-row:hover { background: #f9fafb; }
         .link-row.selected { background: #fdf6fd; }
-        .links-scroll { overflow-y: auto; flex: 1; }
+        .links-scroll { overflow-y: auto; flex: 1; min-height: 0; }
         .text-clamp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .text-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        @keyframes grabbn-rescan-spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 
-<body class="bg-white font-sans text-[0.875rem] flex flex-col" style="height:100vh">
+<body class="bg-white font-sans text-[0.875rem]" style="height:100vh;display:flex;flex-direction:column;">
 
-    <!-- Header -->
-    <div class="flex items-center gap-2 px-3 py-2.5 border-b bg-white shrink-0">
-        <div class="shrink-0 text-orchid-600" style="width:18px;height:18px">
+    <!-- ── VIEW A : idle / picking ───────────────────────────────── -->
+    <div id="viewIdle" style="display:none;" class="flex flex-col gap-3 p-3">
+        <!-- header -->
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="text-orchid-600 shrink-0" viewBox="0 0 24 24" width="15" height="15" fill="none">
+                    <path fill="currentColor" d="M15.5 5a2.5 2.5 0 0 1 2.461 2.058A2.5 2.5 0 0 1 21 9.5V12a8 8 0 0 1-8 8h-.674a8 8 0 0 1-7.155-4.422L2.329 9.894c-.36-.72-.093-1.683.747-2.028c1.043-.427 2.034-.507 3.055.012q.443.227.869.584V7.5a2.5 2.5 0 0 1 3.388-2.338a2.498 2.498 0 0 1 4.224 0A2.5 2.5 0 0 1 15.5 5"/>
+                </svg>
+                <span class="text-xs font-semibold tracking-wide text-gray-600 uppercase">Grabbn</span>
+            </div>
+            <button id="closeBtn"
+                class="flex items-center justify-center text-gray-400 hover:text-gray-600 p-0.5 rounded transition-colors">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- pick element -->
+        <button id="pickElementBtn"
+            class="w-full flex items-center justify-center gap-1.5 text-xs font-medium border border-gray-200 rounded-md h-12 hover:border-orchid-400 hover:text-orchid-600 transition-colors text-gray-700">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/>
+                <line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>
+            </svg>
+            Pick Element
+        </button>
+
+        <!-- siblings toggle -->
+        <div class="flex items-center justify-between gap-3 px-0.5">
+            <div class="flex flex-col gap-0.5 min-w-0">
+                <span class="text-xs text-gray-500">Highlight Siblings</span>
+                <span class="text-[11px] text-gray-400 leading-snug">Selects matching card elements</span>
+            </div>
+            <button id="siblingsToggle" role="switch" data-active="true"
+                style="width:36px;height:20px;border-radius:10px;position:relative;flex-shrink:0;"
+                class="bg-orchid-600 transition-colors focus:outline-none">
+                <span id="siblingsThumb"
+                    style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform 0.15s;transform:translateX(16px);"></span>
+            </button>
+        </div>
+
+        <!-- grab links (hidden until items are checked) -->
+        <button id="grabLinksBtn" disabled style="display:none;"
+            class="w-full flex items-center justify-center text-xs font-semibold rounded-md h-12 bg-orchid-600 text-white hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            Grab Links
+        </button>
+
+        <!-- bulk-select hint -->
+        <p id="shiftHint" style="display:none;" class="text-[11px] text-gray-400 leading-snug px-0.5">
+            <span class="font-semibold text-gray-500">Tip:</span> Check the first item, hold <span class="font-semibold text-gray-500">Shift</span>, then check the last to select the whole range.
+        </p>
+    </div>
+
+    <!-- ── VIEW B : crosshair mode ───────────────────────────────── -->
+    <div id="viewCrosshair" style="display:none;" class="p-3">
+        <button id="abortBtn"
+            class="w-full flex items-center justify-center gap-1.5 text-xs font-medium border border-red-200 text-red-600 rounded-md py-2 hover:bg-red-50 transition-colors">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            Abort&nbsp;&nbsp;(Esc)
+        </button>
+    </div>
+
+    <!-- ── VIEW C : review + save ────────────────────────────────── -->
+    <div id="viewReview" style="display:none;height:100vh;flex-direction:column;" class="flex">
+        <!-- header -->
+        <div class="flex items-center gap-2 px-3 py-2.5 border-b bg-white shrink-0">
+            <svg class="shrink-0 text-orchid-600" viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+            </svg>
+            <p id="reviewTitle" class="text-xs font-semibold text-gray-900 flex-1">0 items grabbed</p>
+            <button id="backBtn"
+                class="flex items-center justify-center text-xs text-orchid-600 hover:text-orchid-700 font-medium shrink-0">
+                ← Back
+            </button>
+            <button id="closeBtn2"
+                class="flex items-center justify-center shrink-0 text-gray-400 hover:text-gray-700 p-1 rounded transition-colors">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- items list -->
+        <div id="linksList" class="links-scroll divide-y divide-gray-50"></div>
+
+        <!-- footer -->
+        <div class="border-t bg-white shrink-0 px-3 py-2.5 flex flex-col gap-y-2">
+            <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <span id="selectedCount" class="text-xs text-gray-500 shrink-0">0 selected</span>
+                    <button id="selectAllBtn"
+                        class="flex items-center justify-center text-xs text-orchid-600 hover:text-orchid-700 shrink-0 font-medium">
+                        All
+                    </button>
+                    <button id="selectNoneBtn"
+                        class="flex items-center justify-center text-xs text-gray-400 hover:text-gray-600 shrink-0">
+                        None
+                    </button>
+                </div>
+
+                <!-- multi-select bucket dropdown -->
+                <div id="bucketSelectWrapper" class="relative shrink-0">
+                    <button id="bucketSelectBtn" type="button"
+                        class="flex items-center justify-center text-xs border border-gray-200 rounded-md px-2 py-1 bg-white gap-1 min-w-[90px] max-w-[140px]">
+                        <span id="bucketSelectLabel" class="truncate flex-1 text-left text-gray-400">Bucket…</span>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-gray-400">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <div id="bucketSelectDropdown"
+                        class="hidden absolute bottom-full mb-1 right-0 bg-white border border-gray-200 rounded-md shadow-md z-50 min-w-full max-h-[160px] overflow-y-auto py-1">
+                    </div>
+                </div>
+
+                <button id="saveBtn" disabled
+                    class="flex items-center justify-center px-3 py-1.5 rounded-md bg-orchid-600 text-white text-xs font-semibold hover:bg-orchid-700 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
+                    Save
+                </button>
+            </div>
+            <div id="saveStatus" class="hidden text-xs"></div>
+        </div>
+    </div>
+
+    <!-- ── AUTH PROMPT ────────────────────────────────────────────── -->
+    <div id="authPrompt" style="display:none;" class="flex flex-col items-center justify-center gap-3 px-4 text-center py-6">
+        <div class="w-9 h-9 rounded-full bg-orchid-50 flex items-center justify-center text-orchid-500">
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
                 <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
             </svg>
         </div>
-        <div class="flex-1 min-w-0">
-            <p class="text-xs font-semibold text-gray-900 text-clamp" id="sourceHost">Loading…</p>
-            <p class="text-[10px] text-gray-400 text-clamp" id="sourcePathDisplay"></p>
-        </div>
-        <button id="rescanBtn" title="Rescan page" class="shrink-0 text-gray-400 hover:text-orchid-600 p-1 rounded transition-colors">
-            <svg id="rescanIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-            </svg>
-        </button>
-        <button id="filterToggleBtn" title="Search" class="shrink-0 text-gray-400 hover:text-orchid-600 p-1 rounded transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-        </button>
-        <button id="closeWidgetBtn" title="Close" class="shrink-0 text-gray-400 hover:text-gray-700 p-1 rounded transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-        </button>
-    </div>
-
-    <!-- Search bar (hidden by default) -->
-    <div id="searchBar" class="hidden px-3 py-2 border-b bg-gray-50 shrink-0">
-        <input id="searchInput" type="text" placeholder="Filter links…"
-            class="w-full text-xs rounded-md border border-gray-200 px-2.5 py-1.5 outline-none focus:border-orchid-400 bg-white">
-    </div>
-
-    <!-- Status bar -->
-    <div id="statusBar" class="hidden px-3 py-1.5 text-[11px] font-medium border-b shrink-0"></div>
-
-    <!-- Pages banner: shown when more pages are available -->
-    <div id="pagesBanner" class="hidden px-3 py-1.5 border-b bg-amber-50 shrink-0 flex items-center gap-2">
-        <svg class="shrink-0 text-amber-500" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="9 18 15 12 9 6"/>
-        </svg>
-        <span class="text-[11px] text-amber-800 font-medium flex-1 min-w-0 truncate" id="pagesLabel"></span>
-        <button id="loadPagesBtn" class="shrink-0 text-[11px] font-semibold text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-md transition-colors">
-            Load all
-        </button>
-    </div>
-
-    <!-- Loading state (initial) -->
-    <div id="loadingState" class="flex-1 flex flex-col items-center justify-center gap-2 text-gray-400">
-        <svg class="animate-spin w-5 h-5 text-orchid-400" viewBox="0 0 24 24" fill="none">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"/>
-        </svg>
-        <p class="text-xs">Fetching links…</p>
-    </div>
-
-    <!-- Auth prompt -->
-    <div id="authPrompt" class="hidden flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <div class="w-10 h-10 rounded-full bg-orchid-50 flex items-center justify-center text-orchid-500">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
-            </svg>
-        </div>
         <div>
-            <p class="text-sm font-semibold text-gray-800">Sign in to save links</p>
-            <p class="text-xs text-gray-400 mt-0.5">Create a free account to save links from any page into your buckets.</p>
+            <p class="text-xs font-semibold text-gray-800">Sign in to grab links</p>
+            <p class="text-xs text-gray-400 mt-0.5">Create a free account to save links into your buckets.</p>
         </div>
         <a href="/v2/login" target="_blank"
-            class="px-4 py-2 rounded-lg bg-orchid-600 text-white text-xs font-semibold hover:bg-orchid-700 transition-colors">
+            class="flex items-center justify-center px-4 py-2 rounded-md bg-orchid-600 text-white text-xs font-semibold hover:bg-orchid-700 transition-colors">
             Sign in / Sign up
         </a>
     </div>
 
-    <!-- Empty state -->
-    <div id="emptyState" class="hidden flex-1 flex flex-col items-center justify-center gap-2 px-4 text-center">
-        <p class="text-sm font-medium text-gray-500">No links found</p>
-        <p class="text-xs text-gray-400">This page didn't return any links.</p>
-    </div>
-
-    <!-- Links list -->
-    <div id="linksList" class="hidden links-scroll divide-y divide-gray-50"></div>
-
-    <!-- Footer -->
-    <div id="footer" class="hidden border-t bg-white shrink-0 px-3 py-2.5 flex flex-col gap-y-2">
-        <div class="flex items-center gap-2">
-            <div class="flex items-center gap-2 flex-1 min-w-0">
-                <span class="text-[11px] text-gray-500 shrink-0" id="selectedCount">0 selected</span>
-                <button id="selectAllBtn" class="text-[11px] text-orchid-600 hover:text-orchid-700 shrink-0 font-medium">All</button>
-                <button id="selectNoneBtn" class="text-[11px] text-gray-400 hover:text-gray-600 shrink-0">None</button>
-            </div>
-            <div id="bucketSelectWrapper" class="relative shrink-0">
-                <button id="bucketSelectBtn" type="button"
-                    class="text-xs border border-gray-200 rounded-md px-2 py-1 outline-none focus:border-orchid-400 bg-white flex items-center gap-1 min-w-[90px] max-w-[130px]">
-                    <span id="bucketSelectLabel" class="truncate flex-1 text-left text-gray-400">Choose bucket…</span>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-gray-400">
-                        <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                </button>
-                <div id="bucketSelectDropdown" class="hidden absolute bottom-full mb-1 right-0 bg-white border border-gray-200 rounded-md shadow-md z-50 min-w-full max-h-[150px] overflow-y-auto py-1">
-                </div>
-            </div>
-            <button id="saveBtn" disabled
-                class="px-3 py-1.5 rounded-lg bg-orchid-600 text-white text-xs font-semibold hover:bg-orchid-700 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
-                Save
-            </button>
-        </div>
-        <div id="saveStatus" class="hidden text-[11px]"></div>
-    </div>
-
     <script>
-        const API = '';  // same origin
+        // ── url params ──────────────────────────────────────────────
+        const params    = new URLSearchParams(window.location.search);
+        const sourceUrl = params.get('source') || '';
+        const anonId    = params.get('anon')   || '';
 
-        // Elements
-        const loadingState  = document.getElementById('loadingState');
-        const authPrompt    = document.getElementById('authPrompt');
-        const emptyState    = document.getElementById('emptyState');
-        const linksList     = document.getElementById('linksList');
-        const footer        = document.getElementById('footer');
-        const statusBar     = document.getElementById('statusBar');
-        const pagesBanner   = document.getElementById('pagesBanner');
-        const pagesLabel    = document.getElementById('pagesLabel');
-        const loadPagesBtn  = document.getElementById('loadPagesBtn');
-        const searchBar     = document.getElementById('searchBar');
-        const searchInput   = document.getElementById('searchInput');
+        // ── state ───────────────────────────────────────────────────
+        let allItems       = [];
+        let selectedUrls   = new Set();
+        let selectedBuckets = new Set();
+        let bucketsLoaded  = [];
+        let bucketsLoading = false;
+        let anchorHref     = null;
+        let siblingsActive = true;
+        let checkedCount   = 0;
+
+        // ── element refs ────────────────────────────────────────────
+        const viewIdle        = document.getElementById('viewIdle');
+        const viewCrosshair   = document.getElementById('viewCrosshair');
+        const viewReview      = document.getElementById('viewReview');
+        const authPromptEl    = document.getElementById('authPrompt');
+
+        const pickElementBtn  = document.getElementById('pickElementBtn');
+        const siblingsToggle  = document.getElementById('siblingsToggle');
+        const grabLinksBtn    = document.getElementById('grabLinksBtn');
+        const shiftHint       = document.getElementById('shiftHint');
+        const closeBtn        = document.getElementById('closeBtn');
+        const abortBtn        = document.getElementById('abortBtn');
+        const backBtn         = document.getElementById('backBtn');
+        const closeBtn2       = document.getElementById('closeBtn2');
+        const reviewTitle     = document.getElementById('reviewTitle');
+        const linksList       = document.getElementById('linksList');
+        const selectedCount   = document.getElementById('selectedCount');
+        const selectAllBtn    = document.getElementById('selectAllBtn');
+        const selectNoneBtn   = document.getElementById('selectNoneBtn');
         const bucketSelectBtn      = document.getElementById('bucketSelectBtn');
         const bucketSelectLabel    = document.getElementById('bucketSelectLabel');
         const bucketSelectDropdown = document.getElementById('bucketSelectDropdown');
-        let bucketValue = '';
-        const saveBtn       = document.getElementById('saveBtn');
-        const selectedCount = document.getElementById('selectedCount');
-        const saveStatus    = document.getElementById('saveStatus');
-        const sourceHostEl  = document.getElementById('sourceHost');
-        const sourcePathEl  = document.getElementById('sourcePathDisplay');
+        const saveBtn         = document.getElementById('saveBtn');
+        const saveStatus      = document.getElementById('saveStatus');
 
-        // State
-        let allLinks        = [];
-        let selectedUrls    = new Set();
-        let existingHrefs   = new Set(); // hrefs already saved in the currently selected bucket
-        let savedLinksCache = null;      // cached GET /api/links response (href → Set<bucketName>)
-        let sourceUrl       = '';
-        let filterText      = '';
-        let maxPage         = 1;
-        let currentPage     = 1;
-        let pagesCollected  = 1;
-        let anonId          = null;
-        let anchorHref      = null; // range-selection anchor (href of last normally-clicked row)
-
+        // ── helpers ─────────────────────────────────────────────────
         function fetchOpts(extra = {}) {
             const headers = Object.assign({}, extra.headers);
             if (anonId) headers['X-Anonymous-Id'] = anonId;
             return Object.assign({ credentials: 'include' }, extra, { headers });
         }
 
-        // --- Helpers ---
-
         function escHtml(s) {
             return String(s)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;');
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        function showStatus(msg, colorClass) {
-            statusBar.textContent = msg;
-            statusBar.className = `px-3 py-1.5 text-[11px] font-medium border-b shrink-0 ${colorClass}`;
-            statusBar.classList.remove('hidden');
+        function postToParent(msg) {
+            if (window.parent !== window) window.parent.postMessage(msg, '*');
         }
 
-        function hideStatus() {
-            statusBar.classList.add('hidden');
-        }
+        // ── view management ─────────────────────────────────────────
+        // Sizes sent to bookmarklet (content height only; drag bar added by IIFE)
+        const VIEW_SIZES = {
+            idle:         { w: 280, h: 252 },
+            idle_compact: { w: 280, h: 148 },
+            crosshair: { w: 240, h: 62  },
+            review:    { w: 380, h: 540 },
+            auth:      { w: 280, h: 210 },
+        };
 
-        function setView(view) {
-            // view: 'loading' | 'auth' | 'empty' | 'list'
-            loadingState.classList.toggle('hidden', view !== 'loading');
-            authPrompt.classList.toggle('hidden',   view !== 'auth');
-            emptyState.classList.toggle('hidden',   view !== 'empty');
-            linksList.classList.toggle('hidden',    view !== 'list');
-            footer.classList.toggle('hidden',       view !== 'list');
-        }
+        function showView(name) {
+            viewIdle.style.display      = 'none';
+            viewCrosshair.style.display = 'none';
+            viewReview.style.display    = 'none';
+            authPromptEl.style.display  = 'none';
 
-        function updatePagesBanner() {
-            if (maxPage <= currentPage) {
-                pagesBanner.classList.add('hidden');
-                return;
+            if (name === 'idle') {
+                viewIdle.style.display = 'flex';
+                viewIdle.style.flexDirection = 'column';
+            } else if (name === 'crosshair') {
+                viewCrosshair.style.display = 'block';
+            } else if (name === 'review') {
+                viewReview.style.display = 'flex';
+            } else if (name === 'auth') {
+                authPromptEl.style.display = 'flex';
             }
-            const remaining = maxPage - currentPage;
-            pagesLabel.textContent = `${remaining} more page${remaining > 1 ? 's' : ''} detected (${currentPage + 1}–${maxPage})`;
-            pagesBanner.classList.remove('hidden');
+
+            const sizeKey = name === 'idle'
+                ? (grabLinksBtn.style.display === 'none' ? 'idle_compact' : 'idle')
+                : name;
+            const s = VIEW_SIZES[sizeKey] || VIEW_SIZES.idle_compact;
+            postToParent({ type: 'grabbn-resize', width: s.w, height: s.h });
         }
 
-        function buildPageUrls() {
-            const urls = [];
-            for (let n = currentPage + 1; n <= maxPage; n++) {
-                try {
-                    const u = new URL(sourceUrl);
-                    u.searchParams.set('page', n);
-                    urls.push(u.href);
-                } catch {}
-            }
-            return urls;
-        }
-
-        function getFiltered() {
-            if (!filterText) return allLinks;
-            const q = filterText.toLowerCase();
-            return allLinks.filter(l =>
-                l.text.toLowerCase().includes(q) || l.href.toLowerCase().includes(q)
-            );
-        }
-
-        function updateFooterCounts() {
-            selectedCount.textContent = `${selectedUrls.size} selected`;
-            saveBtn.disabled = selectedUrls.size === 0 || !bucketValue;
-        }
-
-        async function fetchSavedLinks() {
-            if (savedLinksCache) return savedLinksCache;
-            try {
-                const res = await fetch(`${API}/api/links`, fetchOpts());
-                if (!res.ok) return null;
-                const data = await res.json();
-                // Build map: href → Set of bucket names
-                savedLinksCache = new Map();
-                data.forEach(l => {
-                    savedLinksCache.set(l.href, new Set(l.buckets || []));
-                });
-            } catch {}
-            return savedLinksCache;
-        }
-
-        async function setBucketValue(val) {
-            bucketValue = val;
-            bucketSelectLabel.textContent = val || 'Choose bucket…';
-            bucketSelectLabel.className = `truncate flex-1 text-left ${val ? 'text-gray-700' : 'text-gray-400'}`;
-
-            if (val) {
-                const cache = await fetchSavedLinks();
-                existingHrefs = new Set();
-                if (cache) {
-                    cache.forEach((buckets, href) => {
-                        if (buckets.has(val)) existingHrefs.add(href);
-                    });
-                }
-                // Deselect any links that are already in this bucket
-                existingHrefs.forEach(href => selectedUrls.delete(href));
-                renderLinks();
+        // ── siblings toggle ─────────────────────────────────────────
+        const siblingsThumb = document.getElementById('siblingsThumb');
+        siblingsToggle.addEventListener('click', () => {
+            siblingsActive = !siblingsActive;
+            siblingsToggle.dataset.active = String(siblingsActive);
+            if (siblingsActive) {
+                siblingsToggle.classList.remove('bg-gray-200');
+                siblingsToggle.classList.add('bg-orchid-600');
+                siblingsThumb.style.transform = 'translateX(16px)';
             } else {
-                existingHrefs = new Set();
+                siblingsToggle.classList.remove('bg-orchid-600');
+                siblingsToggle.classList.add('bg-gray-200');
+                siblingsThumb.style.transform = 'translateX(0)';
             }
+            postToParent({ type: 'grabbn-toggle-siblings', active: siblingsActive });
+        });
 
-            updateFooterCounts();
+        // ── pick element ────────────────────────────────────────────
+        pickElementBtn.addEventListener('click', () => {
+            showView('crosshair');
+            postToParent({ type: 'grabbn-enter-pick' });
+        });
+
+        // ── abort ───────────────────────────────────────────────────
+        function abortPickMode() {
+            postToParent({ type: 'grabbn-abort-pick' });
+            showView('idle');
         }
 
-        function renderBucketOptions(names) {
+        abortBtn.addEventListener('click', abortPickMode);
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && viewCrosshair.style.display !== 'none') {
+                e.preventDefault();
+                abortPickMode();
+            }
+        });
+
+        // ── close ───────────────────────────────────────────────────
+        function closeWidget() { postToParent('grabbn-close'); }
+        closeBtn.addEventListener('click', closeWidget);
+        closeBtn2.addEventListener('click', closeWidget);
+
+        // ── back ────────────────────────────────────────────────────
+        backBtn.addEventListener('click', () => showView('idle'));
+
+        // ── grab links ──────────────────────────────────────────────
+        grabLinksBtn.addEventListener('click', () => {
+            postToParent({ type: 'grabbn-get-selected' });
+        });
+
+        // ── bucket multi-select ─────────────────────────────────────
+        function updateBucketLabel() {
+            if (selectedBuckets.size === 0) {
+                bucketSelectLabel.textContent = 'Bucket…';
+                bucketSelectLabel.className = 'truncate flex-1 text-left text-gray-400';
+            } else if (selectedBuckets.size === 1) {
+                bucketSelectLabel.textContent = [...selectedBuckets][0];
+                bucketSelectLabel.className = 'truncate flex-1 text-left text-gray-700';
+            } else {
+                bucketSelectLabel.textContent = `${selectedBuckets.size} buckets`;
+                bucketSelectLabel.className = 'truncate flex-1 text-left text-gray-700';
+            }
+        }
+
+        function renderBucketOptions() {
             bucketSelectDropdown.innerHTML = '';
-            names.forEach(name => {
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = `w-full text-left text-xs px-2.5 py-1.5 hover:bg-orchid-50 hover:text-orchid-700 truncate ${name === bucketValue ? 'text-orchid-600 font-medium' : 'text-gray-700'}`;
-                item.textContent = name;
-                item.addEventListener('click', () => {
-                    setBucketValue(name);
-                    bucketSelectDropdown.classList.add('hidden');
+            bucketsLoaded.forEach(name => {
+                const item = document.createElement('label');
+                item.className = 'flex items-center gap-2 w-full text-xs px-2.5 py-1.5 hover:bg-orchid-50 cursor-pointer';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'w-3 h-3 shrink-0 accent-orchid-600';
+                cb.checked = selectedBuckets.has(name);
+                const span = document.createElement('span');
+                span.className = `truncate ${selectedBuckets.has(name) ? 'text-orchid-700 font-medium' : 'text-gray-700'}`;
+                span.textContent = name;
+                cb.addEventListener('change', () => {
+                    if (cb.checked) selectedBuckets.add(name);
+                    else selectedBuckets.delete(name);
+                    updateBucketLabel();
+                    updateSaveBtn();
+                    renderBucketOptions();
                 });
+                item.appendChild(cb);
+                item.appendChild(span);
                 bucketSelectDropdown.appendChild(item);
             });
         }
 
-        bucketSelectBtn.addEventListener('click', (e) => {
+        bucketSelectBtn.addEventListener('click', e => {
             e.stopPropagation();
-            const isHidden = bucketSelectDropdown.classList.contains('hidden');
-            bucketSelectDropdown.classList.toggle('hidden', !isHidden);
-            if (isHidden) loadBuckets();
+            const hidden = bucketSelectDropdown.classList.contains('hidden');
+            bucketSelectDropdown.classList.toggle('hidden', !hidden);
+            if (hidden) loadBuckets();
         });
 
-        document.addEventListener('click', () => {
-            bucketSelectDropdown.classList.add('hidden');
-        });
+        document.addEventListener('click', () => bucketSelectDropdown.classList.add('hidden'));
 
+        function updateSaveBtn() {
+            saveBtn.disabled = selectedUrls.size === 0 || selectedBuckets.size === 0;
+        }
+
+        // ── render review list ──────────────────────────────────────
         function renderLinks() {
-            const filtered = getFiltered();
             linksList.innerHTML = '';
-
-            if (filtered.length === 0) {
-                linksList.innerHTML = '<p class="text-xs text-gray-400 text-center py-8">No matches for that filter.</p>';
-                updateFooterCounts();
-                return;
-            }
-
             const frag = document.createDocumentFragment();
 
-            filtered.forEach((link, i) => {
-                const already = existingHrefs.has(link.href);
-                const checked  = !already && selectedUrls.has(link.href);
-
+            allItems.forEach((item, i) => {
+                const checked = selectedUrls.has(item.href);
                 const row = document.createElement('label');
-                row.className = `link-row flex items-start gap-2.5 px-3 py-2.5 ${checked ? 'selected' : ''} ${already ? 'cursor-default' : ''}`;
+                row.className = `link-row flex items-start gap-2.5 px-3 py-2.5 ${checked ? 'selected' : ''}`;
                 row.innerHTML = `
-                    <input type="checkbox" data-href="${escHtml(link.href)}"
-                        class="mt-0.5 shrink-0 w-3.5 h-3.5 rounded accent-orchid-600 ${already ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}"
-                        ${checked ? 'checked' : ''} ${already ? 'disabled' : ''}>
-                    ${link.image ? `<img src="${escHtml(link.image)}" class="w-10 h-8 object-cover rounded shrink-0${already ? ' opacity-40' : ''}" onerror="this.remove()">` : ''}
+                    <input type="checkbox" data-href="${escHtml(item.href)}"
+                        class="mt-0.5 shrink-0 w-3.5 h-3.5 rounded accent-orchid-600 cursor-pointer"
+                        ${checked ? 'checked' : ''}>
+                    ${item.image
+                        ? `<img src="${escHtml(item.image)}" class="w-10 h-8 object-cover rounded-md shrink-0" onerror="this.remove()">`
+                        : ''}
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-1.5">
-                            <p class="text-xs font-medium text-clamp ${already ? 'text-gray-400' : 'text-gray-800'}">${escHtml(link.text)}</p>
-                            ${already ? '<span class="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-orchid-500 bg-orchid-50 rounded px-1 py-px">Saved</span>' : ''}
-                        </div>
-                        <p class="text-[10px] text-gray-400 text-clamp">${escHtml(link.href)}</p>
-                    </div>
-                `;
+                        <p class="text-xs font-medium text-gray-800 text-clamp">${escHtml(item.text || item.href)}</p>
+                        <p class="text-xs text-gray-400 text-clamp">${escHtml(item.href)}</p>
+                    </div>`;
 
                 const cb = row.querySelector('input[type=checkbox]');
 
-                if (!already) {
-                    row.addEventListener('click', (e) => {
-                        if ((e.shiftKey || e.ctrlKey || e.metaKey) && anchorHref !== null) {
-                            e.preventDefault();
-                            const anchorIndex = filtered.findIndex(l => l.href === anchorHref);
-                            if (anchorIndex !== -1) {
-                                const from = Math.min(anchorIndex, i);
-                                const to   = Math.max(anchorIndex, i);
-                                for (let j = from; j <= to; j++) {
-                                    if (!existingHrefs.has(filtered[j].href)) selectedUrls.add(filtered[j].href);
-                                }
-                                renderLinks();
-                            }
-                            return;
+                row.addEventListener('click', e => {
+                    if (e.shiftKey && anchorHref !== null) {
+                        e.preventDefault();
+                        const ai = allItems.findIndex(l => l.href === anchorHref);
+                        if (ai !== -1) {
+                            const from = Math.min(ai, i), to = Math.max(ai, i);
+                            for (let j = from; j <= to; j++) selectedUrls.add(allItems[j].href);
+                            renderLinks();
                         }
-                    });
+                        return;
+                    }
+                });
 
-                    cb.addEventListener('change', () => {
-                        if (cb.checked) {
-                            selectedUrls.add(link.href);
-                            row.classList.add('selected');
-                        } else {
-                            selectedUrls.delete(link.href);
-                            row.classList.remove('selected');
-                        }
-                        anchorHref = link.href;
-                        updateFooterCounts();
-                    });
-                }
+                cb.addEventListener('change', () => {
+                    if (cb.checked) { selectedUrls.add(item.href); row.classList.add('selected'); }
+                    else            { selectedUrls.delete(item.href); row.classList.remove('selected'); }
+                    anchorHref = item.href;
+                    updateCountLabel();
+                    updateSaveBtn();
+                });
 
                 frag.appendChild(row);
             });
 
             linksList.appendChild(frag);
-            updateFooterCounts();
+            updateCountLabel();
         }
 
-        // --- Auth & data fetching ---
-
-        async function checkAuth() {
-            try {
-                const res = await fetch(`${API}/api/buckets`, fetchOpts());
-                return res.ok;
-            } catch {
-                return false;
-            }
+        function updateCountLabel() {
+            selectedCount.textContent = `${selectedUrls.size} selected`;
         }
 
-        let bucketsLoading = false;
+        selectAllBtn.addEventListener('click', () => {
+            allItems.forEach(l => selectedUrls.add(l.href));
+            renderLinks(); updateSaveBtn();
+        });
+
+        selectNoneBtn.addEventListener('click', () => {
+            selectedUrls.clear();
+            renderLinks(); updateSaveBtn();
+        });
+
+        // ── load buckets ────────────────────────────────────────────
         async function loadBuckets() {
             if (bucketsLoading) return;
             bucketsLoading = true;
             try {
-                const res = await fetch(`${API}/api/buckets`, fetchOpts());
+                const res = await fetch('/api/buckets', fetchOpts());
                 if (!res.ok) return;
-                const names = await res.json();
-                const prev = bucketValue;
-                // Restore previous selection if still valid, else pre-select the first
-                if (prev && names.includes(prev)) {
-                    await setBucketValue(prev);
-                } else if (names.length > 0) {
-                    await setBucketValue(names[0]);
-                } else {
-                    await setBucketValue('');
+                bucketsLoaded = await res.json();
+                // Pre-select first bucket if none selected yet
+                if (selectedBuckets.size === 0 && bucketsLoaded.length > 0) {
+                    selectedBuckets.add(bucketsLoaded[0]);
+                    updateBucketLabel();
+                    updateSaveBtn();
                 }
-                renderBucketOptions(names);
-            } catch {} finally {
-                bucketsLoading = false;
-            }
+                renderBucketOptions();
+            } catch {} finally { bucketsLoading = false; }
         }
 
-        // --- Load session from URL token ---
-
-        async function loadSession() {
-            const token = new URLSearchParams(window.location.search).get('session');
-            if (!token) {
-                sourceHostEl.textContent = 'No session';
-                setView('empty');
-                return;
-            }
-
-            try {
-                const res = await fetch(`/api/popup-session?token=${encodeURIComponent(token)}`, { credentials: 'include' });
-                if (!res.ok) {
-                    sourceHostEl.textContent = 'Session expired';
-                    setView('empty');
-                    return;
-                }
-
-                const { links, sourceUrl: src, maxPage: mp, currentPage: cp, pagesCollected: pc, anonymousId: sid } = await res.json();
-                if (sid) anonId = sid;
-                sourceUrl      = src;
-                maxPage        = mp || 1;
-                currentPage    = cp || 1;
-                pagesCollected = Math.max(Number(pc) || 1, 1);
-
-                try {
-                    const u = new URL(src);
-                    sourceHostEl.textContent = u.hostname;
-                    const pathStr = (u.pathname + (u.search || '')).slice(0, 70);
-                    sourcePathEl.textContent = pagesCollected > 1
-                        ? `${pagesCollected} pages · ${pathStr}`
-                        : pathStr;
-                    sourcePathEl.title = src;
-                } catch {
-                    sourceHostEl.textContent = String(src).slice(0, 60);
-                }
-
-                const authed = await checkAuth();
-                if (!authed) {
-                    setView('auth');
-                    return;
-                }
-
-                await loadBuckets();
-
-                if (!links || links.length === 0) {
-                    setView('empty');
-                    return;
-                }
-
-                allLinks = links;
-                // Persist parsed links so the bucket creation modal can import them via the Refresh button
-                try { localStorage.setItem('grabbn:parsedLinks', JSON.stringify(links)); } catch (_) {}
-                setView('list');
-                renderLinks();
-                updatePagesBanner();
-
-            } catch {
-                sourceHostEl.textContent = 'Error loading links';
-                setView('empty');
-            }
-        }
-
-        loadSession();
-
-        // --- Save ---
-
+        // ── save ────────────────────────────────────────────────────
         saveBtn.addEventListener('click', async () => {
-            const bucket = bucketValue;
-            if (!bucket || selectedUrls.size === 0) return;
+            if (selectedUrls.size === 0 || selectedBuckets.size === 0) return;
 
-            const linksToSave = allLinks
+            const linksToSave = allItems
                 .filter(l => selectedUrls.has(l.href))
                 .map(l => ({ href: l.href, text: l.text, image: l.image || null, sourceUrl }));
 
@@ -487,172 +458,94 @@
             saveStatus.classList.add('hidden');
 
             try {
-                const res = await fetch(`${API}/api/links`, fetchOpts({
+                const res = await fetch('/api/links', fetchOpts({
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ links: linksToSave, buckets: [bucket] })
+                    body: JSON.stringify({ links: linksToSave, buckets: [...selectedBuckets] })
                 }));
 
                 if (res.ok) {
                     const n = linksToSave.length;
-                    saveStatus.textContent = `✓ ${n} link${n !== 1 ? 's' : ''} saved to "${bucket}"`;
-                    saveStatus.className = 'text-[11px] text-green-600';
+                    const bNames = [...selectedBuckets].join(', ');
+                    saveStatus.textContent = `✓ ${n} link${n !== 1 ? 's' : ''} saved to ${bNames}`;
+                    saveStatus.className = 'text-xs text-green-600';
                     saveStatus.classList.remove('hidden');
                     selectedUrls.clear();
-                    // Invalidate cache so newly saved links show as disabled immediately
-                    savedLinksCache = null;
-                    await setBucketValue(bucket);
+                    renderLinks();
                     setTimeout(() => saveStatus.classList.add('hidden'), 3000);
-                    // Clear the window.name accumulator on the parent page so the
-                    // next bookmarklet click starts a fresh collection session.
-                    if (window.parent !== window) {
-                        window.parent.postMessage('grabbn-reset', '*');
-                    }
-                    pagesCollected = 1;
                 } else {
                     const err = await res.json().catch(() => ({}));
-                    saveStatus.textContent = err.error || 'Failed to save links.';
-                    saveStatus.className = 'text-[11px] text-red-500';
+                    saveStatus.textContent = err.error || 'Failed to save.';
+                    saveStatus.className = 'text-xs text-red-500';
                     saveStatus.classList.remove('hidden');
                 }
             } catch {
-                saveStatus.textContent = 'Network error. Please try again.';
-                saveStatus.className = 'text-[11px] text-red-500';
+                saveStatus.textContent = 'Network error. Try again.';
+                saveStatus.className = 'text-xs text-red-500';
                 saveStatus.classList.remove('hidden');
             }
 
             saveBtn.textContent = 'Save';
-            updateFooterCounts();
+            updateSaveBtn();
         });
 
-        // --- Filter / search ---
+        // ── messages from bookmarklet parent ─────────────────────────
+        window.addEventListener('message', e => {
+            const d = e.data;
+            if (!d) return;
 
-        document.getElementById('filterToggleBtn').addEventListener('click', () => {
-            const hidden = searchBar.classList.toggle('hidden');
-            if (!hidden) {
-                searchInput.focus();
-            } else {
-                searchInput.value = '';
-                filterText = '';
-                renderLinks();
+            // element was anchored → return to idle
+            if (d.type === 'grabbn-element-picked') {
+                showView('idle');
+                return;
             }
-        });
 
-        searchInput.addEventListener('input', () => {
-            filterText = searchInput.value.trim();
-            renderLinks();
-        });
-
-        // --- Select all / none ---
-
-        document.getElementById('selectAllBtn').addEventListener('click', () => {
-            getFiltered().forEach(l => { if (!existingHrefs.has(l.href)) selectedUrls.add(l.href); });
-            renderLinks();
-        });
-
-        document.getElementById('selectNoneBtn').addEventListener('click', () => {
-            selectedUrls.clear();
-            renderLinks();
-        });
-
-
-        // Also re-fetch when the popup window itself regains focus (e.g. user switches
-        // back after auto-saving a draft bucket in the main app tab).
-        window.addEventListener('focus', () => { loadBuckets(); });
-
-        // --- Rescan button ---
-        const rescanBtn  = document.getElementById('rescanBtn');
-        const rescanIcon = document.getElementById('rescanIcon');
-        let rescanSpinning = false;
-
-        rescanBtn.addEventListener('click', () => {
-            if (rescanSpinning) return;
-            rescanSpinning = true;
-            rescanIcon.style.animation = 'grabbn-rescan-spin .7s linear infinite';
-            if (window.parent !== window) {
-                window.parent.postMessage({ type: 'grabbn-rescan' }, '*');
+            // Esc / abort from parent → return to idle
+            if (d.type === 'grabbn-pick-aborted') {
+                showView('idle');
+                return;
             }
-            // Auto-stop spinner after 3s if no reply
-            setTimeout(() => {
-                rescanSpinning = false;
-                rescanIcon.style.animation = '';
-            }, 3000);
-        });
 
-        // --- Close button ---
-        document.getElementById('closeWidgetBtn').addEventListener('click', () => {
-            if (window.parent !== window) {
-                window.parent.postMessage('grabbn-close', '*');
-            } else {
-                window.close();
-            }
-        });
-
-        // --- Pagination: load all pages ---
-
-        loadPagesBtn.addEventListener('click', () => {
-            const urls = buildPageUrls();
-            if (!urls.length) return;
-
-            loadPagesBtn.disabled = true;
-            loadPagesBtn.textContent = `Loading…`;
-            pagesLabel.textContent   = `Fetching page ${currentPage + 1} of ${maxPage}…`;
-
-            // Ask the bookmarklet (running in the outer page) to fetch each URL
-            window.parent.postMessage({ type: 'grabbn-fetch-pages', urls }, '*');
-        });
-
-        // --- Receive fetched-page link batches from the bookmarklet relay ---
-
-        window.addEventListener('message', (e) => {
-            if (!e.data) return;
-
-            if (e.data.type === 'grabbn-rescan-result') {
-                rescanSpinning = false;
-                rescanIcon.style.animation = '';
-                const { links: newLinks = [] } = e.data;
-                if (newLinks.length) {
-                    const existing = new Set(allLinks.map(l => l.href));
-                    newLinks.forEach(l => { if (!existing.has(l.href)) allLinks.push(l); });
-                    if (allLinks.length > 0 && linksList.classList.contains('hidden')) setView('list');
-                    renderLinks();
-                    showStatus(`+${newLinks.length} new link${newLinks.length !== 1 ? 's' : ''} found`, 'text-green-700 bg-green-50');
-                    setTimeout(hideStatus, 2500);
-                } else {
-                    showStatus('No new links found on this page', 'text-gray-500 bg-gray-50');
-                    setTimeout(hideStatus, 2000);
+            // checkbox state changed in page
+            if (d.type === 'grabbn-check-change') {
+                checkedCount = d.count;
+                const hasItems = checkedCount > 0;
+                grabLinksBtn.disabled = !hasItems;
+                grabLinksBtn.style.display = hasItems ? '' : 'none';
+                shiftHint.style.display = hasItems ? '' : 'none';
+                if (viewIdle.style.display !== 'none') {
+                    postToParent({ type: 'grabbn-resize', width: 280, height: hasItems ? VIEW_SIZES.idle.h : VIEW_SIZES.idle_compact.h });
                 }
                 return;
             }
 
-            if (e.data.type !== 'grabbn-page-links') return;
-
-            const { links: newLinks = [], pageUrl, index, total, error } = e.data;
-
-            if (!error && newLinks.length) {
-                // Deduplicate before merging
-                const existing = new Set(allLinks.map(l => l.href));
-                newLinks.forEach(l => { if (!existing.has(l.href)) { allLinks.push(l); existing.add(l.href); } });
+            // parent sent extracted items → show review
+            if (d.type === 'grabbn-selected-items') {
+                allItems = d.items || [];
+                selectedUrls = new Set(allItems.map(i => i.href)); // pre-check all
+                anchorHref = null;
+                reviewTitle.textContent = `${allItems.length} item${allItems.length !== 1 ? 's' : ''} grabbed`;
                 renderLinks();
-            }
-
-            const doneCount = index + 1;
-
-            if (doneCount >= total) {
-                // All pages finished
-                pagesBanner.classList.add('hidden');
-                showStatus(`All ${total + 1} pages loaded — ${allLinks.length} links total`, 'text-green-700 bg-green-50');
-                setTimeout(hideStatus, 3000);
-            } else {
-                // Still in progress — show which page we just got
-                try {
-                    const pageNum = new URL(pageUrl).searchParams.get('page');
-                    pagesLabel.textContent = `Fetching page ${pageNum} of ${maxPage}…`;
-                } catch {}
+                loadBuckets();
+                showView('review');
+                return;
             }
         });
 
+        // ── init ─────────────────────────────────────────────────────
+        (async function init() {
+            try {
+                const res = await fetch('/api/buckets', fetchOpts());
+                if (!res.ok) { showView('auth'); return; }
+                bucketsLoaded = await res.json();
+                if (selectedBuckets.size === 0 && bucketsLoaded.length > 0) {
+                    selectedBuckets.add(bucketsLoaded[0]);
+                    updateBucketLabel();
+                }
+            } catch { showView('auth'); return; }
+            showView('idle');
+            postToParent({ type: 'grabbn-toggle-siblings', active: siblingsActive });
+        })();
     </script>
 </body>
-
 </html>

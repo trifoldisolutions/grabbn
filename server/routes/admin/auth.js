@@ -6,7 +6,7 @@
 import express      from 'express';
 import crypto       from 'crypto';
 import User         from '../../models/user.js';
-import { sendOtpEmail } from '../../utils/email.js';
+import { sendOtpEmail, sendPasswordResetEmail } from '../../utils/email.js';
 import { ADMIN_COOKIE } from '../../middleware/adminSessionAuth.js';
 
 const router     = express.Router();
@@ -130,6 +130,74 @@ router.post('/resend-otp', async (req, res) => {
     } catch (err) {
         console.error('[admin/auth] resend-otp error:', err);
         res.status(500).json({ error: 'Failed to resend code.' });
+    }
+});
+
+// ── POST /api/admin/auth/forgot-password ─────────────────────────────────────
+router.post('/forgot-password', async (req, res) => {
+    const successMsg = 'If that email belongs to an admin account, a reset link has been sent.';
+    try {
+        const { email } = req.body;
+        if (!email) return res.json({ success: true, message: successMsg });
+
+        const user = await User.findOne({ email: email.toLowerCase(), isAnonymous: false })
+            .select('+resetPasswordToken +resetPasswordExpires');
+
+        if (!user || !ADMIN_ROLES.includes(user.role)) {
+            return res.json({ success: true, message: successMsg });
+        }
+
+        const rawToken    = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+        user.resetPasswordToken   = hashedToken;
+        user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+        await user.save();
+
+        const protocol = req.protocol;
+        const host     = req.get('host');
+        const resetUrl = `${protocol}://${host}/admin/reset-password?token=${rawToken}`;
+
+        await sendPasswordResetEmail(user.email, resetUrl);
+
+        res.json({ success: true, message: successMsg });
+    } catch (err) {
+        console.error('[admin/auth] forgot-password error:', err);
+        res.status(500).json({ error: 'Something went wrong. Please try again.' });
+    }
+});
+
+// ── POST /api/admin/auth/reset-password ──────────────────────────────────────
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) {
+            return res.status(400).json({ error: 'Token and new password are required.' });
+        }
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+        }
+
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        const user = await User.findOne({
+            resetPasswordToken:   hashedToken,
+            resetPasswordExpires: { $gt: Date.now() },
+        }).select('+resetPasswordToken +resetPasswordExpires');
+
+        if (!user || !ADMIN_ROLES.includes(user.role)) {
+            return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
+        }
+
+        user.password             = password; // hashed by pre-save hook
+        user.resetPasswordToken   = undefined;
+        user.resetPasswordExpires = undefined;
+        user.passwordChangedAt    = new Date();
+        await user.save();
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[admin/auth] reset-password error:', err);
+        res.status(500).json({ error: 'Something went wrong. Please try again.' });
     }
 });
 

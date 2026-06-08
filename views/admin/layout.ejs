@@ -101,6 +101,12 @@
             Buckets
         </a>
 
+        <!-- FAQ -->
+        <a href="/admin/faq" class="admin-nav-link flex items-center gap-3 px-3 h-9 rounded-md text-sm font-medium transition-colors <%= adminPage === 'faq' ? 'bg-orchid-600 text-white' : 'text-woodsmoke-300 hover:bg-woodsmoke-800 hover:text-white' %>">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10m-1-7v2h2v-2zm2-1.645A3.502 3.502 0 0 0 12 6.5a3.501 3.501 0 0 0-3.433 2.813l1.962.393A1.5 1.5 0 1 1 12 11.5a1 1 0 0 0-1 1V13h2v-.645z"/></svg>
+            FAQ
+        </a>
+
         <div class="px-3 pt-4 pb-1">
             <span class="text-woodsmoke-500 text-[10px] font-semibold uppercase tracking-widest">Program</span>
         </div>
@@ -151,7 +157,7 @@
     <!-- Admin identity footer -->
     <div class="px-4 py-4 border-t border-woodsmoke-800 shrink-0">
         <div class="flex items-center gap-2.5">
-            <div class="w-7 h-7 rounded-full bg-orchid-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+            <div class="w-7 h-7 rounded-md bg-orchid-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                 <%= (admin?.username || admin?.email || '?')[0].toUpperCase() %>
             </div>
             <div class="min-w-0">
@@ -161,10 +167,16 @@
                 </div>
             </div>
         </div>
-        <a href="/api/auth/logout" class="mt-3 flex items-center gap-2 text-woodsmoke-400 hover:text-white text-xs transition-colors">
+        <button id="adminSignOutBtn" class="mt-3 flex items-center justify-center gap-2 text-woodsmoke-400 hover:text-white text-xs transition-colors w-full">
             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 3a1 1 0 0 1 0 2H7a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h5a1 1 0 1 1 0 2H7a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm7.707 5.707a1 1 0 0 0-1.414-1.414l-2 2a1 1 0 0 0 0 1.414l2 2a1 1 0 0 0 1.414-1.414L18.414 12H15a1 1 0 1 1 0-2h3.414z"/></g></svg>
             Sign out
-        </a>
+        </button>
+        <script>
+            document.getElementById('adminSignOutBtn').addEventListener('click', async () => {
+                await fetch('/api/admin/auth/logout', { method: 'POST' });
+                window.location.href = '/admin/login';
+            });
+        </script>
     </div>
 
 </aside>

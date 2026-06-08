@@ -317,7 +317,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
             await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
-            await chrome.tabs.sendMessage(tab.id, { type: 'START_PICK_MODE' });
+            await chrome.tabs.sendMessage(tab.id, {
+              type: 'START_PICK_MODE',
+              siblingsActive: msg.siblingsActive !== false,
+            });
             sendResponse({ ok: true });
           } catch (err) {
             sendResponse({ ok: false, error: err.message });

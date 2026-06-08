@@ -8,110 +8,297 @@ if (window.__grabbnInjected) {
   // State
   // ---------------------------------------------------------------------------
 
-  let pickModeActive = false;
-  let hoveredLink = null;
-  let selPanel = null;       // floating selection panel
-  let bucketOverlay = null;  // final bucket-picker overlay
-  let selectedLinks = [];    // { href, text, element, domImagePromise }
-  const metaRequests = new Map(); // href → Promise<resp>
-  const metaCache    = new Map(); // href → resolved meta object
+  let pickModeActive = false;  // true only during crosshair phase
+  let siblingsActive = true;
+  let anchorEl       = null;
+  let hoveredEl      = null;
+  let shield         = null;
+  let selPanel       = null;
+  let reviewPanel    = null;
+
+  // highlightedEls: [{ el, href, link, domImagePromise }]
+  let highlightedEls = [];
+  let checkedEls     = new Set();
+  let lastCheckedEl  = null;
+  let detectedCards  = new Set();
+
+  const metaRequests = new Map();
+  const metaCache    = new Map();
+  const MAX_SELECTION = 100;
+
+  // Review state
+  let reviewItems          = [];
+  let reviewSelectedUrls   = new Set();
+  let reviewSelectedBuckets = new Set();
+  let reviewBucketsLoaded  = [];
 
   // ---------------------------------------------------------------------------
-  // Pick mode
+  // Pick mode — phase 1 (crosshair)
   // ---------------------------------------------------------------------------
 
-  function startPickMode() {
+  function startPickMode(withSiblings) {
     if (pickModeActive) return;
     pickModeActive = true;
-    selectedLinks = [];
+    siblingsActive = withSiblings !== false;
+    anchorEl = null;
+    clearHighlightedEls();
     metaRequests.clear();
     metaCache.clear();
     removeSelPanel();
+    removeReviewPanel();
     document.body.classList.add('grabbn-pick-mode');
-    document.addEventListener('mouseover', onMouseOver, true);
-    document.addEventListener('mouseout', onMouseOut, true);
-    document.addEventListener('click', onLinkClick, true);
+    createShield();
+    detectListings();
     document.addEventListener('keydown', onKeyDown, true);
-    showHint('Click links to select · Esc to cancel');
+    showHint('Click a card to anchor · Esc to cancel');
   }
 
   function stopPickMode() {
     pickModeActive = false;
     document.body.classList.remove('grabbn-pick-mode');
-    document.removeEventListener('mouseover', onMouseOver, true);
-    document.removeEventListener('mouseout', onMouseOut, true);
-    document.removeEventListener('click', onLinkClick, true);
+    removeShield();
     document.removeEventListener('keydown', onKeyDown, true);
     clearHighlight();
+    clearListings();
     removeHint();
   }
 
-  function cancelSelection() {
-    for (const { element } of selectedLinks) element.classList.remove('grabbn-link-selected');
-    selectedLinks = [];
+  function cancelAll() {
+    clearHighlightedEls();
+    anchorEl = null;
     metaRequests.clear();
     metaCache.clear();
     removeSelPanel();
-    stopPickMode();
+    removeReviewPanel();
+    if (pickModeActive) stopPickMode();
   }
 
   // ---------------------------------------------------------------------------
-  // Event handlers
+  // Listing detection (dashed outlines during crosshair phase)
   // ---------------------------------------------------------------------------
 
-  function onMouseOver(e) {
-    const link = e.target.closest('a[href]');
-    if (!link) return;
-    clearHighlight();
-    hoveredLink = link;
-    link.classList.add('grabbn-link-hover');
-  }
-
-  function onMouseOut(e) {
-    const link = e.target.closest('a[href]');
-    if (link) link.classList.remove('grabbn-link-hover');
-  }
-
-  function onKeyDown(e) {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      if (bucketOverlay) { removeBucketOverlay(); }
-      else { cancelSelection(); }
+  function detectListings() {
+    const skipSelector = 'header, nav, footer, [role="navigation"], [role="banner"], [role="contentinfo"]';
+    const seen = new Set();
+    for (const link of document.querySelectorAll('a[href]')) {
+      if (link.closest('#grabbn-sel-panel, #grabbn-review-panel, #grabbn-hint')) continue;
+      if (link.closest(skipSelector)) continue;
+      const card = findCardAncestor(link);
+      if (seen.has(card)) continue;
+      seen.add(card);
+      detectedCards.add(card);
+      card.classList.add('grabbn-listing');
     }
   }
 
-  const MAX_SELECTION = 100;
+  function clearListings() {
+    for (const card of detectedCards) card.classList.remove('grabbn-listing');
+    detectedCards.clear();
+  }
 
-  function onLinkClick(e) {
-    const link = e.target.closest('a[href]');
-    if (!link) return;
-    e.preventDefault();
-    e.stopPropagation();
+  // ---------------------------------------------------------------------------
+  // Card ancestor detection
+  // ---------------------------------------------------------------------------
 
-    const href = link.href;
-    const existingIdx = selectedLinks.findIndex(l => l.href === href);
+  function findCardAncestor(link, maxLevels = 12) {
+    let el = link;
+    let firstRepeating = null;
+    let firstCardLike  = null;
 
-    if (existingIdx >= 0) {
-      selectedLinks[existingIdx].element.classList.remove('grabbn-link-selected');
-      selectedLinks.splice(existingIdx, 1);
-    } else {
-      if (selectedLinks.length >= MAX_SELECTION) {
-        showSelPanelError(`Max ${MAX_SELECTION} links per batch.`);
-        return;
+    for (let i = 0; i < maxLevels; i++) {
+      let parent = el.parentElement;
+      if (!parent) {
+        const root = el.getRootNode();
+        if (root instanceof ShadowRoot) parent = root.host;
       }
-      link.classList.add('grabbn-link-selected');
-      const domImagePromise = extractDomProductImage(link).catch(() => null);
-      selectedLinks.push({
-        href,
-        text: link.textContent.trim().replace(/\s+/g, ' ').slice(0, 200),
-        element: link,
-        domImagePromise,
-      });
-      fetchMetaForHref(href);
+      if (!parent || parent === document.body || parent === document.documentElement) break;
+
+      let sameTagCount = 0;
+      for (const child of parent.children) {
+        if (child.tagName === el.tagName) sameTagCount++;
+      }
+
+      if (sameTagCount >= 2) {
+        if (!firstRepeating) firstRepeating = el;
+        if (!firstCardLike && el.tagName !== 'A') {
+          if (el.tagName.includes('-') || (el.querySelector('img') && el.querySelector('a[href]'))) {
+            firstCardLike = el;
+          }
+        }
+      }
+
+      el = parent;
     }
+
+    return firstCardLike || firstRepeating || link;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shield (crosshair overlay)
+  // ---------------------------------------------------------------------------
+
+  function createShield() {
+    if (shield) return;
+    shield = document.createElement('div');
+    shield.id = 'grabbn-shield';
+    shield.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483640;cursor:crosshair;';
+    document.body.appendChild(shield);
+    shield.addEventListener('mousemove', onShieldMouseMove);
+    shield.addEventListener('click', onShieldClick);
+  }
+
+  function removeShield() {
+    if (!shield) return;
+    shield.remove();
+    shield = null;
+  }
+
+  function linkFromPoint(x, y) {
+    const elems = document.elementsFromPoint(x, y);
+    for (const el of elems) {
+      if (el === shield) continue;
+      if (el.closest?.('#grabbn-sel-panel, #grabbn-review-panel, #grabbn-hint')) continue;
+      if (el.tagName === 'A' && el.href) return el;
+    }
+    return null;
+  }
+
+  function onShieldMouseMove(e) {
+    const link = linkFromPoint(e.clientX, e.clientY);
+    if (!link) { clearHighlight(); return; }
+    const card = findCardAncestor(link);
+    if (hoveredEl === card) return;
+    clearHighlight();
+    hoveredEl = card;
+    card.classList.add('grabbn-link-hover');
+  }
+
+  function onShieldClick(e) {
+    const link = linkFromPoint(e.clientX, e.clientY);
+    if (!link) return;
+
+    // Exit crosshair phase — keep the page interactive
+    stopPickMode();
+
+    anchorEl = findCardAncestor(link);
+    addElementWithCheckbox(anchorEl, link);
+    if (siblingsActive) addSiblings(anchorEl);
+
     updateSelPanel();
   }
+
+  function clearHighlight() {
+    if (hoveredEl) { hoveredEl.classList.remove('grabbn-link-hover'); hoveredEl = null; }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Checkbox injection (phase 2)
+  // ---------------------------------------------------------------------------
+
+  function addElementWithCheckbox(card, link) {
+    if (highlightedEls.find(e => e.el === card)) return;
+    if (highlightedEls.length >= MAX_SELECTION) return;
+
+    card.classList.remove('grabbn-listing');
+    card.classList.add('grabbn-link-selected');
+
+    const pos = window.getComputedStyle(card).position;
+    if (pos === 'static') {
+      card.style.position = 'relative';
+      card.dataset.grabbnRelative = '1';
+    }
+
+    const wrap = document.createElement('div');
+    wrap.className = 'grabbn-cb-wrap';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = false;
+    cb.className = 'grabbn-cb-input';
+    cb.addEventListener('click', (evt) => {
+      evt.stopPropagation();
+
+      if (evt.shiftKey && lastCheckedEl !== null) {
+        const fromIdx = highlightedEls.findIndex(e => e.el === lastCheckedEl);
+        const toIdx   = highlightedEls.findIndex(e => e.el === card);
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const lo = Math.min(fromIdx, toIdx);
+          const hi = Math.max(fromIdx, toIdx);
+          for (let j = lo; j <= hi; j++) {
+            const target = highlightedEls[j].el;
+            checkedEls.add(target);
+            target.classList.add('grabbn-link-selected');
+            const targetCb = target.querySelector('.grabbn-cb-input');
+            if (targetCb) targetCb.checked = true;
+          }
+          cb.checked = true;
+        }
+      } else {
+        if (cb.checked) {
+          checkedEls.add(card);
+          card.classList.add('grabbn-link-selected');
+        } else {
+          checkedEls.delete(card);
+          card.classList.remove('grabbn-link-selected');
+        }
+        lastCheckedEl = card;
+      }
+
+      updateSelPanel();
+    });
+
+    wrap.appendChild(cb);
+    card.appendChild(wrap);
+
+    const href = link.href;
+    const domImagePromise = extractDomProductImage(card, href).catch(() => null);
+    highlightedEls.push({ el: card, href, link, domImagePromise });
+
+    fetchMetaForHref(href);
+  }
+
+  function clearHighlightedEls() {
+    for (const { el } of highlightedEls) {
+      el.classList.remove('grabbn-link-selected', 'grabbn-listing');
+      el.querySelector('.grabbn-cb-wrap')?.remove();
+      if (el.dataset.grabbnRelative) {
+        el.style.position = '';
+        delete el.dataset.grabbnRelative;
+      }
+    }
+    highlightedEls = [];
+    checkedEls.clear();
+    lastCheckedEl = null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Siblings detection
+  // ---------------------------------------------------------------------------
+
+  function addSiblings(anchor) {
+    const tag = anchor.tagName.toLowerCase();
+    const cls = anchor.classList.length > 0 ? anchor.classList[0] : null;
+    let sel = null;
+    if (tag.includes('-')) {
+      sel = tag;
+    } else if (cls) {
+      try { sel = `${tag}.${CSS.escape(cls)}`; } catch { sel = tag; }
+    }
+    if (!sel) return;
+
+    for (const el of document.querySelectorAll(sel)) {
+      if (el === anchor) continue;
+      if (el.closest('#grabbn-sel-panel, #grabbn-review-panel, #grabbn-hint')) continue;
+      const sibLink = el.querySelector('a[href]');
+      if (!sibLink) continue;
+      if (highlightedEls.length >= MAX_SELECTION) break;
+      addElementWithCheckbox(el, sibLink);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Meta fetching
+  // ---------------------------------------------------------------------------
 
   function fetchMetaForHref(href) {
     if (metaRequests.has(href)) return;
@@ -122,9 +309,6 @@ if (window.__grabbnInjected) {
             title: resp.title,
             image: resp.image,
             images: resp.images || [],
-            provider: resp.provider,
-            imageStatus: resp.imageStatus,
-            imageReason: resp.imageReason,
           });
         } else if (resp?.error === 'rate_daily') {
           metaCache.set(href, { error: 'rate_daily', used: resp.used, limit: resp.limit });
@@ -135,12 +319,20 @@ if (window.__grabbnInjected) {
     metaRequests.set(href, p);
   }
 
-  function clearHighlight() {
-    if (hoveredLink) { hoveredLink.classList.remove('grabbn-link-hover'); hoveredLink = null; }
+  // ---------------------------------------------------------------------------
+  // Key handler
+  // ---------------------------------------------------------------------------
+
+  function onKeyDown(e) {
+    if (e.key === 'Escape' && e.isTrusted) {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelAll();
+    }
   }
 
   // ---------------------------------------------------------------------------
-  // Hint
+  // Hint banner
   // ---------------------------------------------------------------------------
 
   function showHint(msg) {
@@ -154,73 +346,7 @@ if (window.__grabbnInjected) {
   function removeHint() { document.getElementById('grabbn-hint')?.remove(); }
 
   // ---------------------------------------------------------------------------
-  // Selection panel
-  // ---------------------------------------------------------------------------
-
-  function updateSelPanel() {
-    if (!selectedLinks.length) {
-      removeSelPanel();
-      showHint('Click links to select · Esc to cancel');
-      return;
-    }
-    removeHint();
-    if (!selPanel) {
-      selPanel = document.createElement('div');
-      selPanel.id = 'grabbn-sel-panel';
-      document.body.appendChild(selPanel);
-    }
-    const n = selectedLinks.length;
-    selPanel.innerHTML = `
-      <div id="grabbn-sel-header">
-        <span id="grabbn-sel-logo">${GRAB_ICON}<span>Grabbn</span></span>
-        <span id="grabbn-sel-count">${n} / ${MAX_SELECTION} selected</span>
-      </div>
-      <ul id="grabbn-sel-list">
-        ${selectedLinks.map((l, i) => `
-          <li class="grabbn-sel-row" data-idx="${i}">
-            <input type="checkbox" class="grabbn-sel-cb" data-href="${escapeHtml(l.href)}" checked />
-            <span class="grabbn-sel-row-text" title="${escapeHtml(l.href)}">${escapeHtml(l.text || truncate(l.href, 44))}</span>
-          </li>
-        `).join('')}
-      </ul>
-      <div id="grabbn-sel-footer">
-        <button id="grabbn-sel-cancel">Cancel</button>
-        <button id="grabbn-sel-save">Save ${n} link${n !== 1 ? 's' : ''}</button>
-      </div>
-    `;
-    selPanel.querySelector('#grabbn-sel-cancel').addEventListener('click', cancelSelection);
-    selPanel.querySelector('#grabbn-sel-save').addEventListener('click', showBucketPicker);
-    selPanel.querySelectorAll('.grabbn-sel-cb').forEach(cb => {
-      cb.addEventListener('change', () => {
-        if (!cb.checked) {
-          const idx = selectedLinks.findIndex(l => l.href === cb.dataset.href);
-          if (idx >= 0) {
-            selectedLinks[idx].element.classList.remove('grabbn-link-selected');
-            selectedLinks.splice(idx, 1);
-          }
-          updateSelPanel();
-        }
-      });
-    });
-  }
-
-  function removeSelPanel() { selPanel?.remove(); selPanel = null; }
-
-  function showSelPanelError(msg) {
-    if (!selPanel) return;
-    let err = selPanel.querySelector('#grabbn-sel-error');
-    if (!err) {
-      err = document.createElement('div');
-      err.id = 'grabbn-sel-error';
-      selPanel.querySelector('#grabbn-sel-footer').before(err);
-    }
-    err.textContent = msg;
-    clearTimeout(err._t);
-    err._t = setTimeout(() => err.remove(), 2500);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Bucket picker overlay
+  // Grabbn icon SVG
   // ---------------------------------------------------------------------------
 
   const GRAB_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
@@ -230,186 +356,339 @@ if (window.__grabbnInjected) {
     </g>
   </svg>`;
 
-  async function showBucketPicker() {
-    removeBucketOverlay();
-    const n = selectedLinks.length;
-    if (!n) return;
+  // ---------------------------------------------------------------------------
+  // Selection panel (phase 2 — after anchor clicked)
+  // ---------------------------------------------------------------------------
 
-    bucketOverlay = document.createElement('div');
-    bucketOverlay.id = 'grabbn-overlay';
-    bucketOverlay.innerHTML = `
-      <div id="grabbn-modal">
-        <div id="grabbn-modal-header">
-          <span id="grabbn-modal-logo">${GRAB_ICON}<span>Grabbn</span></span>
-          <button id="grabbn-close">✕</button>
-        </div>
-        <div id="grabbn-link-preview">${n} link${n !== 1 ? 's' : ''} ready to save</div>
-        <div id="grabbn-bucket-list"><div class="grabbn-loading">Loading buckets…</div></div>
-        <div id="grabbn-footer" style="display:none">
-          <span id="grabbn-selected-count">0 buckets</span>
-          <button id="grabbn-save-btn" disabled>Save</button>
-        </div>
+  function updateSelPanel() {
+    // If the user changes selection while the review panel is open, dismiss it
+    // so the selection panel reflects the updated state instead of stacking.
+    if (reviewPanel) removeReviewPanel();
+
+    const n     = checkedEls.size;
+    const total = highlightedEls.length;
+    if (total === 0) { removeSelPanel(); return; }
+
+    if (!selPanel) {
+      selPanel = document.createElement('div');
+      selPanel.id = 'grabbn-sel-panel';
+      document.body.appendChild(selPanel);
+    }
+
+    selPanel.innerHTML = `
+      <div id="grabbn-sel-header">
+        <span id="grabbn-sel-logo">${GRAB_ICON}<span>Grabbn</span></span>
+        <span id="grabbn-sel-count">${n} / ${total} checked</span>
+      </div>
+      <p id="grabbn-sel-hint">Check the cards you want · hold <strong>Shift</strong> to select a range.</p>
+      <div id="grabbn-sel-footer">
+        <button id="grabbn-sel-cancel">Cancel</button>
+        <button id="grabbn-sel-grab" ${n === 0 ? 'disabled' : ''}>Grab ${n} link${n !== 1 ? 's' : ''}</button>
       </div>
     `;
-    document.body.appendChild(bucketOverlay);
-    bucketOverlay.querySelector('#grabbn-close').addEventListener('click', removeBucketOverlay);
-    bucketOverlay.addEventListener('click', e => { if (e.target === bucketOverlay) removeBucketOverlay(); });
 
+    selPanel.querySelector('#grabbn-sel-cancel').addEventListener('click', cancelAll);
+    if (n > 0) {
+      selPanel.querySelector('#grabbn-sel-grab').addEventListener('click', onGrabLinks);
+    }
+  }
+
+  function removeSelPanel() { selPanel?.remove(); selPanel = null; }
+
+  // ---------------------------------------------------------------------------
+  // Grab Links — collect items and show review
+  // ---------------------------------------------------------------------------
+
+  async function onGrabLinks() {
+    const items = [];
+    for (const { el, href, link, domImagePromise } of highlightedEls) {
+      if (!checkedEls.has(el)) continue;
+
+      let text = '';
+      const h = el.querySelector('h1,h2,h3,h4,h5,h6');
+      if (h) text = h.textContent.trim();
+      if (!text) text = (link.title || link.getAttribute('aria-label') || '').trim();
+      if (!text) text = el.textContent.trim().replace(/\s+/g, ' ').slice(0, 120);
+
+      const domImg = await (domImagePromise?.catch(() => null));
+      items.push({ href, text: text.slice(0, 120), domImage: domImg?.image || '' });
+    }
+
+    removeSelPanel();
+    showReviewPanel(items);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Review panel
+  // ---------------------------------------------------------------------------
+
+  function showReviewPanel(items) {
+    reviewItems          = items;
+    reviewSelectedUrls   = new Set(items.map(i => i.href));
+    reviewSelectedBuckets = new Set();
+    reviewBucketsLoaded  = [];
+
+    reviewPanel = document.createElement('div');
+    reviewPanel.id = 'grabbn-review-panel';
+    document.body.appendChild(reviewPanel);
+
+    renderReviewShell();
+    loadReviewBuckets();
+  }
+
+  function renderReviewShell() {
+    const n = reviewItems.length;
+
+    reviewPanel.innerHTML = `
+      <div id="grabbn-review-header">
+        <span id="grabbn-review-logo">${GRAB_ICON}<span>Grabbn</span></span>
+        <span id="grabbn-review-title">${n} item${n !== 1 ? 's' : ''} to save</span>
+        <button id="grabbn-review-close">✕</button>
+      </div>
+      <ul id="grabbn-review-list">
+        ${reviewItems.map(item => `
+          <li class="grabbn-review-row">
+            <input type="checkbox" class="grabbn-review-cb" data-href="${escapeHtml(item.href)}" checked>
+            ${item.domImage
+              ? `<img class="grabbn-review-thumb" src="${escapeHtml(item.domImage)}" alt="" onerror="this.remove()">`
+              : '<div class="grabbn-review-thumb grabbn-review-thumb-empty"></div>'}
+            <div class="grabbn-review-info">
+              <span class="grabbn-review-text">${escapeHtml(item.text || item.href)}</span>
+              <span class="grabbn-review-href">${escapeHtml(truncate(item.href, 50))}</span>
+            </div>
+          </li>
+        `).join('')}
+      </ul>
+      <div id="grabbn-review-footer">
+        <div id="grabbn-review-footer-top">
+          <span id="grabbn-review-count">${n} selected</span>
+          <button id="grabbn-review-all">All</button>
+          <button id="grabbn-review-none">None</button>
+          <div id="grabbn-bucket-wrap">
+            <button id="grabbn-bucket-btn" type="button">
+              <span id="grabbn-bucket-label">Bucket…</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div id="grabbn-bucket-dropdown" class="grabbn-bucket-dropdown grabbn-hidden"></div>
+          </div>
+          <button id="grabbn-review-save" disabled>Save</button>
+        </div>
+        <div id="grabbn-review-status" class="grabbn-hidden"></div>
+      </div>
+    `;
+
+    reviewPanel.querySelector('#grabbn-review-close').addEventListener('click', () => {
+      cancelAll();
+    });
+
+    reviewPanel.querySelectorAll('.grabbn-review-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) reviewSelectedUrls.add(cb.dataset.href);
+        else reviewSelectedUrls.delete(cb.dataset.href);
+        updateReviewCount();
+        updateReviewSaveBtn();
+      });
+    });
+
+    reviewPanel.querySelector('#grabbn-review-all').addEventListener('click', () => {
+      reviewItems.forEach(i => reviewSelectedUrls.add(i.href));
+      reviewPanel.querySelectorAll('.grabbn-review-cb').forEach(cb => { cb.checked = true; });
+      updateReviewCount(); updateReviewSaveBtn();
+    });
+
+    reviewPanel.querySelector('#grabbn-review-none').addEventListener('click', () => {
+      reviewSelectedUrls.clear();
+      reviewPanel.querySelectorAll('.grabbn-review-cb').forEach(cb => { cb.checked = false; });
+      updateReviewCount(); updateReviewSaveBtn();
+    });
+
+    const bucketBtn      = reviewPanel.querySelector('#grabbn-bucket-btn');
+    const bucketDropdown = reviewPanel.querySelector('#grabbn-bucket-dropdown');
+    bucketBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      bucketDropdown.classList.toggle('grabbn-hidden');
+    });
+    document.addEventListener('click', closeBucketDropdown);
+
+    reviewPanel.querySelector('#grabbn-review-save').addEventListener('click', doSave);
+  }
+
+  function closeBucketDropdown() {
+    reviewPanel?.querySelector('#grabbn-bucket-dropdown')?.classList.add('grabbn-hidden');
+  }
+
+  function updateReviewCount() {
+    const el = reviewPanel?.querySelector('#grabbn-review-count');
+    if (el) el.textContent = `${reviewSelectedUrls.size} selected`;
+  }
+
+  function updateReviewSaveBtn() {
+    const btn = reviewPanel?.querySelector('#grabbn-review-save');
+    if (btn) btn.disabled = reviewSelectedUrls.size === 0 || reviewSelectedBuckets.size === 0;
+  }
+
+  async function loadReviewBuckets() {
     const resp = await chrome.runtime.sendMessage({ type: 'GET_BUCKETS' });
-    const list = bucketOverlay?.querySelector('#grabbn-bucket-list');
-    if (!list) return;
+    if (!reviewPanel) return;
+
+    const dropdown = reviewPanel.querySelector('#grabbn-bucket-dropdown');
+    if (!dropdown) return;
 
     if (!resp.ok || !resp.buckets?.length) {
-      list.innerHTML = '<div class="grabbn-empty">No buckets found. Create one on Grabbn first.</div>';
+      dropdown.innerHTML = '<div class="grabbn-bucket-empty">No buckets found.</div>';
       return;
     }
 
-    list.innerHTML = '';
-    const footer = bucketOverlay.querySelector('#grabbn-footer');
-    const saveBtn = bucketOverlay.querySelector('#grabbn-save-btn');
-    const countEl = bucketOverlay.querySelector('#grabbn-selected-count');
-    footer.style.display = 'flex';
-
-    resp.buckets.forEach(({ name, linkCount, thumbnail }) => {
-      const row = document.createElement('label');
-      row.className = 'grabbn-bucket-row';
-      row.innerHTML = `
-        <input type="checkbox" class="grabbn-cb" value="${escapeHtml(name)}" />
-        ${thumbnail
-          ? `<img class="grabbn-bucket-thumb" src="${escapeHtml(thumbnail)}" alt="" />`
-          : `<div class="grabbn-bucket-thumb grabbn-bucket-thumb-empty"></div>`}
-        <span class="grabbn-bucket-name">${escapeHtml(name)}</span>
-        <span class="grabbn-bucket-count">${linkCount ?? 0}</span>
-      `;
-      list.appendChild(row);
-    });
-
-    list.addEventListener('change', () => {
-      const checked = list.querySelectorAll('.grabbn-cb:checked');
-      countEl.textContent = checked.length === 1 ? '1 bucket' : `${checked.length} buckets`;
-      saveBtn.disabled = checked.length === 0;
-    });
-
-    saveBtn.addEventListener('click', () => {
-      const bucketNames = [...list.querySelectorAll('.grabbn-cb:checked')].map(cb => cb.value);
-      if (!bucketNames.length) return;
-      saveAllLinks(bucketNames);
-    });
+    reviewBucketsLoaded = resp.buckets;
+    reviewSelectedBuckets.add(resp.buckets[0].name);
+    updateBucketLabel();
+    updateReviewSaveBtn();
+    renderBucketDropdown();
   }
 
-  function removeBucketOverlay() { bucketOverlay?.remove(); bucketOverlay = null; }
+  function renderBucketDropdown() {
+    const dropdown = reviewPanel?.querySelector('#grabbn-bucket-dropdown');
+    if (!dropdown) return;
+    dropdown.innerHTML = '';
+    for (const { name } of reviewBucketsLoaded) {
+      const item = document.createElement('label');
+      item.className = 'grabbn-bucket-option';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'grabbn-bucket-option-cb';
+      cb.checked = reviewSelectedBuckets.has(name);
+      cb.addEventListener('change', () => {
+        if (cb.checked) reviewSelectedBuckets.add(name);
+        else reviewSelectedBuckets.delete(name);
+        updateBucketLabel();
+        updateReviewSaveBtn();
+        renderBucketDropdown();
+      });
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'grabbn-bucket-option-name';
+      nameSpan.textContent = name;
+      item.appendChild(cb);
+      item.appendChild(nameSpan);
+      dropdown.appendChild(item);
+    }
+  }
+
+  function updateBucketLabel() {
+    const label = reviewPanel?.querySelector('#grabbn-bucket-label');
+    if (!label) return;
+    if (reviewSelectedBuckets.size === 0) {
+      label.textContent = 'Bucket…';
+      label.dataset.empty = '1';
+    } else if (reviewSelectedBuckets.size === 1) {
+      label.textContent = [...reviewSelectedBuckets][0];
+      delete label.dataset.empty;
+    } else {
+      label.textContent = `${reviewSelectedBuckets.size} buckets`;
+      delete label.dataset.empty;
+    }
+  }
 
   // ---------------------------------------------------------------------------
-  // Save all selected links
+  // Save
   // ---------------------------------------------------------------------------
 
-  async function saveAllLinks(bucketNames) {
-    const saveBtn = bucketOverlay?.querySelector('#grabbn-save-btn');
-    const n = selectedLinks.length;
+  async function doSave() {
+    if (reviewSelectedUrls.size === 0 || reviewSelectedBuckets.size === 0) return;
 
-    // Wait for any still-pending meta fetches (up to 20 s total)
-    const pendingPromises = selectedLinks
-      .filter(l => metaRequests.has(l.href) && !metaCache.has(l.href))
-      .map(l => metaRequests.get(l.href).catch(() => null));
+    const saveBtn = reviewPanel?.querySelector('#grabbn-review-save');
+    const status  = reviewPanel?.querySelector('#grabbn-review-status');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
 
-    if (pendingPromises.length) {
-      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Fetching images…'; }
-      await Promise.race([
-        Promise.all(pendingPromises),
-        new Promise(r => setTimeout(r, 20000)),
-      ]);
+    // Wait for any pending meta fetches
+    const pending = [...reviewSelectedUrls]
+      .filter(href => metaRequests.has(href) && !metaCache.has(href))
+      .map(href => metaRequests.get(href).catch(() => null));
+    if (pending.length) {
+      await Promise.race([Promise.all(pending), new Promise(r => setTimeout(r, 20000))]);
     }
 
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = `Saving ${n} link${n !== 1 ? 's' : ''}…`; }
-
-    const linksPayload = await Promise.all(selectedLinks.map(async (entry) => {
-      let meta = metaCache.get(entry.href) || {};
-      if (!meta.image && entry.domImagePromise) {
-        const domImage = await entry.domImagePromise.catch(() => null);
-        if (domImage) meta = { ...meta, image: domImage.image };
-      }
-      return {
-        href: entry.href,
-        text: meta.title || entry.text,
-        image: meta.image || '',
-        images: meta.images || [],
-      };
-    }));
+    const linksPayload = await Promise.all(
+      reviewItems
+        .filter(i => reviewSelectedUrls.has(i.href))
+        .map(async i => {
+          const meta = metaCache.get(i.href) || {};
+          return {
+            href:   i.href,
+            text:   meta.title  || i.text,
+            image:  meta.image  || i.domImage || '',
+            images: meta.images || [],
+          };
+        })
+    );
 
     const resp = await chrome.runtime.sendMessage({
-      type: 'SAVE_LINKS',
-      links: linksPayload,
-      bucketNames,
+      type:        'SAVE_LINKS',
+      links:       linksPayload,
+      bucketNames: [...reviewSelectedBuckets],
     });
 
-    if (!bucketOverlay) return;
-
     if (resp.ok) {
-      showSuccessState(n, bucketNames);
+      showReviewSuccess(linksPayload.length, [...reviewSelectedBuckets]);
     } else {
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = `Save ${n} link${n !== 1 ? 's' : ''}`; }
-      showInlineError(resp.error || 'Failed to save');
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+      if (status) {
+        status.textContent = resp.error || 'Failed to save.';
+        status.classList.remove('grabbn-hidden');
+        status.classList.add('grabbn-status-error');
+      }
     }
   }
 
-  function showSuccessState(linkCount, bucketNames) {
-    if (!bucketOverlay) return;
-    const modal = bucketOverlay.querySelector('#grabbn-modal');
+  function showReviewSuccess(count, bucketNames) {
+    if (!reviewPanel) return;
     const bucketLabel = bucketNames.length === 1
       ? `"${escapeHtml(bucketNames[0])}"`
       : `${bucketNames.length} buckets`;
-    modal.innerHTML = `
-      <div id="grabbn-modal-header">
-        <span id="grabbn-modal-logo">${GRAB_ICON}<span>Grabbn</span></span>
-        <button id="grabbn-close">✕</button>
+
+    for (const { el } of highlightedEls) el.classList.remove('grabbn-link-selected');
+
+    reviewPanel.innerHTML = `
+      <div id="grabbn-review-header">
+        <span id="grabbn-review-logo">${GRAB_ICON}<span>Grabbn</span></span>
       </div>
       <div id="grabbn-success">
         <div class="grabbn-success-icon">✓</div>
-        <div class="grabbn-success-msg">${linkCount} link${linkCount !== 1 ? 's' : ''} saved to ${bucketLabel}</div>
+        <div class="grabbn-success-msg">${count} link${count !== 1 ? 's' : ''} saved to ${bucketLabel}</div>
       </div>
-      <div id="grabbn-footer" style="display:flex">
-        <button id="grabbn-again-btn">Pick more links</button>
-        <button id="grabbn-done-btn">Done</button>
+      <div id="grabbn-review-footer">
+        <div id="grabbn-review-footer-top">
+          <button id="grabbn-again-btn">Pick more</button>
+          <button id="grabbn-done-btn">Done</button>
+        </div>
       </div>
     `;
-    for (const { element } of selectedLinks) element.classList.remove('grabbn-link-selected');
-    selectedLinks = [];
-    metaRequests.clear();
-    metaCache.clear();
-    removeSelPanel();
 
-    modal.querySelector('#grabbn-close').addEventListener('click', () => { removeBucketOverlay(); stopPickMode(); });
-    modal.querySelector('#grabbn-done-btn').addEventListener('click', () => { removeBucketOverlay(); stopPickMode(); });
-    modal.querySelector('#grabbn-again-btn').addEventListener('click', () => {
-      removeBucketOverlay();
-      startPickMode();
+    reviewPanel.querySelector('#grabbn-done-btn').addEventListener('click', () => {
+      removeReviewPanel();
+      clearHighlightedEls();
+    });
+    reviewPanel.querySelector('#grabbn-again-btn').addEventListener('click', () => {
+      removeReviewPanel();
+      clearHighlightedEls();
+      metaRequests.clear();
+      metaCache.clear();
+      startPickMode(siblingsActive);
     });
   }
 
-  function showInlineError(msg) {
-    if (!bucketOverlay) return;
-    let err = bucketOverlay.querySelector('#grabbn-inline-error');
-    if (!err) {
-      err = document.createElement('div');
-      err.id = 'grabbn-inline-error';
-      bucketOverlay.querySelector('#grabbn-footer').before(err);
-    }
-    err.textContent = msg;
+  function removeReviewPanel() {
+    document.removeEventListener('click', closeBucketDropdown);
+    reviewPanel?.remove();
+    reviewPanel = null;
+    reviewItems          = [];
+    reviewSelectedUrls   = new Set();
+    reviewSelectedBuckets = new Set();
+    reviewBucketsLoaded  = [];
   }
 
   // ---------------------------------------------------------------------------
-  // Image utilities (unchanged)
+  // Image utilities
   // ---------------------------------------------------------------------------
-
-  function isVisibleElement(el) {
-    if (!el) return false;
-    const rect = el.getBoundingClientRect();
-    if (rect.width < 40 || rect.height < 40) return false;
-    if (rect.bottom <= 0 || rect.right <= 0) return false;
-    if (rect.top >= window.innerHeight || rect.left >= window.innerWidth) return false;
-    const style = window.getComputedStyle(el);
-    return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || '1') > 0.05;
-  }
 
   function extractUrlFromCssImage(value) {
     if (!value) return '';
@@ -422,7 +701,7 @@ if (window.__grabbnInjected) {
     const value = String(raw).trim();
     if (!value) return '';
     if (value.startsWith('data:')) return value;
-    if (value.startsWith('blob:')) return ''; // browser-only, useless to the server
+    if (value.startsWith('blob:')) return '';
     try { return new URL(value, location.href).href; }
     catch { return ''; }
   }
@@ -433,128 +712,101 @@ if (window.__grabbnInjected) {
       .split(',')
       .map(part => {
         const bits = part.trim().split(/\s+/).filter(Boolean);
-        const url = bits[0] || '';
+        const url  = bits[0] || '';
         const descriptor = bits[1] || '';
         let score = 0;
-        if (/^\d+w$/i.test(descriptor)) score = parseInt(descriptor, 10) || 0;
+        if (/^\d+w$/i.test(descriptor))          score = parseInt(descriptor, 10) || 0;
         else if (/^\d+(\.\d+)?x$/i.test(descriptor)) score = (parseFloat(descriptor) || 0) * 1000;
         return { url, score };
       })
-      .filter(candidate => candidate.url)
+      .filter(c => c.url)
       .sort((a, b) => b.score - a.score);
   }
 
-  function getElementImageUrl(el) {
-    if (!el) return '';
 
-    const directCandidates = [
-      el.getAttribute?.('data-old-hires'),
-      el.getAttribute?.('src'),
-      el.getAttribute?.('data-src'),
-      el.getAttribute?.('data-origin-src'),
-      el.getAttribute?.('data-lazy-src'),
-      el.getAttribute?.('data-main-image'),
-      el.getAttribute?.('before-src'),
-      el.getAttribute?.('data-before-src'),
-      el.getAttribute?.('data-original'),
-      el.getAttribute?.('data-image'),
-      el.currentSrc,
-      el.src,
-    ];
-    const attrCandidates = [];
-
-    const srcset = el.getAttribute?.('srcset') || el.getAttribute?.('data-srcset') || '';
-    if (srcset) {
-      parseSrcsetCandidates(srcset).forEach(candidate => attrCandidates.push(candidate.url));
+  function gatherImgs(root) {
+    const imgs = [...root.querySelectorAll('img')];
+    for (const el of root.querySelectorAll('*')) {
+      if (el.shadowRoot) imgs.push(...el.shadowRoot.querySelectorAll('img'));
     }
-    directCandidates.forEach(candidate => attrCandidates.push(candidate));
-
-    const bg = extractUrlFromCssImage(el.style?.backgroundImage || '');
-    const computedBg = extractUrlFromCssImage(window.getComputedStyle(el).backgroundImage || '');
-    if (bg) attrCandidates.push(bg);
-    if (computedBg) attrCandidates.push(computedBg);
-
-    for (const candidate of attrCandidates) {
-      const normalized = normalizeImageUrl(candidate);
-      if (normalized && !/^data:image\/gif;base64,/i.test(normalized)) return normalized;
-    }
-
-    return '';
+    return imgs;
   }
 
-  function getCandidateImages(link) {
-    const candidates = [];
-    const seen = new Set();
+  async function extractDomProductImage(card, href) {
+    const urlScores = new Map(); // url → best score seen so far
+    const pageUrl   = location.href;
+    const pageRoot  = location.origin + '/';
 
-    function addImage(img, baseScore) {
-      if (!img || seen.has(img) || !isVisibleElement(img)) return;
-      const url = getElementImageUrl(img);
+    function addCandidate(raw, baseScore) {
+      if (!raw) return;
+      const url = normalizeImageUrl(String(raw).trim());
       if (!url) return;
-      seen.add(img);
-      const rect = img.getBoundingClientRect();
-      const area = rect.width * rect.height;
-      const naturalArea = (img.naturalWidth || 0) * (img.naturalHeight || 0);
-      const linkRect = link.getBoundingClientRect();
-      const imgCx = rect.left + rect.width / 2;
-      const imgCy = rect.top + rect.height / 2;
-      const linkCx = linkRect.left + linkRect.width / 2;
-      const linkCy = linkRect.top + linkRect.height / 2;
-      const distance = Math.hypot(imgCx - linkCx, imgCy - linkCy);
-      candidates.push({
-        url,
-        rect,
-        score: baseScore + Math.min(area / 5000, 120) + Math.min(naturalArea / 50000, 80) - Math.min(distance / 8, 120),
-      });
+      if (/^data:image\/gif;base64,/i.test(url)) return;
+      // img.src resolves to the page URL when src="" — skip it
+      if (url === pageUrl || url === pageRoot) return;
+      urlScores.set(url, Math.max(urlScores.get(url) || 0, baseScore));
     }
 
-    link.querySelectorAll('img').forEach(img => addImage(img, 400));
-    let current = link;
-    for (let depth = 0; current && depth < 8; depth += 1, current = current.parentElement) {
-      current.querySelectorAll('img').forEach(img => addImage(img, 300 - depth * 25));
-    }
+    for (const img of gatherImgs(card)) {
+      // Bonus for images that have actually loaded at a decent size
+      const naturalBonus =
+        img.naturalWidth > 1 && img.naturalHeight > 1
+          ? Math.min((img.naturalWidth * img.naturalHeight) / 10000, 100)
+          : 0;
 
-    const linkAncestors = new Set();
-    let lcaEl = link;
-    while (lcaEl) { linkAncestors.add(lcaEl); lcaEl = lcaEl.parentElement; }
+      // Lazy-load attributes (checked before src so placeholder srcs don't win)
+      const LAZY_ATTRS = [
+        'data-src', 'data-lazy-src', 'data-origin-src', 'data-original',
+        'data-lazy', 'data-url', 'data-image', 'data-main-image',
+        'data-old-hires', 'before-src', 'data-before-src',
+      ];
+      for (const attr of LAZY_ATTRS) {
+        const v = img.getAttribute(attr);
+        if (v) { addCandidate(v, 80 + naturalBonus); break; }
+      }
 
-    let lcaBestImg = null, lcaBestDepth = Infinity;
-    for (const img of document.querySelectorAll('img')) {
-      const r = img.getBoundingClientRect();
-      if (r.width < 60 || r.height < 60 || r.bottom <= 0 || r.top >= window.innerHeight) continue;
-      let el = img.parentElement;
-      let depth = 0;
-      while (el && depth < 15) {
-        if (linkAncestors.has(el)) {
-          if (depth < lcaBestDepth) { lcaBestDepth = depth; lcaBestImg = img; }
-          break;
+      // Browser-selected source (resolves picture/srcset correctly once loaded)
+      if (img.currentSrc) addCandidate(img.currentSrc, 100 + naturalBonus);
+
+      // Explicit src attribute (may be a placeholder — lower priority)
+      addCandidate(img.getAttribute('src'), 60 + naturalBonus);
+
+      // srcset on the img element itself
+      const srcset = img.getAttribute('srcset') || img.getAttribute('data-srcset') || '';
+      if (srcset) {
+        const best = parseSrcsetCandidates(srcset)[0];
+        if (best?.url) addCandidate(best.url, 70 + naturalBonus);
+      }
+
+      // <source> elements inside a <picture> parent
+      if (img.parentElement?.tagName === 'PICTURE') {
+        for (const src of img.parentElement.querySelectorAll('source')) {
+          const ss = src.getAttribute('srcset') || '';
+          if (!ss) continue;
+          const best = parseSrcsetCandidates(ss)[0];
+          if (best?.url) { addCandidate(best.url, 90 + naturalBonus); break; }
         }
-        depth++;
-        el = el.parentElement;
       }
     }
-    if (lcaBestImg) addImage(lcaBestImg, 520);
 
-    [
-      '#landingImage',
-      '#imgTagWrapperId img',
-      '#main-image-container img',
-      '#imageBlock img',
-      '.product-intro__main img',
-      '.product-intro__thumbs-item--main img',
-      '[class*="product-intro__main"] img',
-      '[class*="main-swiper"] img',
-      '.crop-image-container img',
-    ].forEach(selector => {
-      document.querySelectorAll(selector).forEach(img => addImage(img, 260));
-    });
+    // CSS background-image fallback (only when no <img> candidates found)
+    if (!urlScores.size) {
+      for (const el of card.querySelectorAll('*')) {
+        const bg  = extractUrlFromCssImage(window.getComputedStyle(el).backgroundImage || '');
+        const url = normalizeImageUrl(bg);
+        if (url && url !== pageUrl) { urlScores.set(url, 20); break; }
+      }
+    }
 
-    return candidates.sort((a, b) => b.score - a.score);
-  }
+    // YouTube: derive thumbnail from video ID in the href
+    if (!urlScores.size && href) {
+      const ytId = new URLSearchParams(new URL(href, location.href).search).get('v');
+      if (ytId) urlScores.set(`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`, 50);
+    }
 
-  async function extractDomProductImage(link) {
-    const candidates = getCandidateImages(link);
-    if (!candidates.length) return null;
-    return { image: candidates[0].url, source: 'dom_image_url' };
+    if (!urlScores.size) return null;
+    const [bestUrl] = [...urlScores.entries()].sort((a, b) => b[1] - a[1]);
+    return { image: bestUrl[0], source: 'dom_image_url' };
   }
 
   // ---------------------------------------------------------------------------
@@ -572,6 +824,6 @@ if (window.__grabbnInjected) {
   // ---------------------------------------------------------------------------
 
   chrome.runtime.onMessage.addListener((msg) => {
-    if (msg.type === 'START_PICK_MODE') startPickMode();
+    if (msg.type === 'START_PICK_MODE') startPickMode(msg.siblingsActive !== false);
   });
 }

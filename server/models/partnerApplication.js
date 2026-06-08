@@ -17,7 +17,10 @@ const partnerApplicationSchema = new mongoose.Schema({
     submittedAt:     { type: Date, default: Date.now },
     reviewedAt:      { type: Date, default: null },
     reviewedBy:      { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    rejectionReason: { type: String, default: '' },
+    rejectionReason:     { type: String, default: '' },
+    tier:                { type: String, enum: ['junior', 'pro'], default: null },
+    usResidentConfirmed: { type: Boolean, default: false },
+    ageConfirmed:        { type: Boolean, default: false },
 }, { timestamps: false });
 
 export default mongoose.model('PartnerApplication', partnerApplicationSchema);

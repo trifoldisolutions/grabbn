@@ -20,22 +20,22 @@
             </div>
             <div class="text-center">
                 <div class="text-white text-sm font-bold tracking-widest uppercase" style="letter-spacing: 0.12em;">Grabbn</div>
-                <div class="text-woodsmoke-500 text-xs mt-0.5">Restricted access</div>
+                <div class="text-woodsmoke-500 text-sm mt-0.5">Restricted access</div>
             </div>
         </div>
 
         <!-- Card -->
-        <div class="bg-woodsmoke-900 border border-woodsmoke-700 rounded-xl p-7 space-y-5">
+        <div class="bg-woodsmoke-900 border border-woodsmoke-700 rounded-md p-7 space-y-5">
 
             <!-- Error banner -->
-            <div id="errorBanner" class="hidden bg-red-900/40 border border-red-700/50 text-red-300 text-sm rounded-md px-4 py-3"></div>
+            <div id="errorBanner" class="hidden bg-red-900/40 border border-red-700/50 text-red-300 text-base rounded-md px-4 py-3"></div>
 
             <!-- Step 1: Credentials -->
             <div id="stepCredentials">
-                <h1 class="text-white text-base font-semibold mb-5">Sign in</h1>
+                <h1 class="text-white text-lg font-semibold mb-5">Sign in</h1>
                 <form id="credentialsForm" class="space-y-4" novalidate>
                     <div class="space-y-1">
-                        <label class="text-xs font-semibold text-woodsmoke-400 uppercase tracking-wider">Email</label>
+                        <label class="text-sm font-semibold text-woodsmoke-400 uppercase tracking-wider">Email</label>
                         <input
                             id="emailInput"
                             type="email"
@@ -43,42 +43,88 @@
                             required
                             autofocus
                             placeholder="you@example.com"
-                            class="w-full h-10 px-3 bg-woodsmoke-800 border border-woodsmoke-600 rounded-md text-sm text-white placeholder-woodsmoke-500 focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent transition-colors"
+                            class="w-full h-11 px-3 bg-woodsmoke-800 border border-woodsmoke-600 rounded-md text-base text-white placeholder-woodsmoke-500 focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent transition-colors"
                         />
                     </div>
                     <div class="space-y-1">
-                        <label class="text-xs font-semibold text-woodsmoke-400 uppercase tracking-wider">Password</label>
+                        <label class="text-sm font-semibold text-woodsmoke-400 uppercase tracking-wider">Password</label>
                         <input
                             id="passwordInput"
                             type="password"
                             autocomplete="current-password"
                             required
                             placeholder="••••••••"
-                            class="w-full h-10 px-3 bg-woodsmoke-800 border border-woodsmoke-600 rounded-md text-sm text-white placeholder-woodsmoke-500 focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent transition-colors"
+                            class="w-full h-11 px-3 bg-woodsmoke-800 border border-woodsmoke-600 rounded-md text-base text-white placeholder-woodsmoke-500 focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent transition-colors"
                         />
                     </div>
                     <button
                         type="submit"
                         id="credentialsSubmitBtn"
-                        class="w-full h-10 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                        class="w-full h-11 bg-orchid-600 hover:bg-orchid-700 text-white text-base font-semibold rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
                         Continue
+                    </button>
+                </form>
+                <button id="forgotPasswordLink" class="mt-3 flex items-center justify-center text-sm text-woodsmoke-500 hover:text-woodsmoke-300 transition-colors w-full">
+                    Forgot password?
+                </button>
+            </div>
+
+            <!-- Step 3: Forgot password -->
+            <div id="stepForgot" class="hidden">
+                <button id="backFromForgot" class="flex items-center justify-center gap-1.5 text-woodsmoke-400 hover:text-white text-sm mb-5 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="m7.825 13l4.9 4.9q.3.3.288.7t-.313.7q-.3.275-.7.288t-.7-.288l-6.6-6.6q-.15-.15-.213-.325T4.425 12t.062-.375T4.7 11.3l6.6-6.6q.275-.275.688-.275t.712.275q.3.3.3.713t-.3.712L7.825 11H19q.425 0 .713.288T20 12t-.288.713T19 13z"/></svg>
+                    Back
+                </button>
+                <h1 class="text-white text-lg font-semibold mb-1">Reset your password</h1>
+                <p class="text-woodsmoke-400 text-sm mb-5">Enter your admin email and we'll send you a reset link.</p>
+                <form id="forgotForm" class="space-y-4" novalidate>
+                    <div class="space-y-1">
+                        <label class="text-sm font-semibold text-woodsmoke-400 uppercase tracking-wider">Email</label>
+                        <input
+                            id="forgotEmailInput"
+                            type="email"
+                            autocomplete="email"
+                            required
+                            placeholder="you@example.com"
+                            class="w-full h-11 px-3 bg-woodsmoke-800 border border-woodsmoke-600 rounded-md text-base text-white placeholder-woodsmoke-500 focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent transition-colors"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        id="forgotSubmitBtn"
+                        class="w-full h-11 bg-orchid-600 hover:bg-orchid-700 text-white text-base font-semibold rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                        Send reset link
                     </button>
                 </form>
             </div>
 
+            <!-- Step 4: Forgot password sent -->
+            <div id="stepForgotSent" class="hidden text-center space-y-4 py-2">
+                <div class="flex items-center justify-center w-10 h-10 rounded-md bg-orchid-900/40 border border-orchid-700/40 mx-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="text-orchid-400"><path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2m0 4l-8 5l-8-5V6l8 5l8-5z"/></svg>
+                </div>
+                <div>
+                    <p class="text-white text-base font-semibold">Check your email</p>
+                    <p class="text-woodsmoke-400 text-sm mt-1">If that address belongs to an admin account, a reset link is on its way.</p>
+                </div>
+                <button id="backToLoginFromSent" class="flex items-center justify-center text-sm text-woodsmoke-500 hover:text-woodsmoke-300 transition-colors">
+                    Back to sign in
+                </button>
+            </div>
+
             <!-- Step 2: OTP (hidden initially) -->
             <div id="stepOtp" class="hidden">
-                <button id="backToCredentials" class="flex items-center gap-1.5 text-woodsmoke-400 hover:text-white text-xs mb-5 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"><path fill="currentColor" d="m7.825 13l4.9 4.9q.3.3.288.7t-.313.7q-.3.275-.7.288t-.7-.288l-6.6-6.6q-.15-.15-.213-.325T4.425 12t.062-.375T4.7 11.3l6.6-6.6q.275-.275.688-.275t.712.275q.3.3.3.713t-.3.712L7.825 11H19q.425 0 .713.288T20 12t-.288.713T19 13z"/></svg>
+                <button id="backToCredentials" class="flex items-center justify-center gap-1.5 text-woodsmoke-400 hover:text-white text-sm mb-5 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="m7.825 13l4.9 4.9q.3.3.288.7t-.313.7q-.3.275-.7.288t-.7-.288l-6.6-6.6q-.15-.15-.213-.325T4.425 12t.062-.375T4.7 11.3l6.6-6.6q.275-.275.688-.275t.712.275q.3.3.3.713t-.3.712L7.825 11H19q.425 0 .713.288T20 12t-.288.713T19 13z"/></svg>
                     Back
                 </button>
-                <h1 class="text-white text-base font-semibold mb-1">Check your email</h1>
-                <p class="text-woodsmoke-400 text-xs mb-5">
+                <h1 class="text-white text-lg font-semibold mb-1">Check your email</h1>
+                <p class="text-woodsmoke-400 text-sm mb-5">
                     We sent a 6-digit code to <span id="otpEmailLabel" class="text-woodsmoke-200 font-medium"></span>
                 </p>
                 <form id="otpForm" class="space-y-4" novalidate>
                     <div class="space-y-1">
-                        <label class="text-xs font-semibold text-woodsmoke-400 uppercase tracking-wider">Verification Code</label>
+                        <label class="text-sm font-semibold text-woodsmoke-400 uppercase tracking-wider">Verification Code</label>
                         <input
                             id="otpInput"
                             type="text"
@@ -86,17 +132,17 @@
                             maxlength="6"
                             placeholder="000000"
                             autocomplete="one-time-code"
-                            class="w-full h-10 px-3 bg-woodsmoke-800 border border-woodsmoke-600 rounded-md text-sm text-white placeholder-woodsmoke-500 focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent tracking-[0.3em] text-center transition-colors"
+                            class="w-full h-11 px-3 bg-woodsmoke-800 border border-woodsmoke-600 rounded-md text-base text-white placeholder-woodsmoke-500 focus:outline-none focus:ring-2 focus:ring-orchid-500 focus:border-transparent tracking-[0.3em] text-center transition-colors"
                         />
                     </div>
                     <button
                         type="submit"
                         id="otpSubmitBtn"
-                        class="w-full h-10 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                        class="w-full h-11 bg-orchid-600 hover:bg-orchid-700 text-white text-base font-semibold rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
                         Sign in
                     </button>
                 </form>
-                <button id="resendOtpBtn" class="mt-3 text-xs text-woodsmoke-500 hover:text-woodsmoke-300 transition-colors w-full text-center">
+                <button id="resendOtpBtn" class="mt-3 flex items-center justify-center text-sm text-woodsmoke-500 hover:text-woodsmoke-300 transition-colors w-full">
                     Resend code
                 </button>
             </div>
@@ -226,6 +272,41 @@ document.getElementById('resendOtpBtn').addEventListener('click', async () => {
 // ── OTP: digits only ──────────────────────────────────────────────────────────
 document.getElementById('otpInput').addEventListener('input', function() {
     this.value = this.value.replace(/\D/g, '').slice(0, 6);
+});
+
+// ── Forgot password ───────────────────────────────────────────────────────────
+function showStep(id) {
+    ['stepCredentials', 'stepOtp', 'stepForgot', 'stepForgotSent'].forEach(s => {
+        document.getElementById(s).classList.toggle('hidden', s !== id);
+    });
+    clearError();
+}
+
+document.getElementById('forgotPasswordLink').addEventListener('click', () => showStep('stepForgot'));
+document.getElementById('backFromForgot').addEventListener('click', () => showStep('stepCredentials'));
+document.getElementById('backToLoginFromSent').addEventListener('click', () => showStep('stepCredentials'));
+
+document.getElementById('forgotSubmitBtn').dataset.label = 'Send reset link';
+document.getElementById('forgotForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+
+    const email = document.getElementById('forgotEmailInput').value.trim();
+    if (!email) return showError('Email is required.');
+
+    setLoading('forgotSubmitBtn', true);
+    try {
+        await fetch('/api/admin/auth/forgot-password', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ email }),
+        });
+        showStep('stepForgotSent');
+    } catch {
+        showError('Something went wrong. Please try again.');
+    } finally {
+        setLoading('forgotSubmitBtn', false);
+    }
 });
 </script>
 

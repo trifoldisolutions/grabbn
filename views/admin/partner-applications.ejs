@@ -20,7 +20,7 @@
     </div>
 
     <!-- ── Applications table ────────────────────────────────────────────────── -->
-    <div class="bg-white border border-silver-100 rounded-xl overflow-hidden">
+    <div class="bg-white border border-silver-100 rounded-md overflow-hidden">
         <% if (!applications.length) { %>
         <div class="p-8 text-center text-sm text-woodsmoke-400">No <%= status %> applications.</div>
         <% } else { %>
@@ -45,11 +45,11 @@
                     </td>
                     <td class="px-4 py-3">
                         <% if (app.status === 'pending') { %>
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700">Pending</span>
+                            <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-100 text-amber-700">Pending</span>
                         <% } else if (app.status === 'approved') { %>
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700">Approved</span>
+                            <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-100 text-emerald-700">Approved</span>
                         <% } else { %>
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700">Rejected</span>
+                            <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-red-100 text-red-700">Rejected</span>
                         <% } %>
                     </td>
                     <td class="px-4 py-3 text-right">

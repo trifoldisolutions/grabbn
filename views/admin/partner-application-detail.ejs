@@ -16,21 +16,21 @@
 
     <!-- ── Status banner ──────────────────────────────────────────────────── -->
     <% if (application.status === 'approved') { %>
-    <div class="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-sm text-emerald-800">
+    <div class="bg-emerald-50 border border-emerald-200 rounded-md px-4 py-3 text-sm text-emerald-800">
         Approved on <%= new Date(application.reviewedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %>
     </div>
     <% } else if (application.status === 'rejected') { %>
-    <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
+    <div class="bg-red-50 border border-red-200 rounded-md px-4 py-3 text-sm text-red-800">
         Rejected on <%= new Date(application.reviewedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) %>
         <% if (application.rejectionReason) { %><br><span class="text-red-700">Reason: <%= application.rejectionReason %></span><% } %>
     </div>
     <% } %>
 
     <!-- ── Applicant info ─────────────────────────────────────────────────── -->
-    <div class="bg-white border border-silver-100 rounded-xl p-5 space-y-3">
+    <div class="bg-white border border-silver-100 rounded-md p-5 space-y-3">
         <h3 class="text-xs font-semibold text-woodsmoke-500 uppercase tracking-wider">Applicant</h3>
         <div class="flex items-start gap-4">
-            <div class="w-10 h-10 rounded-full bg-orchid-100 text-orchid-600 flex items-center justify-center font-bold shrink-0">
+            <div class="w-10 h-10 rounded-md bg-orchid-100 text-orchid-600 flex items-center justify-center font-bold shrink-0">
                 <%= (application.userId?.username || application.userId?.email || '?')[0].toUpperCase() %>
             </div>
             <div class="space-y-0.5">
@@ -50,13 +50,13 @@
     </div>
 
     <!-- ── Pitch ──────────────────────────────────────────────────────────── -->
-    <div class="bg-white border border-silver-100 rounded-xl p-5 space-y-3">
+    <div class="bg-white border border-silver-100 rounded-md p-5 space-y-3">
         <h3 class="text-xs font-semibold text-woodsmoke-500 uppercase tracking-wider">Pitch</h3>
         <p class="text-sm text-woodsmoke-700 whitespace-pre-line leading-relaxed"><%= application.pitch || '(no pitch provided)' %></p>
     </div>
 
     <!-- ── Identity files ─────────────────────────────────────────────────── -->
-    <div class="bg-white border border-silver-100 rounded-xl p-5 space-y-4">
+    <div class="bg-white border border-silver-100 rounded-md p-5 space-y-4">
         <h3 class="text-xs font-semibold text-woodsmoke-500 uppercase tracking-wider">Identity Verification</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="space-y-2">
@@ -80,11 +80,11 @@
 
     <!-- ── Claimed accounts ───────────────────────────────────────────────── -->
     <% if (application.claimedAccounts && application.claimedAccounts.length > 0) { %>
-    <div class="bg-white border border-silver-100 rounded-xl p-5 space-y-3">
+    <div class="bg-white border border-silver-100 rounded-md p-5 space-y-3">
         <h3 class="text-xs font-semibold text-woodsmoke-500 uppercase tracking-wider">Claimed Linked Accounts</h3>
         <div class="space-y-3">
             <% application.claimedAccounts.forEach((acc, i) => { %>
-            <div class="bg-silver-50 border border-silver-100 rounded-lg p-3 text-xs space-y-1">
+            <div class="bg-silver-50 border border-silver-100 rounded-md p-3 text-xs space-y-1">
                 <div class="font-semibold text-woodsmoke-700">Account <%= i + 1 %></div>
                 <div class="text-woodsmoke-500">Email: <span class="text-woodsmoke-800"><%= acc.email || '—' %></span></div>
                 <div class="text-woodsmoke-500">Phone: <span class="text-woodsmoke-800"><%= acc.phone || '—' %></span></div>
@@ -101,16 +101,16 @@
 
     <!-- ── Actions ────────────────────────────────────────────────────────── -->
     <% if (application.status === 'pending') { %>
-    <div class="bg-white border border-silver-100 rounded-xl p-5 space-y-4">
+    <div class="bg-white border border-silver-100 rounded-md p-5 space-y-4">
         <h3 class="text-xs font-semibold text-woodsmoke-500 uppercase tracking-wider">Decision</h3>
 
         <div class="flex flex-wrap gap-3">
             <button id="approveBtn"
-                class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-md transition-colors">
+                class="px-5 py-2.5 flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-md transition-colors">
                 Approve
             </button>
             <button id="rejectBtn"
-                class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-md transition-colors">
+                class="px-5 py-2.5 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-md transition-colors">
                 Reject
             </button>
         </div>
@@ -123,11 +123,11 @@
                 placeholder="e.g. insufficient track record"></textarea>
             <div class="flex gap-2">
                 <button id="confirmRejectBtn"
-                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-md transition-colors">
+                    class="px-4 py-2 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-md transition-colors">
                     Confirm Reject
                 </button>
                 <button id="cancelRejectBtn"
-                    class="px-4 py-2 border border-silver-200 text-sm font-semibold text-woodsmoke-700 rounded-md hover:bg-silver-50 transition-colors">
+                    class="px-4 py-2 flex items-center justify-center border border-silver-200 text-sm font-semibold text-woodsmoke-700 rounded-md hover:bg-silver-50 transition-colors">
                     Cancel
                 </button>
             </div>

@@ -1,6 +1,7 @@
 <%
   title = 'Grabbn Partner Program'
   page  = 'partnership'
+  var isJuniorPartner = user && user.isPartner
 %>
 <%- include('partials/layout') %>
 
@@ -17,6 +18,12 @@
                class="inline-flex items-center justify-center h-10 px-5 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
                 Apply Now
             </a>
+            <% if (isJuniorPartner) { %>
+            <a href="/partnership/apply?tier=pro"
+               class="inline-flex items-center justify-center h-10 px-5 border border-orchid-600 text-orchid-600 hover:bg-orchid-50 text-sm font-semibold rounded-md transition-colors">
+                Upgrade to Pro
+            </a>
+            <% } %>
             <a href="/partnership/pdf" target="_blank"
                class="inline-flex items-center justify-center gap-1.5 h-10 px-4 border border-silver-300 hover:border-silver-400 text-woodsmoke-600 hover:text-woodsmoke-800 text-sm font-medium rounded-md transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2h9l5 5v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm9 0v5h5M9 13h6m-6 4h6m-6-8h2"/></svg>
@@ -148,10 +155,12 @@
                             </a>
                         </td>
                         <td class="px-4 py-3">
+                            <% if (isJuniorPartner) { %>
                             <a href="/partnership/apply?tier=pro"
                                class="inline-flex items-center justify-center h-10 px-4 border border-orchid-600 text-orchid-600 hover:bg-orchid-50 text-xs font-semibold rounded-md transition-colors">
                                 Upgrade Status
                             </a>
+                            <% } %>
                         </td>
                     </tr>
                 </tfoot>
@@ -327,7 +336,13 @@
            class="inline-flex items-center justify-center h-10 px-5 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
             Apply Now
         </a>
-        <a href="/partnership/pdf"
+        <% if (isJuniorPartner) { %>
+        <a href="/partnership/apply?tier=pro"
+           class="inline-flex items-center justify-center h-10 px-5 border border-orchid-600 text-orchid-600 hover:bg-orchid-50 text-sm font-semibold rounded-md transition-colors">
+            Upgrade to Pro
+        </a>
+        <% } %>
+        <a href="/partnership/pdf" target="_blank"
            class="inline-flex items-center justify-center gap-1.5 h-10 px-4 border border-silver-300 hover:border-silver-400 text-woodsmoke-600 hover:text-woodsmoke-800 text-sm font-medium rounded-md transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M6 2h9l5 5v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zm9 0v5h5M9 13h6m-6 4h6m-6-8h2"/></svg>
             Save as PDF

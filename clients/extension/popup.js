@@ -170,6 +170,24 @@ document.getElementById('input-otp').addEventListener('keydown', (e) => {
 });
 
 // ---------------------------------------------------------------------------
+// Siblings toggle
+// ---------------------------------------------------------------------------
+
+let siblingsActive = true;
+
+const siblingsToggle = document.getElementById('siblings-toggle');
+siblingsToggle.addEventListener('click', () => {
+  siblingsActive = !siblingsActive;
+  siblingsToggle.dataset.active = String(siblingsActive);
+  siblingsToggle.setAttribute('aria-checked', String(siblingsActive));
+  if (siblingsActive) {
+    siblingsToggle.classList.add('toggle-on');
+  } else {
+    siblingsToggle.classList.remove('toggle-on');
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Pick mode
 // ---------------------------------------------------------------------------
 
@@ -178,7 +196,7 @@ document.getElementById('btn-pick').addEventListener('click', async () => {
   btn.disabled = true;
 
   try {
-    await sendRuntimeMessage({ type: 'ACTIVATE_PICK_MODE' });
+    await sendRuntimeMessage({ type: 'ACTIVATE_PICK_MODE', siblingsActive });
     window.close();
   } catch (err) {
     btn.disabled = false;

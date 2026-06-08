@@ -159,6 +159,63 @@
       line-height: 1.5;
     }
 
+    /* ── Siblings toggle ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 0 2px;
+    }
+
+    .toggle-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .toggle-label {
+      font-size: 12px;
+      color: #454545;
+      font-weight: 500;
+    }
+
+    .toggle-sub {
+      font-size: 11px;
+      color: #9a9a9a;
+    }
+
+    .toggle-btn {
+      width: 36px;
+      height: 20px;
+      border-radius: 10px;
+      border: none;
+      position: relative;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: background 0.15s;
+      background: #dcdcdc;
+      padding: 0;
+    }
+
+    .toggle-btn.toggle-on { background: #b346b3; }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+      transition: transform 0.15s;
+    }
+
+    .toggle-btn.toggle-on .toggle-thumb { transform: translateX(16px); }
+
     /* ── Loading ── */
     #view-loading {
       display: flex;
@@ -197,6 +254,17 @@
       </svg>
       Pick a link
     </button>
+
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <span class="toggle-label">Highlight Siblings</span>
+        <span class="toggle-sub">Auto-selects matching cards</span>
+      </div>
+      <button id="siblings-toggle" role="switch" aria-checked="true" data-active="true" class="toggle-btn toggle-on">
+        <span id="siblings-thumb" class="toggle-thumb"></span>
+      </button>
+    </div>
+
     <button class="logout-btn" id="btn-logout">Sign out</button>
   </div>
 

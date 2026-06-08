@@ -1,4 +1,4 @@
-/* ── Pick mode cursor ────────────────────────────────────────────────────── */
+/* Fallback: ensure crosshair even in areas the shield doesn't reach */
 body.grabbn-pick-mode,
 body.grabbn-pick-mode * {
   cursor: crosshair !important;
@@ -7,18 +7,26 @@ body.grabbn-pick-mode * {
 /* Restore normal cursors inside the extension's own UI */
 #grabbn-sel-panel,
 #grabbn-sel-panel *,
-#grabbn-overlay,
-#grabbn-overlay *,
+#grabbn-review-panel,
+#grabbn-review-panel *,
 #grabbn-hint {
   cursor: default !important;
 }
 
 #grabbn-sel-panel button,
 #grabbn-sel-panel input[type="checkbox"],
-#grabbn-overlay button,
-#grabbn-overlay input[type="checkbox"],
-#grabbn-overlay label {
+#grabbn-review-panel button,
+#grabbn-review-panel input[type="checkbox"],
+#grabbn-review-panel label {
   cursor: pointer !important;
+}
+
+/* ── Card state outlines ─────────────────────────────────────────────────── */
+
+.grabbn-listing {
+  outline: 2px dashed rgba(179, 70, 179, 0.4) !important;
+  outline-offset: 2px !important;
+  border-radius: 3px !important;
 }
 
 .grabbn-link-hover {
@@ -32,10 +40,35 @@ body.grabbn-pick-mode * {
   outline: 2px solid #b346b3 !important;
   outline-offset: 2px !important;
   border-radius: 3px !important;
-  background-color: rgba(179, 70, 179, 0.14) !important;
+  background-color: rgba(179, 70, 179, 0.10) !important;
+}
+
+/* ── Injected checkbox ───────────────────────────────────────────────────── */
+
+.grabbn-cb-wrap {
+  position: absolute !important;
+  top: 6px !important;
+  left: 6px !important;
+  z-index: 2147483646 !important;
+  pointer-events: auto !important;
+  background: rgba(255, 255, 255, 0.90) !important;
+  border-radius: 4px !important;
+  padding: 3px !important;
+  line-height: 0 !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18) !important;
+}
+
+.grabbn-cb-input {
+  width: 15px !important;
+  height: 15px !important;
+  cursor: pointer !important;
+  accent-color: #b346b3 !important;
+  margin: 0 !important;
+  display: block !important;
 }
 
 /* ── Hint banner ─────────────────────────────────────────────────────────── */
+
 #grabbn-hint {
   position: fixed;
   bottom: 24px;
@@ -53,268 +86,17 @@ body.grabbn-pick-mode * {
   white-space: nowrap;
 }
 
-/* ── Overlay backdrop ────────────────────────────────────────────────────── */
-#grabbn-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2147483646;
-  background: rgba(25, 25, 25, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Jost', system-ui, sans-serif;
-}
+/* ── Selection panel (phase 2) ───────────────────────────────────────────── */
 
-/* ── Modal ───────────────────────────────────────────────────────────────── */
-#grabbn-modal {
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 24px 64px rgba(64, 18, 61, 0.22);
-  width: 320px;
-  max-height: 500px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-/* ── Header ──────────────────────────────────────────────────────────────── */
-#grabbn-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 13px 14px 11px;
-  border-bottom: 1px solid #efefef;
-}
-
-#grabbn-modal-logo {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #943792;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.2px;
-}
-
-#grabbn-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #b0b0b0;
-  font-size: 13px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  line-height: 1;
-  font-family: inherit;
-}
-
-#grabbn-close:hover { background: #f8f8f8; color: #454545; }
-
-/* ── Link preview ────────────────────────────────────────────────────────── */
-#grabbn-link-preview {
-  font-size: 11px;
-  color: #7c7c7c;
-  padding: 6px 14px 9px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  border-bottom: 1px solid #efefef;
-}
-
-#grabbn-meta-note {
-  font-size: 11px;
-  line-height: 1.4;
-  color: #8a5a11;
-  background: #fff7e6;
-  padding: 0 14px;
-}
-
-#grabbn-meta-note:not(:empty) {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #efefef;
-}
-
-/* ── Bucket list ─────────────────────────────────────────────────────────── */
-#grabbn-bucket-list {
-  overflow-y: auto;
-  padding: 6px 8px;
-  flex: 1;
-}
-
-.grabbn-bucket-row {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  width: 100%;
-  padding: 6px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.1s;
-}
-
-.grabbn-bucket-row:hover { background: #fdf6fd; }
-
-.grabbn-cb {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-  accent-color: #b346b3;
-  cursor: pointer;
-}
-
-.grabbn-bucket-thumb {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  object-fit: cover;
-  flex-shrink: 0;
-  background: #efefef;
-}
-
-.grabbn-bucket-thumb-empty {
-  background: #f3d8f6;
-}
-
-.grabbn-bucket-name {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 500;
-  color: #191919;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.grabbn-bucket-count {
-  font-size: 11px;
-  color: #888888;
-  background: #f8f8f8;
-  padding: 1px 7px;
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-
-.grabbn-loading,
-.grabbn-empty {
-  font-size: 13px;
-  color: #888888;
-  text-align: center;
-  padding: 22px 16px;
-}
-
-/* ── Footer ──────────────────────────────────────────────────────────────── */
-#grabbn-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-top: 1px solid #efefef;
-  gap: 8px;
-}
-
-#grabbn-selected-count {
-  font-size: 12px;
-  color: #7c7c7c;
-  flex: 1;
-}
-
-#grabbn-save-btn {
-  height: 40px;
-  padding: 0 18px;
-  background: #b346b3;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s;
-}
-
-#grabbn-save-btn:hover:not(:disabled) { background: #943792; }
-#grabbn-save-btn:disabled { background: #ecbaed; cursor: not-allowed; }
-
-/* ── Inline error ────────────────────────────────────────────────────────── */
-#grabbn-inline-error {
-  font-size: 12px;
-  color: #dc2626;
-  padding: 0 14px 8px;
-  text-align: center;
-}
-
-/* ── Success state ───────────────────────────────────────────────────────── */
-#grabbn-success {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 16px 20px;
-  gap: 8px;
-}
-
-.grabbn-success-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #fdf6fd;
-  color: #b346b3;
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.grabbn-success-msg {
-  font-size: 14px;
-  font-weight: 600;
-  color: #40123d;
-  text-align: center;
-}
-
-#grabbn-again-btn {
-  flex: 1;
-  height: 40px;
-  padding: 0 12px;
-  background: none;
-  border: 1px solid #dcdcdc;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #525252;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.1s;
-}
-
-#grabbn-again-btn:hover { background: #f8f8f8; }
-
-#grabbn-done-btn {
-  height: 40px;
-  padding: 0 18px;
-  background: #b346b3;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s;
-}
-
-#grabbn-done-btn:hover { background: #943792; }
-
-/* ── Selection panel ─────────────────────────────────────────────────────── */
 #grabbn-sel-panel {
   position: fixed;
   bottom: 20px;
   right: 20px;
   z-index: 2147483647;
   background: #ffffff;
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: 0 8px 40px rgba(64, 18, 61, 0.22);
-  width: 300px;
-  max-height: 380px;
+  width: 280px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -349,40 +131,12 @@ body.grabbn-pick-mode * {
   border-radius: 10px;
 }
 
-#grabbn-sel-list {
-  list-style: none;
+#grabbn-sel-hint {
+  font-size: 11px;
+  color: #888;
+  padding: 8px 14px 2px;
   margin: 0;
-  padding: 4px 8px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.grabbn-sel-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
-  border-radius: 6px;
-  transition: background 0.1s;
-}
-
-.grabbn-sel-row:hover { background: #fdf6fd; }
-
-.grabbn-sel-cb {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  accent-color: #b346b3;
-  cursor: pointer;
-}
-
-.grabbn-sel-row-text {
-  flex: 1;
-  font-size: 12px;
-  color: #333333;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.45;
 }
 
 #grabbn-sel-footer {
@@ -408,7 +162,7 @@ body.grabbn-pick-mode * {
 
 #grabbn-sel-cancel:hover { background: #f8f8f8; }
 
-#grabbn-sel-save {
+#grabbn-sel-grab {
   flex: 2;
   height: 36px;
   background: #b346b3;
@@ -421,13 +175,362 @@ body.grabbn-pick-mode * {
   font-family: inherit;
   transition: background 0.15s;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-#grabbn-sel-save:hover { background: #943792; }
+#grabbn-sel-grab:hover:not(:disabled) { background: #943792; }
+#grabbn-sel-grab:disabled { background: #ecbaed; cursor: not-allowed; }
 
-#grabbn-sel-error {
+/* ── Review panel ────────────────────────────────────────────────────────── */
+
+#grabbn-review-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2147483647;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 40px rgba(64, 18, 61, 0.22);
+  width: 360px;
+  max-height: 520px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Jost', system-ui, sans-serif;
+}
+
+#grabbn-review-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px 10px;
+  border-bottom: 1px solid #efefef;
+  flex-shrink: 0;
+}
+
+#grabbn-review-logo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #943792;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+#grabbn-review-title {
+  flex: 1;
+  font-size: 12px;
+  color: #6d6d6d;
+}
+
+#grabbn-review-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #b0b0b0;
+  font-size: 13px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  font-family: inherit;
+}
+
+#grabbn-review-close:hover { background: #f8f8f8; color: #454545; }
+
+/* ── Review list ─────────────────────────────────────────────────────────── */
+
+#grabbn-review-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.grabbn-review-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  transition: background 0.08s;
+}
+
+.grabbn-review-row:hover { background: #fdf6fd; }
+
+.grabbn-review-cb {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  accent-color: #b346b3;
+  cursor: pointer;
+}
+
+.grabbn-review-thumb {
+  width: 40px;
+  height: 34px;
+  border-radius: 5px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #efefef;
+}
+
+.grabbn-review-thumb-empty {
+  width: 40px;
+  height: 34px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  background: #f3d8f6;
+}
+
+.grabbn-review-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.grabbn-review-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grabbn-review-href {
   font-size: 11px;
-  color: #dc2626;
-  text-align: center;
-  padding: 4px 14px 2px;
+  color: #9a9a9a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+/* ── Review footer ───────────────────────────────────────────────────────── */
+
+#grabbn-review-footer {
+  border-top: 1px solid #efefef;
+  flex-shrink: 0;
+}
+
+#grabbn-review-footer-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+#grabbn-review-count {
+  font-size: 11px;
+  color: #7c7c7c;
+  flex-shrink: 0;
+}
+
+#grabbn-review-all,
+#grabbn-review-none {
+  background: none;
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+#grabbn-review-all { color: #b346b3; font-weight: 600; }
+#grabbn-review-all:hover { color: #943792; }
+
+#grabbn-review-none { color: #9a9a9a; }
+#grabbn-review-none:hover { color: #555; }
+
+/* ── Bucket selector ─────────────────────────────────────────────────────── */
+
+#grabbn-bucket-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+#grabbn-bucket-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  background: #fff;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #191919;
+  cursor: pointer;
+  font-family: inherit;
+  overflow: hidden;
+}
+
+#grabbn-bucket-btn:hover { border-color: #b346b3; }
+
+#grabbn-bucket-label {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#grabbn-bucket-label[data-empty] { color: #9a9a9a; }
+
+.grabbn-bucket-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(64, 18, 61, 0.14);
+  z-index: 2147483647;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.grabbn-bucket-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.08s;
+}
+
+.grabbn-bucket-option:hover { background: #fdf6fd; }
+
+.grabbn-bucket-option-cb {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  accent-color: #b346b3;
+  cursor: pointer;
+}
+
+.grabbn-bucket-option-name {
+  font-size: 12px;
+  color: #191919;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grabbn-bucket-empty {
+  font-size: 12px;
+  color: #888;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.grabbn-hidden { display: none !important; }
+
+/* ── Review save button ──────────────────────────────────────────────────── */
+
+#grabbn-review-save {
+  height: 28px;
+  padding: 0 14px;
+  background: #b346b3;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#grabbn-review-save:hover:not(:disabled) { background: #943792; }
+#grabbn-review-save:disabled { background: #ecbaed; cursor: not-allowed; }
+
+/* ── Review status message ───────────────────────────────────────────────── */
+
+#grabbn-review-status {
+  font-size: 11px;
+  padding: 0 12px 8px;
+  text-align: center;
+}
+
+.grabbn-status-error { color: #dc2626; }
+
+/* ── Success state ───────────────────────────────────────────────────────── */
+
+#grabbn-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 20px;
+  gap: 8px;
+}
+
+.grabbn-success-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fdf6fd;
+  color: #b346b3;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grabbn-success-msg {
+  font-size: 14px;
+  font-weight: 600;
+  color: #40123d;
+  text-align: center;
+}
+
+#grabbn-again-btn {
+  flex: 1;
+  height: 36px;
+  padding: 0 12px;
+  background: none;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #525252;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#grabbn-again-btn:hover { background: #f8f8f8; }
+
+#grabbn-done-btn {
+  height: 36px;
+  padding: 0 18px;
+  background: #b346b3;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#grabbn-done-btn:hover { background: #943792; }

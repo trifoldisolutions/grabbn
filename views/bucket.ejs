@@ -287,7 +287,7 @@
     const allSorted    = bucket.links.slice().sort(function(a, b) {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        return (b.clickCount || 0) - (a.clickCount || 0);
+        return 0;
     });
     // Archived links are never shown in the main grid
     const sortedLinks  = allSorted.filter(function(l){ return !l.isArchived; });
@@ -351,6 +351,13 @@
                                 <%= link.text || 'Untitled Link' %><% if (link.duration) { %><span class="text-woodsmoke-400 font-normal"> · <%= link.duration %></span><% } %>
                             </p>
                             <p class="text-xs text-woodsmoke-400 truncate mt-0.5"><%= link.href %></p>
+                            <% if (link.addedAt) { %><p class="text-xs text-woodsmoke-300 mt-0.5"><%= new Date(link.addedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) %></p><% } %>
+                            <% var _reg = linkRegistrations && linkRegistrations[link.href]; %>
+                            <% if (_reg) { %>
+                            <p class="text-xs mt-1 font-medium <%= _reg.status === 'disputed' ? 'text-amber-500' : 'text-orchid-500' %>">
+                                <% if (_reg.status === 'disputed') { %>Registration under review<% } else { %>Registered by @<%= _reg.registrantUsername %><% } %>
+                            </p>
+                            <% } %>
                         </div>
                     </a>
                     <!-- 3-dot context menu (overlays thumbnail, top-right) -->
@@ -640,6 +647,7 @@
             window.location.href = '/report/' + bucketId;
         });
     });
+
 
     // ── Clone Link modal ──────────────────────────────────────────────────────
     (function () {
@@ -1950,4 +1958,22 @@
 })();
 </script>
 
+<% if (!isOwner) { %>
+<script>
+(function () {
+    var user = window.__GRABBN_USER__;
+    if (!user || user.isAnonymous || !user.username) return;
+    var LS_KEY = 'grabbn_bk_recent_other_' + user.username;
+    var MAX = 5;
+    var entry = { _id: '<%= bucketId %>', name: '<%= bucket.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'") %>', hasThumbnail: <%- bucket.thumbnail ? 'true' : 'false' %> };
+    try {
+        var list = JSON.parse(localStorage.getItem(LS_KEY)) || [];
+        list = list.filter(function (b) { return b._id !== entry._id; });
+        list.unshift(entry);
+        if (list.length > MAX) list.length = MAX;
+        localStorage.setItem(LS_KEY, JSON.stringify(list));
+    } catch (e) {}
+})();
+</script>
+<% } %>
 <%- include('partials/layout-end') %>

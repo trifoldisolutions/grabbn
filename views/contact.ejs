@@ -1,12 +1,548 @@
 <%
   title = 'Contact'
   page  = 'contact'
+  const isLoggedIn = user && !user.isAnonymous
 %>
 <%- include('partials/layout') %>
 
-<div class="p-6">
-    <h1 class="text-lg font-semibold mb-1">Contact</h1>
-    <p class="text-xs text-gray-400">Send a message or view your past requests</p>
+<div class="max-w-[992px] mx-auto px-6 pt-10 pb-24 space-y-8">
+
+    <!-- Success banner (hidden until form submits) -->
+    <div id="successBanner" class="hidden items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-md">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" class="shrink-0 mt-0.5 text-green-600"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m-2 14.5l-4-4l1.41-1.41L10 13.67l6.59-6.59L18 8.5z"/></svg>
+        <div>
+            <p class="text-sm font-semibold text-green-800">Message sent</p>
+            <p class="text-sm text-green-700 mt-0.5">We've received your message and will respond as soon as we can.</p>
+        </div>
+    </div>
+
+    <!-- Intent cards -->
+    <div id="intentCards" class="grid grid-cols-2 gap-3">
+
+        <button data-intent="support" class="intent-card w-full flex items-center gap-3 text-left px-4 py-3.5 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
+            <div class="intent-icon w-9 h-9 rounded-md bg-silver-100 flex items-center justify-center shrink-0 transition-colors">
+                <iconify-icon icon="mingcute:headphone-2-fill" width="16" height="16" class="intent-icon-svg text-woodsmoke-400 transition-colors"></iconify-icon>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-woodsmoke-900">I need help</div>
+                <div class="text-xs text-woodsmoke-400 mt-0.5">Platform issue, account problem, or bug report</div>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="intent-chevron shrink-0 text-woodsmoke-300 transition-colors"><path fill="currentColor" d="M10 6L8.59 7.41L13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </button>
+
+        <button data-intent="brand" class="intent-card w-full flex items-center gap-3 text-left px-4 py-3.5 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
+            <div class="intent-icon w-9 h-9 rounded-md bg-silver-100 flex items-center justify-center shrink-0 transition-colors">
+                <iconify-icon icon="mingcute:building-5-fill" width="16" height="16" class="intent-icon-svg text-woodsmoke-400 transition-colors"></iconify-icon>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-woodsmoke-900">Brand or business</div>
+                <div class="text-xs text-woodsmoke-400 mt-0.5">Commercial inquiries, advertising, or partnerships</div>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="intent-chevron shrink-0 text-woodsmoke-300 transition-colors"><path fill="currentColor" d="M10 6L8.59 7.41L13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </button>
+
+        <button data-intent="feedback" class="intent-card w-full flex items-center gap-3 text-left px-4 py-3.5 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
+            <div class="intent-icon w-9 h-9 rounded-md bg-silver-100 flex items-center justify-center shrink-0 transition-colors">
+                <iconify-icon icon="mingcute:bulb-2-fill" width="16" height="16" class="intent-icon-svg text-woodsmoke-400 transition-colors"></iconify-icon>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-woodsmoke-900">I have feedback</div>
+                <div class="text-xs text-woodsmoke-400 mt-0.5">Feature requests, suggestions, or general thoughts</div>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="intent-chevron shrink-0 text-woodsmoke-300 transition-colors"><path fill="currentColor" d="M10 6L8.59 7.41L13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </button>
+
+        <button data-intent="other" class="intent-card w-full flex items-center gap-3 text-left px-4 py-3.5 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
+            <div class="intent-icon w-9 h-9 rounded-md bg-silver-100 flex items-center justify-center shrink-0 transition-colors">
+                <iconify-icon icon="mingcute:news-fill" width="16" height="16" class="intent-icon-svg text-woodsmoke-400 transition-colors"></iconify-icon>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-woodsmoke-900">Press or other</div>
+                <div class="text-xs text-woodsmoke-400 mt-0.5">Media inquiries, legal, or anything else</div>
+            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" class="intent-chevron shrink-0 text-woodsmoke-300 transition-colors"><path fill="currentColor" d="M10 6L8.59 7.41L13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </button>
+
+    </div>
+
+    <!-- Contact form (hidden until intent selected) -->
+    <form id="contactForm" class="hidden space-y-7" novalidate>
+        <input type="hidden" id="intentInput" name="intent" value="">
+
+        <!-- Identity block — anonymous users only -->
+        <% if (!isLoggedIn) { %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-4">
+                <label class="text-sm font-medium text-woodsmoke-700" for="nameInput">
+                    Name <span class="text-woodsmoke-300 font-normal">(optional)</span>
+                </label>
+                <input id="nameInput" name="name" type="text" placeholder="Your name" autocomplete="name"
+                    class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:border-orchid-400 text-woodsmoke-800 placeholder-woodsmoke-300">
+            </div>
+            <div class="space-y-4">
+                <label class="text-sm font-medium text-woodsmoke-700" for="emailInput">
+                    Email <span class="text-red-400">*</span>
+                </label>
+                <input id="emailInput" name="email" type="email" placeholder="your@email.com" autocomplete="email"
+                    class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:border-orchid-400 text-woodsmoke-800 placeholder-woodsmoke-300">
+            </div>
+        </div>
+        <% } %>
+
+        <!-- Support-specific fields -->
+        <div id="fields-support" class="hidden space-y-6">
+            <div class="space-y-4">
+                <label class="text-sm font-medium text-woodsmoke-700">Category</label>
+                <input type="hidden" id="categoryInput" name="category" value="">
+                <div class="grid grid-cols-3 gap-3">
+
+                    <button type="button" data-cat="account" class="cat-btn flex items-center gap-3 px-4 py-3 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors text-left">
+                        <div class="cat-icon w-7 h-7 rounded-md bg-silver-100 flex items-center justify-center shrink-0 transition-colors">
+                            <iconify-icon icon="mingcute:user-3-fill" width="14" height="14" class="cat-icon-svg text-woodsmoke-400 transition-colors"></iconify-icon>
+                        </div>
+                        <span class="cat-label text-xs font-medium text-woodsmoke-700 leading-snug">Account &amp; verification</span>
+                    </button>
+
+                    <button type="button" data-cat="content" class="cat-btn flex items-center gap-3 px-4 py-3 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors text-left">
+                        <div class="cat-icon w-7 h-7 rounded-md bg-silver-100 flex items-center justify-center shrink-0 transition-colors">
+                            <iconify-icon icon="mingcute:album-2-fill" width="14" height="14" class="cat-icon-svg text-woodsmoke-400 transition-colors"></iconify-icon>
+                        </div>
+                        <span class="cat-label text-xs font-medium text-woodsmoke-700 leading-snug">Content &amp; buckets</span>
+                    </button>
+
+                    <button type="button" data-cat="bug" class="cat-btn flex items-center gap-3 px-4 py-3 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors text-left">
+                        <div class="cat-icon w-7 h-7 rounded-md bg-silver-100 flex items-center justify-center shrink-0 transition-colors">
+                            <iconify-icon icon="mingcute:bug-fill" width="14" height="14" class="cat-icon-svg text-woodsmoke-400 transition-colors"></iconify-icon>
+                        </div>
+                        <span class="cat-label text-xs font-medium text-woodsmoke-700 leading-snug">Technical bug</span>
+                    </button>
+
+                    <button type="button" data-cat="billing" class="cat-btn flex items-center gap-3 px-4 py-3 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors text-left">
+                        <div class="cat-icon w-7 h-7 rounded-md bg-silver-100 flex items-center justify-center shrink-0 transition-colors">
+                            <iconify-icon icon="mingcute:currency-dollar-2-fill" width="14" height="14" class="cat-icon-svg text-woodsmoke-400 transition-colors"></iconify-icon>
+                        </div>
+                        <span class="cat-label text-xs font-medium text-woodsmoke-700 leading-snug">Billing &amp; GTK</span>
+                    </button>
+
+                    <button type="button" data-cat="safety" class="cat-btn flex items-center gap-3 px-4 py-3 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors text-left">
+                        <div class="cat-icon w-7 h-7 rounded-md bg-silver-100 flex items-center justify-center shrink-0 transition-colors">
+                            <iconify-icon icon="mingcute:shield-shape-fill" width="14" height="14" class="cat-icon-svg text-woodsmoke-400 transition-colors"></iconify-icon>
+                        </div>
+                        <span class="cat-label text-xs font-medium text-woodsmoke-700 leading-snug">Safety &amp; moderation</span>
+                    </button>
+
+                    <button type="button" data-cat="other" class="cat-btn flex items-center gap-3 px-4 py-3 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors text-left">
+                        <div class="cat-icon w-7 h-7 rounded-md bg-silver-100 flex items-center justify-center shrink-0 transition-colors">
+                            <iconify-icon icon="mingcute:more-1-fill" width="14" height="14" class="cat-icon-svg text-woodsmoke-400 transition-colors"></iconify-icon>
+                        </div>
+                        <span class="cat-label text-xs font-medium text-woodsmoke-700 leading-snug">Something else</span>
+                    </button>
+
+                </div>
+            </div>
+            <div class="space-y-4">
+                <label class="text-sm font-medium text-woodsmoke-700" for="subjectInput">
+                    Subject <span class="text-woodsmoke-300 font-normal">(optional)</span>
+                </label>
+                <input id="subjectInput" name="subject" type="text" placeholder="Brief summary of your issue"
+                    class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:border-orchid-400 text-woodsmoke-800 placeholder-woodsmoke-300">
+            </div>
+        </div>
+
+        <!-- Brand-specific fields -->
+        <div id="fields-brand" class="hidden space-y-6">
+            <% if (isLoggedIn) { %>
+            <div class="flex items-center justify-between gap-4 px-4 py-3 bg-orchid-50 border border-orchid-200 rounded-md">
+                <p class="text-sm text-woodsmoke-700">Interested in the Grabbn Partner Program?</p>
+                <a href="/partnership" class="shrink-0 text-sm font-medium text-orchid-600 hover:text-orchid-700 transition-colors">Learn more →</a>
+            </div>
+            <% } %>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-4">
+                    <label class="text-sm font-medium text-woodsmoke-700" for="companyInput">
+                        Company / Brand <span class="text-woodsmoke-300 font-normal">(optional)</span>
+                    </label>
+                    <input id="companyInput" name="company" type="text" placeholder="Acme Inc."
+                        class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:border-orchid-400 text-woodsmoke-800 placeholder-woodsmoke-300">
+                </div>
+                <div class="space-y-4">
+                    <label class="text-sm font-medium text-woodsmoke-700" for="websiteInput">
+                        Website <span class="text-woodsmoke-300 font-normal">(optional)</span>
+                    </label>
+                    <input id="websiteInput" name="website" type="url" placeholder="https://…"
+                        class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:border-orchid-400 text-woodsmoke-800 placeholder-woodsmoke-300">
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback-specific fields -->
+        <div id="fields-feedback" class="hidden space-y-4">
+            <div class="space-y-4">
+                <label class="text-sm font-medium text-woodsmoke-700">Type</label>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button type="button" data-ft="feature" class="ft-pill flex items-center justify-center h-7 px-3 text-xs font-medium rounded-md border border-silver-200 text-woodsmoke-500 hover:border-silver-300 transition-colors">Feature request</button>
+                    <button type="button" data-ft="bug"     class="ft-pill flex items-center justify-center h-7 px-3 text-xs font-medium rounded-md border border-silver-200 text-woodsmoke-500 hover:border-silver-300 transition-colors">Bug report</button>
+                    <button type="button" data-ft="general" class="ft-pill flex items-center justify-center h-7 px-3 text-xs font-medium rounded-md border border-silver-200 text-woodsmoke-500 hover:border-silver-300 transition-colors">General</button>
+                </div>
+                <input type="hidden" id="feedbackTypeInput" name="feedbackType" value="">
+            </div>
+        </div>
+
+        <!-- Other/Press-specific fields -->
+        <div id="fields-other" class="hidden space-y-6">
+            <div class="space-y-4">
+                <label class="text-sm font-medium text-woodsmoke-700" for="organizationInput">
+                    Organization <span class="text-woodsmoke-300 font-normal">(optional)</span>
+                </label>
+                <input id="organizationInput" name="organization" type="text" placeholder="Press outlet, agency, etc."
+                    class="w-full h-10 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:border-orchid-400 text-woodsmoke-800 placeholder-woodsmoke-300">
+            </div>
+        </div>
+
+        <!-- Message (shared across all intents) -->
+        <div class="space-y-4">
+            <label class="text-sm font-medium text-woodsmoke-700">
+                Message <span class="text-red-400">*</span>
+            </label>
+
+            <div id="editorContainer" class="border border-silver-200 rounded-md overflow-hidden transition-colors focus-within:border-orchid-400">
+
+                <!-- Toolbar -->
+                <div class="flex items-center gap-0.5 px-2 py-1.5 bg-silver-50 border-b border-silver-200">
+                    <button type="button" data-cmd="bold"      title="Bold"      class="fmt-btn w-7 h-7 flex items-center justify-center rounded hover:bg-silver-200 transition-colors text-xs font-bold text-woodsmoke-500">B</button>
+                    <button type="button" data-cmd="italic"    title="Italic"    class="fmt-btn w-7 h-7 flex items-center justify-center rounded hover:bg-silver-200 transition-colors text-xs italic font-medium text-woodsmoke-500">I</button>
+                    <button type="button" data-cmd="underline" title="Underline" class="fmt-btn w-7 h-7 flex items-center justify-center rounded hover:bg-silver-200 transition-colors text-xs underline font-medium text-woodsmoke-500">U</button>
+
+                    <div class="w-px h-4 bg-silver-300 mx-1.5 shrink-0"></div>
+
+                    <button type="button" id="linkToggleBtn" title="Insert link" class="fmt-btn w-7 h-7 flex items-center justify-center rounded hover:bg-silver-200 transition-colors text-woodsmoke-500">
+                        <iconify-icon icon="mingcute:link-2-fill" width="13" height="13"></iconify-icon>
+                    </button>
+
+                    <div class="w-px h-4 bg-silver-300 mx-1.5 shrink-0"></div>
+
+                    <button type="button" data-media="image" title="Attach image"   class="media-btn fmt-btn w-7 h-7 flex items-center justify-center rounded hover:bg-silver-200 transition-colors text-woodsmoke-500">
+                        <iconify-icon icon="mingcute:pic-fill" width="13" height="13"></iconify-icon>
+                    </button>
+                    <button type="button" data-media="file"  title="Attach PDF or TXT" class="media-btn fmt-btn w-7 h-7 flex items-center justify-center rounded hover:bg-silver-200 transition-colors text-woodsmoke-500">
+                        <iconify-icon icon="mingcute:file-upload-fill" width="13" height="13"></iconify-icon>
+                    </button>
+                    <button type="button" data-media="video" title="Attach video"   class="media-btn fmt-btn w-7 h-7 flex items-center justify-center rounded hover:bg-silver-200 transition-colors text-woodsmoke-500">
+                        <iconify-icon icon="mingcute:movie-fill" width="13" height="13"></iconify-icon>
+                    </button>
+                </div>
+
+                <!-- Link URL bar -->
+                <div id="linkBar" style="display:none" class="items-center gap-2 px-3 py-2 bg-orchid-50 border-b border-orchid-100">
+                    <iconify-icon icon="mingcute:link-2-fill" width="13" height="13" class="text-orchid-400 shrink-0"></iconify-icon>
+                    <input id="linkUrlInput" type="url" placeholder="https://…"
+                        class="flex-1 text-sm bg-transparent focus:outline-none text-woodsmoke-800 placeholder-woodsmoke-300 min-w-0">
+                    <button type="button" id="linkApplyBtn"  class="flex items-center justify-center shrink-0 text-xs font-semibold text-orchid-600 hover:text-orchid-700">Apply</button>
+                    <button type="button" id="linkCancelBtn" class="flex items-center justify-center shrink-0 text-xs text-woodsmoke-400 hover:text-woodsmoke-600">Cancel</button>
+                </div>
+
+                <!-- Contenteditable editor -->
+                <div id="msgEditor" contenteditable="true" data-placeholder="Describe your issue, idea, or question…"
+                    class="min-h-[140px] px-3 py-2.5 text-sm text-woodsmoke-800 focus:outline-none leading-relaxed"></div>
+
+                <!-- Attachment chips -->
+                <div id="attachmentList" style="display:none" class="gap-2 flex-wrap px-3 py-2 border-t border-silver-100 bg-silver-50"></div>
+            </div>
+
+            <span id="charCount" class="text-xs text-woodsmoke-300">0 / 5 000</span>
+
+            <!-- Hidden file inputs -->
+            <input type="file" id="fileInputImage" accept="image/jpeg,image/png,image/gif,image/webp" multiple class="hidden">
+            <input type="file" id="fileInputFile"  accept=".pdf,.txt" multiple class="hidden">
+            <input type="file" id="fileInputVideo" accept="video/mp4,video/quicktime,video/webm" multiple class="hidden">
+        </div>
+
+        <!-- Submit row -->
+        <div class="flex items-center gap-4">
+            <button id="submitBtn" type="submit"
+                class="flex items-center justify-center h-10 px-5 bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                Send message
+            </button>
+            <p id="formMsg" class="hidden text-sm"></p>
+        </div>
+    </form>
+
 </div>
 
+<style>
+#msgEditor:empty:before {
+    content: attr(data-placeholder);
+    color: #9ca3af;
+    pointer-events: none;
+}
+#msgEditor a { color: #7c3aed; text-decoration: underline; }
+#contactForm label { display: block; margin-bottom: 10px; }
+</style>
+
+<script>
+(function () {
+    let currentIntent = null;
+    let savedRange    = null;
+    const attachments = [];
+    const MAX_FILES   = 5;
+    const MAX_BYTES   = 5 * 1024 * 1024;
+
+    const cards       = document.querySelectorAll('.intent-card');
+    const formPanel   = document.getElementById('contactForm');
+    const intentInput = document.getElementById('intentInput');
+    const editor      = document.getElementById('msgEditor');
+    const charCount   = document.getElementById('charCount');
+    const submitBtn   = document.getElementById('submitBtn');
+    const formMsg     = document.getElementById('formMsg');
+    const linkBar     = document.getElementById('linkBar');
+    const linkUrlInput = document.getElementById('linkUrlInput');
+    const attachList  = document.getElementById('attachmentList');
+
+    // ── Intent card selection ──────────────────────────────────────────────────
+    cards.forEach(card => {
+        card.addEventListener('click', () => {
+            const intent = card.dataset.intent;
+            cards.forEach(c => {
+                c.classList.remove('border-orchid-600', 'bg-orchid-50');
+                c.classList.add('border-silver-200');
+                c.querySelector('.intent-icon').classList.replace('bg-orchid-100', 'bg-silver-100');
+                c.querySelector('.intent-icon-svg').classList.replace('text-orchid-600', 'text-woodsmoke-400');
+                c.querySelector('.intent-chevron').classList.replace('text-orchid-400', 'text-woodsmoke-300');
+            });
+            card.classList.remove('border-silver-200');
+            card.classList.add('border-orchid-600', 'bg-orchid-50');
+            card.querySelector('.intent-icon').classList.replace('bg-silver-100', 'bg-orchid-100');
+            card.querySelector('.intent-icon-svg').classList.replace('text-woodsmoke-400', 'text-orchid-600');
+            card.querySelector('.intent-chevron').classList.replace('text-woodsmoke-300', 'text-orchid-400');
+
+            currentIntent = intent;
+            intentInput.value = intent;
+            document.querySelectorAll('[id^="fields-"]').forEach(el => el.classList.add('hidden'));
+            const specific = document.getElementById('fields-' + intent);
+            if (specific) specific.classList.remove('hidden');
+            if (formPanel.classList.contains('hidden')) {
+                formPanel.classList.remove('hidden');
+                formPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+    });
+
+    // ── Char counter ───────────────────────────────────────────────────────────
+    editor.addEventListener('input', () => {
+        const len = editor.innerText.replace(/\n$/, '').length;
+        charCount.textContent = `${len.toLocaleString()} / 5 000`;
+    });
+
+    // ── Feedback type pills ────────────────────────────────────────────────────
+    document.querySelectorAll('.ft-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('.ft-pill').forEach(p => {
+                p.classList.remove('bg-orchid-600', 'text-white', 'border-orchid-600');
+                p.classList.add('border-silver-200', 'text-woodsmoke-500');
+            });
+            pill.classList.remove('border-silver-200', 'text-woodsmoke-500');
+            pill.classList.add('bg-orchid-600', 'text-white', 'border-orchid-600');
+            document.getElementById('feedbackTypeInput').value = pill.dataset.ft;
+        });
+    });
+
+    // ── Category buttons ───────────────────────────────────────────────────────
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('border-orchid-600', 'bg-orchid-50');
+                b.classList.add('border-silver-200');
+                b.querySelector('.cat-icon').classList.replace('bg-orchid-100', 'bg-silver-100');
+                b.querySelector('.cat-icon-svg').classList.replace('text-orchid-600', 'text-woodsmoke-400');
+                b.querySelector('.cat-label').classList.replace('text-orchid-700', 'text-woodsmoke-700');
+            });
+            btn.classList.remove('border-silver-200');
+            btn.classList.add('border-orchid-600', 'bg-orchid-50');
+            btn.querySelector('.cat-icon').classList.replace('bg-silver-100', 'bg-orchid-100');
+            btn.querySelector('.cat-icon-svg').classList.replace('text-woodsmoke-400', 'text-orchid-600');
+            btn.querySelector('.cat-label').classList.replace('text-woodsmoke-700', 'text-orchid-700');
+            document.getElementById('categoryInput').value = btn.dataset.cat;
+        });
+    });
+
+    // ── Text formatting ────────────────────────────────────────────────────────
+    document.querySelectorAll('.fmt-btn[data-cmd]').forEach(btn => {
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            document.execCommand(btn.dataset.cmd, false, null);
+            editor.focus();
+        });
+    });
+
+    // ── Link ──────────────────────────────────────────────────────────────────
+    document.getElementById('linkToggleBtn').addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const sel = window.getSelection();
+        if (sel.rangeCount) savedRange = sel.getRangeAt(0).cloneRange();
+        if (linkBar.style.display === 'none' || !linkBar.style.display) {
+            linkBar.style.display = 'flex';
+            linkUrlInput.value = '';
+            linkUrlInput.focus();
+        } else {
+            closeLinkBar();
+        }
+    });
+
+    document.getElementById('linkApplyBtn').addEventListener('click', applyLink);
+    linkUrlInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') applyLink();
+        if (e.key === 'Escape') closeLinkBar();
+    });
+    document.getElementById('linkCancelBtn').addEventListener('click', closeLinkBar);
+
+    function applyLink() {
+        const url = linkUrlInput.value.trim();
+        if (!url) { closeLinkBar(); return; }
+        editor.focus();
+        if (savedRange) {
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(savedRange);
+        }
+        document.execCommand('createLink', false, url);
+        editor.querySelectorAll('a:not([target])').forEach(a => { a.target = '_blank'; a.rel = 'noopener noreferrer'; });
+        closeLinkBar();
+    }
+
+    function closeLinkBar() {
+        linkBar.style.display = 'none';
+        savedRange = null;
+    }
+
+    // ── File attachments ───────────────────────────────────────────────────────
+    const fileInputImage = document.getElementById('fileInputImage');
+    const fileInputFile  = document.getElementById('fileInputFile');
+    const fileInputVideo = document.getElementById('fileInputVideo');
+
+    document.querySelectorAll('.media-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            ({ image: fileInputImage, file: fileInputFile, video: fileInputVideo })[btn.dataset.media]?.click();
+        });
+    });
+
+    [fileInputImage, fileInputFile, fileInputVideo].forEach(input => {
+        input.addEventListener('change', () => {
+            for (const file of input.files) {
+                if (attachments.length >= MAX_FILES) { showMsg(`Maximum ${MAX_FILES} files.`); break; }
+                if (file.size > MAX_BYTES) { showMsg(`${file.name} exceeds 5 MB limit.`); continue; }
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+                    attachments.push({ id, name: file.name, type: file.type, data: ev.target.result.split(',')[1] });
+                    renderAttachments();
+                };
+                reader.readAsDataURL(file);
+            }
+            input.value = '';
+        });
+    });
+
+    function renderAttachments() {
+        if (!attachments.length) { attachList.style.display = 'none'; return; }
+        attachList.style.display = 'flex';
+        attachList.innerHTML = attachments.map(f => `
+            <div class="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 bg-white border border-silver-200 rounded-md max-w-[220px]">
+                <span class="text-xs text-woodsmoke-600 truncate">${escHtml(f.name)}</span>
+                <button type="button" data-id="${f.id}" class="rm-attach shrink-0 text-woodsmoke-300 hover:text-red-400 transition-colors text-base leading-none">×</button>
+            </div>`).join('');
+        attachList.querySelectorAll('.rm-attach').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const i = attachments.findIndex(f => f.id === btn.dataset.id);
+                if (i !== -1) attachments.splice(i, 1);
+                renderAttachments();
+            });
+        });
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showMsg(text) {
+        formMsg.textContent = text;
+        formMsg.classList.remove('hidden');
+        formMsg.classList.add('text-red-500');
+    }
+
+    // ── Form submit ────────────────────────────────────────────────────────────
+    formPanel.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentIntent) return;
+
+        const data = {
+            intent:      currentIntent,
+            message:     editor.innerHTML.trim(),
+            attachments: attachments.map(f => ({ filename: f.name, contentType: f.type, data: f.data })),
+        };
+
+        const nameInput  = document.getElementById('nameInput');
+        const emailInput = document.getElementById('emailInput');
+        if (nameInput)  data.name  = nameInput.value.trim();
+        if (emailInput) data.email = emailInput.value.trim();
+
+        if (currentIntent === 'support') {
+            const cat = document.getElementById('categoryInput');
+            const sub = document.getElementById('subjectInput');
+            if (cat) data.category = cat.value;
+            if (sub) data.subject  = sub.value.trim();
+        }
+        if (currentIntent === 'brand') {
+            const co  = document.getElementById('companyInput');
+            const web = document.getElementById('websiteInput');
+            if (co)  data.company = co.value.trim();
+            if (web) data.website = web.value.trim();
+        }
+        if (currentIntent === 'feedback') {
+            data.feedbackType = document.getElementById('feedbackTypeInput').value;
+        }
+        if (currentIntent === 'other') {
+            const org = document.getElementById('organizationInput');
+            if (org) data.organization = org.value.trim();
+        }
+
+        submitBtn.disabled    = true;
+        submitBtn.textContent = 'Sending…';
+        formMsg.classList.add('hidden');
+
+        try {
+            const res  = await fetch('/api/contact', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify(data),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Something went wrong');
+
+            formPanel.classList.add('hidden');
+            cards.forEach(c => {
+                c.classList.remove('border-orchid-600', 'bg-orchid-50');
+                c.classList.add('border-silver-200');
+                c.querySelector('.intent-icon').classList.replace('bg-orchid-100', 'bg-silver-100');
+                c.querySelector('.intent-icon-svg').classList.replace('text-orchid-600', 'text-woodsmoke-400');
+                c.querySelector('.intent-chevron').classList.replace('text-orchid-400', 'text-woodsmoke-300');
+            });
+            const banner = document.getElementById('successBanner');
+            banner.classList.remove('hidden');
+            banner.classList.add('flex');
+            currentIntent = null;
+        } catch (err) {
+            formMsg.textContent = err.message;
+            formMsg.classList.remove('hidden');
+            formMsg.classList.add('text-red-500');
+        } finally {
+            submitBtn.disabled    = false;
+            submitBtn.textContent = 'Send message';
+        }
+    });
+
+    cards[0].click();
+})();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@1/dist/iconify-icon.min.js"></script>
 <%- include('partials/layout-end') %>

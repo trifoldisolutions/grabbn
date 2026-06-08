@@ -13,6 +13,7 @@ import partnersRouter  from './admin/partners.js';
 import analyticsRouter from './admin/analytics.js';
 import systemRouter    from './admin/system.js';
 import auditRouter     from './admin/audit.js';
+import faqRouter       from './admin/faq.js';
 
 const router = express.Router();
 
@@ -25,6 +26,7 @@ router.use('/reports',   reportsRouter);
 router.use('/buckets',   bucketsRouter);
 router.use('/partners',  requireSuperadmin, partnersRouter); // partners: superadmin only
 router.use('/analytics', analyticsRouter);
+router.use('/faq',       faqRouter);
 router.use('/system',    requireSuperadmin, systemRouter);   // system:   superadmin only
 router.use('/audit',     requireSuperadmin, auditRouter);    // audit:    superadmin only
 
