@@ -167,7 +167,7 @@
                 <button
                     class="shrink-0 w-6 h-6 flex items-center justify-center rounded text-woodsmoke-400 hover:text-orchid-600 transition-colors"
                     title="Copy source URL"
-                    onclick="(function(btn){var url='<%= bucket.sourceUrl.replace(/'/g, "\\'") %>';navigator.clipboard.writeText(url).then(function(){btn.title='Copied!';setTimeout(function(){btn.title='Copy source URL';},2000);});})(this)"
+                    onclick="(function(){var url='<%= bucket.sourceUrl.replace(/'/g, "\\'") %>';navigator.clipboard.writeText(url).then(function(){window.showToast('Source URL copied!','success');}).catch(function(){window.showToast('Failed to copy.');});})()"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1 1 0 0 1 3 21V7a1 1 0 0 1 1-1zm2 0h8v10h2V4H9zm-4 2v12h10V8z"/></svg>
                 </button>
@@ -539,7 +539,15 @@
             <!-- populated by JS -->
         </div>
         <!-- Footer -->
-        <div class="px-4 py-3 border-t border-silver-100 shrink-0">
+        <div class="px-4 py-3 border-t border-silver-100 shrink-0 flex flex-col gap-y-2">
+            <div id="bvCloneDupWarn" class="hidden p-2 bg-amber-50 border border-amber-200 rounded-md">
+                <p class="text-xs font-medium text-amber-700 mb-1">Already saved in your library:</p>
+                <ul id="bvCloneDupList" class="text-xs text-amber-600 space-y-0.5 max-h-[52px] overflow-y-auto mb-2 list-disc pl-3"></ul>
+                <div class="flex items-center gap-2">
+                    <button id="bvCloneSaveAnyway" class="flex items-center justify-center px-3 py-1 rounded-md bg-orchid-600 text-white text-xs font-semibold hover:bg-orchid-700 transition-colors">Save anyway</button>
+                    <button id="bvCloneDupCancel" class="flex items-center justify-center text-xs text-gray-500 hover:text-gray-700 font-medium">Cancel</button>
+                </div>
+            </div>
             <button id="bvCloneConfirm" class="w-full h-10 bg-orchid-700 hover:bg-orchid-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-md transition-colors flex items-center justify-center gap-2">
                 Confirm Choices
             </button>
@@ -560,7 +568,15 @@
         <div id="bvMoveBucketList" class="overflow-y-auto flex-1 py-1">
             <!-- populated by JS -->
         </div>
-        <div class="px-4 py-3 border-t border-silver-100 shrink-0">
+        <div class="px-4 py-3 border-t border-silver-100 shrink-0 flex flex-col gap-y-2">
+            <div id="bvMoveDupWarn" class="hidden p-2 bg-amber-50 border border-amber-200 rounded-md">
+                <p class="text-xs font-medium text-amber-700 mb-1">Already saved in your library:</p>
+                <ul id="bvMoveDupList" class="text-xs text-amber-600 space-y-0.5 max-h-[52px] overflow-y-auto mb-2 list-disc pl-3"></ul>
+                <div class="flex items-center gap-2">
+                    <button id="bvMoveSaveAnyway" class="flex items-center justify-center px-3 py-1 rounded-md bg-orchid-600 text-white text-xs font-semibold hover:bg-orchid-700 transition-colors">Move anyway</button>
+                    <button id="bvMoveDupCancel" class="flex items-center justify-center text-xs text-gray-500 hover:text-gray-700 font-medium">Cancel</button>
+                </div>
+            </div>
             <button id="bvMoveConfirm" class="w-full h-10 bg-orchid-700 hover:bg-orchid-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-md transition-colors flex items-center justify-center gap-2">
                 Move Link
             </button>
@@ -622,11 +638,10 @@
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
             var href = btn.closest('[data-href]').dataset.href;
-            navigator.clipboard.writeText(href).catch(function () {});
             btn.closest('.bv-link-menu').classList.add('hidden');
-            var orig = btn.textContent;
-            btn.textContent = 'Copied!';
-            setTimeout(function () { btn.textContent = orig; }, 2000);
+            navigator.clipboard.writeText(href)
+                .then(function () { window.showToast('Link copied!', 'success'); })
+                .catch(function () { window.showToast('Failed to copy link.'); });
         });
     });
 
@@ -670,6 +685,7 @@
             modal.classList.add('hidden');
             window.unlockScroll ? window.unlockScroll() : (document.body.style.overflow = '');
             listEl.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = false; });
+            document.getElementById('bvCloneDupWarn').classList.add('hidden');
             updateConfirmState();
         }
 
@@ -720,30 +736,60 @@
             if (!selected.length || !pendingLink) return;
 
             var DOTS_SVG = '<svg width="24" height="10" viewBox="0 0 24 10" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><circle cx="3" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0s" repeatCount="indefinite"/></circle><circle cx="12" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.2s" repeatCount="indefinite"/></circle><circle cx="21" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.4s" repeatCount="indefinite"/></circle></svg>';
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = DOTS_SVG;
 
-            fetch('/api/links', {
+            function doClone() {
+                document.getElementById('bvCloneDupWarn').classList.add('hidden');
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = DOTS_SVG;
+                fetch('/api/links', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ links: [pendingLink], buckets: selected })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function () {
+                    bucketCache = null;
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Cloned!';
+                    setTimeout(function () {
+                        closeModal();
+                        confirmBtn.textContent = 'Confirm Choices';
+                    }, 1200);
+                })
+                .catch(function () {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Error — try again';
+                    setTimeout(function () { confirmBtn.textContent = 'Confirm Choices'; }, 2000);
+                });
+            }
+
+            var dupWarn = document.getElementById('bvCloneDupWarn');
+            var dupList = document.getElementById('bvCloneDupList');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Checking…';
+
+            fetch('/api/links/check-duplicates', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ links: [pendingLink], buckets: selected })
+                body: JSON.stringify({ hrefs: [pendingLink.href] })
             })
-            .then(function (r) { return r.json(); })
-            .then(function () {
-                bucketCache = null;
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Cloned!';
-                setTimeout(function () {
-                    closeModal();
+            .then(function(r) { return r.ok ? r.json() : { duplicates: {} }; })
+            .then(function(data) {
+                var inBuckets = ((data.duplicates || {})[pendingLink.href]) || [];
+                if (inBuckets.length > 0) {
+                    dupList.innerHTML = inBuckets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
+                    dupWarn.classList.remove('hidden');
                     confirmBtn.textContent = 'Confirm Choices';
-                }, 1200);
+                    confirmBtn.disabled = false;
+                    document.getElementById('bvCloneSaveAnyway').onclick = doClone;
+                    document.getElementById('bvCloneDupCancel').onclick = function() { dupWarn.classList.add('hidden'); };
+                } else {
+                    doClone();
+                }
             })
-            .catch(function () {
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Error — try again';
-                setTimeout(function () { confirmBtn.textContent = 'Confirm Choices'; }, 2000);
-            });
+            .catch(function() { doClone(); });
         });
 
         closeBtn.addEventListener('click', closeModal);
@@ -785,6 +831,7 @@
             modal.classList.add('hidden');
             window.unlockScroll ? window.unlockScroll() : (document.body.style.overflow = '');
             listEl.querySelectorAll('input[type=checkbox]').forEach(function (cb) { cb.checked = false; });
+            document.getElementById('bvMoveDupWarn').classList.add('hidden');
             updateConfirmState();
         }
 
@@ -835,42 +882,73 @@
             if (!selected.length || !pendingLink) return;
 
             var DOTS_SVG = '<svg width="24" height="10" viewBox="0 0 24 10" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><circle cx="3" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0s" repeatCount="indefinite"/></circle><circle cx="12" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.2s" repeatCount="indefinite"/></circle><circle cx="21" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.4s" repeatCount="indefinite"/></circle></svg>';
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = DOTS_SVG;
 
-            fetch('/api/links', {
+            function doMove() {
+                document.getElementById('bvMoveDupWarn').classList.add('hidden');
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = DOTS_SVG;
+                fetch('/api/links', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ links: [pendingLink], buckets: selected })
+                })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('clone failed');
+                    return fetch('/api/buckets/' + encodeURIComponent(bucketName) + '/links', {
+                        method: 'DELETE',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ href: pendingLink.href })
+                    });
+                })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('delete failed');
+                    bucketCache = null;
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Moved!';
+                    if (pendingLink.sourceEl) {
+                        pendingLink.sourceEl.remove();
+                    }
+                    setTimeout(function () {
+                        closeModal();
+                        confirmBtn.textContent = 'Move Link';
+                    }, 1200);
+                })
+                .catch(function () {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Error — try again';
+                    setTimeout(function () { confirmBtn.textContent = 'Move Link'; }, 2000);
+                });
+            }
+
+            var dupWarn = document.getElementById('bvMoveDupWarn');
+            var dupList = document.getElementById('bvMoveDupList');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Checking…';
+
+            fetch('/api/links/check-duplicates', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ links: [pendingLink], buckets: selected })
+                body: JSON.stringify({ hrefs: [pendingLink.href] })
             })
-            .then(function (r) {
-                if (!r.ok) throw new Error('clone failed');
-                return fetch('/api/buckets/' + encodeURIComponent(bucketName) + '/links', {
-                    method: 'DELETE',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ href: pendingLink.href })
-                });
-            })
-            .then(function (r) {
-                if (!r.ok) throw new Error('delete failed');
-                bucketCache = null;
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Moved!';
-                if (pendingLink.sourceEl) {
-                    pendingLink.sourceEl.remove();
-                }
-                setTimeout(function () {
-                    closeModal();
+            .then(function(r) { return r.ok ? r.json() : { duplicates: {} }; })
+            .then(function(data) {
+                // Filter out the current bucket since the link is being moved from here
+                var inBuckets = ((data.duplicates || {})[pendingLink.href] || []).filter(function(b) { return b !== bucketName; });
+                if (inBuckets.length > 0) {
+                    dupList.innerHTML = inBuckets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
+                    dupWarn.classList.remove('hidden');
                     confirmBtn.textContent = 'Move Link';
-                }, 1200);
+                    confirmBtn.disabled = false;
+                    document.getElementById('bvMoveSaveAnyway').onclick = doMove;
+                    document.getElementById('bvMoveDupCancel').onclick = function() { dupWarn.classList.add('hidden'); };
+                } else {
+                    doMove();
+                }
             })
-            .catch(function () {
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Error — try again';
-                setTimeout(function () { confirmBtn.textContent = 'Move Link'; }, 2000);
-            });
+            .catch(function() { doMove(); });
         });
 
         closeBtn.addEventListener('click', closeModal);
@@ -996,9 +1074,9 @@
         if (navigator.share) {
             try { await navigator.share({ title: '<%= bucket.name.replace(/'/g, "\\'") %>', text: shareText, url: url }); } catch (_) {}
         } else {
-            await navigator.clipboard.writeText(shareText + '\n' + url).catch(() => {});
-            label.textContent = 'Link copied!';
-            setTimeout(function () { label.textContent = 'Share'; }, 2000);
+            await navigator.clipboard.writeText(shareText + '\n' + url)
+                .then(() => window.showToast('Link copied!', 'success'))
+                .catch(() => window.showToast('Failed to copy link.'));
         }
         // Record share
         fetch('/api/buckets/' + bucketId + '/share', { method: 'POST', credentials: 'include' }).catch(() => {});
@@ -1010,11 +1088,10 @@
         if (!linkHrefs.length) return;
         try {
             await navigator.clipboard.writeText(linkHrefs.join('\n'));
-            label.textContent = 'Copied!';
+            window.showToast('All links copied!', 'success');
         } catch (_) {
-            label.textContent = 'Failed';
+            window.showToast('Failed to copy links.');
         }
-        setTimeout(function () { label.textContent = 'Copy all links'; }, 2000);
     });
 
     // Star rating widget

@@ -41,7 +41,6 @@ import contactRouter     from './server/routes/contact.js';
 import PartnerApplication from './server/models/partnerApplication.js';
 import adminRouter     from './server/routes/admin.js';
 import adminAuthRouter from './server/routes/admin/auth.js';
-import devTodosRouter  from './server/routes/devTodos.js';
 import { adminSessionAuth, requireAdminSession } from './server/middleware/adminSessionAuth.js';
 import Notification from './server/models/notification.js';
 import Block from './server/models/block.js';
@@ -292,8 +291,6 @@ app.get('/api/users/:userId/online-status', anonymousAuth, async (req, res) => {
 
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'dev_ressources')));
-app.use('/api/dev/todos', devTodosRouter);
 
 // ── Image proxy ─────────────────────────────────────────────────────────────
 // Fetches external link thumbnail URLs server-side so that CDN hotlink
@@ -2193,6 +2190,51 @@ app.get('/api/buckets/:name/id', requireAuth, requireVerification, async (req, r
     }
 });
 
+// Unarchive a single bucket by ID
+app.patch('/api/buckets/:id/unarchive', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const bucket = await Bucket.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            { isArchived: false },
+            { new: true }
+        );
+        if (!bucket) return res.status(404).json({ error: 'Bucket not found' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error unarchiving bucket:', err);
+        res.status(500).json({ error: 'Failed to unarchive bucket' });
+    }
+});
+
+// Bulk archive buckets by ID
+app.patch('/api/buckets/bulk/archive', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids required' });
+        await Bucket.updateMany({ _id: { $in: ids }, userId: req.user._id }, { isArchived: true });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error archiving buckets:', err);
+        res.status(500).json({ error: 'Failed to archive buckets' });
+    }
+});
+
+// Bulk delete buckets by ID
+app.delete('/api/buckets/bulk', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids required' });
+        const buckets = await Bucket.find({ _id: { $in: ids }, userId: req.user._id }).select('thumbnail links.image');
+        await Bucket.deleteMany({ _id: { $in: ids }, userId: req.user._id });
+        const imageUrls = buckets.flatMap(b => [b.thumbnail, ...b.links.map(l => l.image)]).filter(Boolean);
+        if (imageUrls.length) await deleteR2Images(imageUrls);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error bulk deleting buckets:', err);
+        res.status(500).json({ error: 'Failed to delete buckets' });
+    }
+});
+
 // Delete all draft buckets for the current user (called when opening a fresh new-bucket modal)
 app.delete('/api/buckets/drafts', requireAuth, async (req, res) => {
     try {
@@ -3029,6 +3071,34 @@ app.get('/api/links', requireAuth, requireVerification, async (req, res) => {
     } catch (error) {
         console.error('Error fetching links:', error);
         res.status(500).json({ error: 'Failed to fetch links' });
+    }
+});
+
+// Check which hrefs already exist in any of the user's buckets
+app.post('/api/links/check-duplicates', requireAuth, requireVerification, async (req, res) => {
+    try {
+        const { hrefs } = req.body;
+        if (!Array.isArray(hrefs) || hrefs.length === 0) {
+            return res.status(400).json({ error: 'hrefs array is required' });
+        }
+
+        const buckets = await Bucket.find(
+            { userId: req.user._id, 'links.href': { $in: hrefs } },
+            'name links.href'
+        ).lean();
+
+        const duplicates = {};
+        for (const href of hrefs) {
+            const inBuckets = buckets
+                .filter(b => b.links.some(l => l.href === href))
+                .map(b => b.name);
+            if (inBuckets.length > 0) duplicates[href] = inBuckets;
+        }
+
+        return res.json({ duplicates });
+    } catch (err) {
+        console.error('check-duplicates error:', err);
+        return res.status(500).json({ error: 'Server error' });
     }
 });
 
@@ -4806,7 +4876,7 @@ app.get('/partnership/pdf', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // Admin panel — server-rendered EJS pages at /admin/*
-// Protected by anonymousAuth + requireModerator (imported from adminAuth.js)
+// Protected by adminPage() below: only a valid _gadmin session opens these
 // ---------------------------------------------------------------------------
 import { requireModerator as _requireModerator, requireSuperadmin as _requireSuperadmin, requireNonAdmin } from './server/middleware/adminAuth.js';
 
@@ -4918,6 +4988,31 @@ app.get('/admin/partners/applications/:appId', adminPage('superadmin'), async (r
 // /admin/faq — FAQ management
 app.get('/admin/faq', adminPage(), (req, res) => {
     res.render('admin/faq', { admin: req.user });
+});
+
+// /admin/reports — moderation queue
+app.get('/admin/reports', adminPage(), (req, res) => {
+    res.render('admin/reports', { admin: req.user });
+});
+
+// /admin/buckets — bucket management
+app.get('/admin/buckets', adminPage(), (req, res) => {
+    res.render('admin/buckets', { admin: req.user });
+});
+
+// /admin/analytics — platform analytics
+app.get('/admin/analytics', adminPage(), (req, res) => {
+    res.render('admin/analytics', { admin: req.user });
+});
+
+// /admin/system — health, broadcast, jobs (superadmin only)
+app.get('/admin/system', adminPage('superadmin'), (req, res) => {
+    res.render('admin/system', { admin: req.user });
+});
+
+// /admin/audit — audit log (superadmin only)
+app.get('/admin/audit', adminPage('superadmin'), (req, res) => {
+    res.render('admin/audit', { admin: req.user });
 });
 
 // ── Search: JSON pagination API ──────────────────────────────────────────────
@@ -5404,7 +5499,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
 
         const bucketFilter = isOwner
             ? { userId: profileUser._id }
-            : { userId: profileUser._id, ...FILTER_PUBLIC };
+            : { userId: profileUser._id, ...FILTER_PUBLIC, isArchived: { $ne: true } };
 
         const canMessage = isOwner ? false : await resolveCanMessage(viewer, profileUser);
 
@@ -5414,7 +5509,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
 
         const [allBuckets, subscriberCount, followingCount, rawGrabbed, userRepos] = await Promise.all([
             Bucket.find(bucketFilter)
-                .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft allowComments allowGrabs ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
+                .select('name description thumbnail visibility isPublic isPaywalled price links._id viewCount shareCount grabbedBy sourceUrl hashtags mature isDraft isArchived allowComments allowGrabs ratingCount ratingSum repoIds createdAt updatedAt' + (isOwner ? ' bucketOwningId' : ''))
                 .sort({ order: 1, createdAt: -1 })
                 .lean(),
             Subscription.countDocuments({ followeeId: profileUser._id }),
@@ -5434,9 +5529,10 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
         const profileHasMature = allBuckets.some(b => b.mature) || rawGrabbed.some(b => b.mature);
         const showMatureGate   = hideMature && profileHasMature && !matureAck;
 
-        const ownBuckets        = allBuckets.map(addDisplayThumb);
+        const ownBuckets        = allBuckets.filter(b => !b.isArchived).map(addDisplayThumb);
+        const archivedBuckets   = isOwner ? allBuckets.filter(b => b.isArchived).map(addDisplayThumb) : [];
         const grabbedBuckets    = rawGrabbed.map(addDisplayThumb);
-        const publicBucketCount = allBuckets.filter(b => b.visibility === 'public').length;
+        const publicBucketCount = allBuckets.filter(b => b.visibility === 'public' && !b.isArchived).length;
         const publicRepoIds     = new Set(allBuckets.filter(b => b.visibility === 'public').flatMap(b => (b.repoIds || []).map(id => id.toString())));
         const publicRepoCount   = userRepos.filter(r => publicRepoIds.has(r._id.toString())).length;
         const totalViews     = ownBuckets.reduce((sum, b) => sum + (b.viewCount       ?? 0), 0);
@@ -5450,6 +5546,7 @@ app.get('/u/:username', anonymousAuth, async (req, res) => {
             profileUser,
             isOwner,
             ownBuckets,
+            archivedBuckets,
             grabbedBuckets,
             publicBucketCount,
             publicRepoCount,
@@ -5872,7 +5969,6 @@ connectMongo()
             console.log(`Server running at http://localhost:${PORT}`);
             console.log(`Scraping endpoint: http://localhost:${PORT}/scrape?url=YOUR_URL`);
             console.log(`Frontend available at http://localhost:${PORT}`);
-            console.log(`Dev To-Do: http://localhost:${PORT}/todo.html`);
         });
 
         // Run the repository build immediately, then every hour

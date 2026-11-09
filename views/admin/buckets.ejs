@@ -1,0 +1,261 @@
+<%
+  title     = 'Buckets'
+  subtitle  = 'Browse and manage all buckets'
+  adminPage = 'buckets'
+%>
+<%- include('layout') %>
+
+<div class="p-6 space-y-5">
+
+    <!-- ── Filters ──────────────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-md p-4 flex flex-wrap items-end gap-3">
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Owner ID</label>
+            <input id="filterOwner" type="text" placeholder="userId…"
+                class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 w-48" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Visibility</label>
+            <select id="filterVisibility" class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 bg-white">
+                <option value="">All</option>
+                <option value="public">Public</option>
+                <option value="unlisted">Unlisted</option>
+                <option value="private">Private</option>
+            </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Topic</label>
+            <input id="filterTopic" type="text" placeholder="topic…"
+                class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 w-36" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Sort</label>
+            <select id="filterSort" class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 bg-white">
+                <option value="createdAt">Newest</option>
+                <option value="views">Most viewed</option>
+                <option value="exploreScore">Explore score</option>
+                <option value="rating">Rating</option>
+            </select>
+        </div>
+
+        <button id="applyFiltersBtn"
+            class="h-9 px-4 flex items-center justify-center bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+            Apply
+        </button>
+        <button id="clearFiltersBtn"
+            class="h-9 px-4 flex items-center justify-center bg-silver-100 hover:bg-silver-200 text-woodsmoke-700 text-sm font-medium rounded-md transition-colors">
+            Clear
+        </button>
+
+        <div class="ml-auto text-xs text-woodsmoke-400 self-center" id="resultCount"></div>
+    </div>
+
+    <!-- ── Table ─────────────────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-silver-100 bg-silver-50">
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Name</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Owner</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Visibility</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Topic</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Views</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Score</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Created</th>
+                        <th class="text-right px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="bucketsTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center py-12 text-woodsmoke-400 text-sm">Loading…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between px-4 py-3 border-t border-silver-100">
+            <button id="prevPageBtn"
+                class="h-8 px-3 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                ← Prev
+            </button>
+            <span id="pageIndicator" class="text-xs text-woodsmoke-400"></span>
+            <button id="nextPageBtn"
+                class="h-8 px-3 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                Next →
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Visibility modal ──────────────────────────────────────────────────────── -->
+<div id="visibilityModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-woodsmoke-950/50">
+    <div class="bg-white rounded-md shadow-2xl w-full max-w-sm mx-4 p-6 space-y-4">
+        <h2 class="text-base font-semibold text-woodsmoke-950">Change visibility</h2>
+        <select id="visibilitySelect" class="w-full h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 bg-white">
+            <option value="public">Public</option>
+            <option value="unlisted">Unlisted</option>
+            <option value="private">Private</option>
+        </select>
+        <div class="flex gap-2 pt-1">
+            <button id="visibilityConfirmBtn"
+                class="flex-1 h-9 flex items-center justify-center bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+                Save
+            </button>
+            <button id="visibilityCancelBtn"
+                class="flex-1 h-9 flex items-center justify-center bg-silver-100 hover:bg-silver-200 text-woodsmoke-700 text-sm font-medium rounded-md transition-colors">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPage = 1;
+let totalPages  = 1;
+let pendingVisibilityBucketId = null;
+
+function esc(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function visibilityBadge(v) {
+    if (v === 'public')   return 'bg-emerald-100 text-emerald-700';
+    if (v === 'unlisted') return 'bg-amber-100 text-amber-700';
+    return 'bg-silver-100 text-woodsmoke-500';
+}
+
+async function fetchBuckets(page = 1) {
+    const owner      = document.getElementById('filterOwner').value.trim();
+    const visibility = document.getElementById('filterVisibility').value;
+    const topic      = document.getElementById('filterTopic').value.trim();
+    const sort       = document.getElementById('filterSort').value;
+
+    const params = new URLSearchParams({ page, limit: 30, sort });
+    if (owner)      params.set('owner', owner);
+    if (visibility) params.set('visibility', visibility);
+    if (topic)      params.set('topic', topic);
+
+    const tbody = document.getElementById('bucketsTableBody');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-woodsmoke-400 text-sm">Loading…</td></tr>`;
+
+    try {
+        const data = await adminFetch(`/api/admin/buckets?${params}`);
+        currentPage = data.pagination.page;
+        totalPages  = data.pagination.pages;
+
+        document.getElementById('resultCount').textContent   = `${data.pagination.total.toLocaleString()} bucket${data.pagination.total !== 1 ? 's' : ''}`;
+        document.getElementById('pageIndicator').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+        document.getElementById('prevPageBtn').disabled      = currentPage <= 1;
+        document.getElementById('nextPageBtn').disabled      = currentPage >= totalPages;
+
+        if (!data.buckets.length) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-woodsmoke-400 text-sm">No buckets found</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.buckets.map(b => `
+            <tr class="border-b border-silver-50 hover:bg-silver-50 transition-colors">
+                <td class="px-4 py-3 font-medium text-woodsmoke-900 max-w-[180px] truncate">${esc(b.name || '—')}</td>
+                <td class="px-4 py-3">
+                    <div class="text-woodsmoke-700 text-sm">${esc(b.userId?.username || '—')}</div>
+                    <div class="text-xs text-woodsmoke-400">${esc(b.userId?.email || '—')}</div>
+                </td>
+                <td class="px-4 py-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${visibilityBadge(b.visibility)}">
+                        ${esc(b.visibility || '—')}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-woodsmoke-500 text-xs">${esc(b.topic || '—')}</td>
+                <td class="px-4 py-3 text-woodsmoke-700">${(b.viewCount || 0).toLocaleString()}</td>
+                <td class="px-4 py-3 text-woodsmoke-400 text-xs">${b.exploreScore != null ? Number(b.exploreScore).toFixed(2) : '—'}</td>
+                <td class="px-4 py-3 text-woodsmoke-400 text-xs">${formatDate(b.createdAt)}</td>
+                <td class="px-4 py-3">
+                    <div class="flex items-center justify-end gap-1">
+                        <button onclick="openVisibilityModal('${b._id}', '${esc(b.visibility)}')"
+                            class="h-7 px-2.5 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded transition-colors">
+                            Visibility
+                        </button>
+                        <button onclick="toggleFeature('${b._id}', ${!b.featured}, this)"
+                            class="h-7 px-2.5 flex items-center justify-center text-xs font-medium ${b.featured ? 'text-amber-700 bg-amber-50 hover:bg-amber-100' : 'text-woodsmoke-600 bg-silver-100 hover:bg-silver-200'} rounded transition-colors">
+                            ${b.featured ? 'Unfeature' : 'Feature'}
+                        </button>
+                        <button onclick="deleteBucket('${b._id}', this)"
+                            class="h-7 px-2.5 flex items-center justify-center text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded transition-colors">
+                            Delete
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-12 text-red-400 text-sm">Failed to load buckets</td></tr>`;
+    }
+}
+
+function openVisibilityModal(bucketId, current) {
+    pendingVisibilityBucketId = bucketId;
+    document.getElementById('visibilitySelect').value = current;
+    document.getElementById('visibilityModal').classList.remove('hidden');
+}
+
+document.getElementById('visibilityConfirmBtn').addEventListener('click', async () => {
+    if (!pendingVisibilityBucketId) return;
+    const visibility = document.getElementById('visibilitySelect').value;
+    try {
+        await adminFetch(`/api/admin/buckets/${pendingVisibilityBucketId}/visibility`, {
+            method: 'PATCH', body: JSON.stringify({ visibility })
+        });
+        showToast('Visibility updated');
+        document.getElementById('visibilityModal').classList.add('hidden');
+        fetchBuckets(currentPage);
+    } catch {}
+});
+document.getElementById('visibilityCancelBtn').addEventListener('click', () => {
+    document.getElementById('visibilityModal').classList.add('hidden');
+});
+
+async function toggleFeature(bucketId, featured, btn) {
+    btn.disabled = true;
+    try {
+        await adminFetch(`/api/admin/buckets/${bucketId}/feature`, {
+            method: 'PATCH', body: JSON.stringify({ featured })
+        });
+        showToast(featured ? 'Bucket featured in Showroom' : 'Bucket removed from Showroom');
+        fetchBuckets(currentPage);
+    } finally { btn.disabled = false; }
+}
+
+async function deleteBucket(bucketId, btn) {
+    if (!adminConfirm('Permanently delete this bucket? This cannot be undone.')) return;
+    btn.disabled = true;
+    try {
+        await adminFetch(`/api/admin/buckets/${bucketId}`, { method: 'DELETE' });
+        showToast('Bucket deleted');
+        fetchBuckets(currentPage);
+    } finally { btn.disabled = false; }
+}
+
+document.getElementById('applyFiltersBtn').addEventListener('click', () => fetchBuckets(1));
+document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+    document.getElementById('filterOwner').value      = '';
+    document.getElementById('filterTopic').value      = '';
+    document.getElementById('filterVisibility').value = '';
+    document.getElementById('filterSort').value       = 'createdAt';
+    fetchBuckets(1);
+});
+document.getElementById('prevPageBtn').addEventListener('click', () => { if (currentPage > 1) fetchBuckets(currentPage - 1); });
+document.getElementById('nextPageBtn').addEventListener('click', () => { if (currentPage < totalPages) fetchBuckets(currentPage + 1); });
+
+fetchBuckets(1);
+</script>
+
+<%- include('layout-end') %>

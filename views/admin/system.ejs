@@ -1,0 +1,175 @@
+<%
+  title     = 'System'
+  subtitle  = 'Health checks, broadcast notifications, and background jobs'
+  adminPage = 'system'
+%>
+<%- include('layout') %>
+
+<div class="p-6 space-y-6">
+
+    <!-- ── Health ────────────────────────────────────────────────────────────── -->
+    <div class="space-y-3">
+        <h2 class="text-sm font-semibold text-woodsmoke-700 border-b border-silver-100 pb-2">Service health</h2>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3" id="healthCards">
+            <div class="bg-white border border-silver-100 rounded-md p-4 text-sm text-woodsmoke-400">Checking…</div>
+        </div>
+        <button id="refreshHealthBtn"
+            class="h-8 px-3 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors">
+            Refresh
+        </button>
+    </div>
+
+    <!-- ── Broadcast ─────────────────────────────────────────────────────────── -->
+    <div class="space-y-3">
+        <h2 class="text-sm font-semibold text-woodsmoke-700 border-b border-silver-100 pb-2">Broadcast notification</h2>
+        <div class="bg-white border border-silver-100 rounded-md p-5 space-y-4 max-w-xl">
+            <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Message</label>
+                <textarea id="broadcastMessage" rows="3" placeholder="Enter message for all users…"
+                    class="px-3 py-2 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 resize-none"></textarea>
+            </div>
+            <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">
+                    Target country <span class="normal-case font-normal text-woodsmoke-400">(optional — leave blank for all)</span>
+                </label>
+                <input id="broadcastCountry" type="text" placeholder="e.g. US"
+                    class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 w-32" maxlength="2" />
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="broadcastBtn"
+                    class="h-9 px-5 flex items-center justify-center bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+                    Send broadcast
+                </button>
+                <span id="broadcastResult" class="text-xs text-woodsmoke-400"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Jobs ──────────────────────────────────────────────────────────────── -->
+    <div class="space-y-3">
+        <h2 class="text-sm font-semibold text-woodsmoke-700 border-b border-silver-100 pb-2">Background jobs</h2>
+        <div class="space-y-2" id="jobsList">
+            <div class="text-sm text-woodsmoke-400">Loading…</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Health ────────────────────────────────────────────────────────────────────
+
+function statusIndicator(status) {
+    if (status === 'ok')             return 'bg-emerald-500';
+    if (status === 'not_configured') return 'bg-silver-300';
+    if (status === 'degraded')       return 'bg-amber-400';
+    return 'bg-red-500';
+}
+function statusLabel(status) {
+    if (status === 'ok')             return 'text-emerald-700';
+    if (status === 'not_configured') return 'text-woodsmoke-400';
+    if (status === 'degraded')       return 'text-amber-700';
+    return 'text-red-600';
+}
+
+async function loadHealth() {
+    const cards = document.getElementById('healthCards');
+    try {
+        const data     = await adminFetch('/api/admin/system/health');
+        const services = [
+            { key: 'mongodb', label: 'MongoDB'  },
+            { key: 'stripe',  label: 'Stripe'   },
+            { key: 'resend',  label: 'Resend'   }
+        ];
+        cards.innerHTML = services.map(s => `
+        <div class="bg-white border border-silver-100 rounded-md p-4 flex items-center gap-3">
+            <span class="w-2 h-2 rounded-md shrink-0 ${statusIndicator(data[s.key])}"></span>
+            <div>
+                <div class="text-sm font-semibold text-woodsmoke-900">${s.label}</div>
+                <div class="text-xs font-medium mt-0.5 ${statusLabel(data[s.key])}">${data[s.key] || 'unknown'}</div>
+            </div>
+        </div>`).join('');
+    } catch {
+        cards.innerHTML = `<div class="col-span-3 text-sm text-red-400">Failed to load health status</div>`;
+    }
+}
+
+document.getElementById('refreshHealthBtn').addEventListener('click', loadHealth);
+
+// ── Broadcast ─────────────────────────────────────────────────────────────────
+
+document.getElementById('broadcastBtn').addEventListener('click', async () => {
+    const message = document.getElementById('broadcastMessage').value.trim();
+    const country = document.getElementById('broadcastCountry').value.trim().toUpperCase();
+    const result  = document.getElementById('broadcastResult');
+
+    if (!message) { showToast('Message is required', 'error'); return; }
+
+    const target = country ? ` to users in ${country}` : ' to all users';
+    if (!adminConfirm(`Send this broadcast${target}?`)) return;
+
+    const btn = document.getElementById('broadcastBtn');
+    btn.disabled = true;
+    result.textContent = '';
+
+    try {
+        const body = { message };
+        if (country) body.targetCountry = country;
+        const data = await adminFetch('/api/admin/system/notify', {
+            method: 'POST', body: JSON.stringify(body)
+        });
+        result.textContent = `Sent to ${(data.recipientCount || 0).toLocaleString()} users`;
+        showToast('Broadcast sent');
+        document.getElementById('broadcastMessage').value = '';
+        document.getElementById('broadcastCountry').value = '';
+    } finally { btn.disabled = false; }
+});
+
+// ── Jobs ──────────────────────────────────────────────────────────────────────
+
+async function loadJobs() {
+    const list = document.getElementById('jobsList');
+    try {
+        const data = await adminFetch('/api/admin/system/jobs');
+        if (!data.jobs.length) {
+            list.innerHTML = `<div class="text-sm text-woodsmoke-400">No jobs configured</div>`;
+            return;
+        }
+        list.innerHTML = data.jobs.map(j => `
+        <div class="bg-white border border-silver-100 rounded-md p-4 flex items-center justify-between gap-4" id="job-${j.name}">
+            <div>
+                <div class="text-sm font-semibold text-woodsmoke-900">${j.name}</div>
+                <div class="text-xs text-woodsmoke-400 mt-0.5">
+                    Last run: ${j.lastRun ? new Date(j.lastRun).toLocaleString('en-GB') : 'unknown'}
+                    &nbsp;·&nbsp;
+                    <span class="${j.status === 'ok' ? 'text-emerald-600' : 'text-woodsmoke-400'}">${j.status || 'unknown'}</span>
+                </div>
+            </div>
+            <button onclick="triggerJob('${j.name}', this)"
+                class="h-8 px-3 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors shrink-0">
+                Run now
+            </button>
+        </div>`).join('');
+    } catch {
+        list.innerHTML = `<div class="text-sm text-red-400">Failed to load jobs</div>`;
+    }
+}
+
+async function triggerJob(jobName, btn) {
+    if (!adminConfirm(`Trigger job "${jobName}" now?`)) return;
+    btn.disabled = true;
+    btn.textContent = 'Triggering…';
+    try {
+        await adminFetch(`/api/admin/system/jobs/${jobName}/run`, { method: 'POST' });
+        showToast(`Job "${jobName}" triggered`);
+        btn.textContent = 'Triggered';
+        setTimeout(() => { btn.textContent = 'Run now'; btn.disabled = false; }, 3000);
+    } catch {
+        btn.textContent = 'Run now';
+        btn.disabled = false;
+    }
+}
+
+loadHealth();
+loadJobs();
+</script>
+
+<%- include('layout-end') %>

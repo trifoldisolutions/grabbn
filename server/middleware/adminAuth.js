@@ -24,7 +24,8 @@ export function requireModerator(req, res, next) {
 
 /**
  * Blocks admin accounts (moderator / superadmin) from accessing the regular
- * user-facing frontend. Redirects them to the admin panel instead.
+ * user-facing frontend. Redirects them to the admin login, which moves on to
+ * the panel if they already have an admin session.
  * Apply as: app.use('/v2', requireNonAdmin)
  */
 export function requireNonAdmin(req, res, next) {
@@ -33,7 +34,7 @@ export function requireNonAdmin(req, res, next) {
         !req.user.isAnonymous &&
         ['moderator', 'superadmin'].includes(req.user.role)
     ) {
-        return res.redirect('/admin');
+        return res.redirect('/admin/login');
     }
     next();
 }

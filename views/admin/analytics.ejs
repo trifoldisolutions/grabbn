@@ -1,0 +1,209 @@
+<%
+  title     = 'Analytics'
+  subtitle  = 'Platform growth, content performance, and revenue'
+  adminPage = 'analytics'
+%>
+<%- include('layout') %>
+
+<div class="p-6 space-y-6" id="analyticsRoot">
+    <div class="text-center py-16 text-woodsmoke-400 text-sm">Loading…</div>
+</div>
+
+<script>
+const IS_SUPERADMIN = window.__ADMIN__.role === 'superadmin';
+
+function esc(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function kpiCard(label, value, sub = '') {
+    return `
+    <div class="bg-white border border-silver-100 rounded-md p-5">
+        <div class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider mb-1">${label}</div>
+        <div class="text-2xl font-bold text-woodsmoke-950">${value}</div>
+        ${sub ? `<div class="text-xs text-woodsmoke-400 mt-1">${sub}</div>` : ''}
+    </div>`;
+}
+
+function barChart(series, labelKey, valueKey, color = 'bg-orchid-400') {
+    if (!series.length) return `<div class="text-xs text-woodsmoke-400 py-4 text-center">No data</div>`;
+    const max = Math.max(...series.map(d => d[valueKey] || 0)) || 1;
+    return series.map(d => {
+        const pct = Math.round(((d[valueKey] || 0) / max) * 100);
+        return `
+        <div class="flex items-center gap-2 text-xs">
+            <div class="w-20 text-woodsmoke-400 shrink-0 truncate">${esc(d[labelKey])}</div>
+            <div class="flex-1 bg-silver-100 rounded-md h-4 overflow-hidden">
+                <div class="${color} h-4 rounded-md" style="width:${pct}%"></div>
+            </div>
+            <div class="w-8 text-right text-woodsmoke-600 font-medium">${d[valueKey] || 0}</div>
+        </div>`;
+    }).join('');
+}
+
+function sectionHeader(title) {
+    return `<h2 class="text-sm font-semibold text-woodsmoke-700 border-b border-silver-100 pb-2">${title}</h2>`;
+}
+
+async function loadAnalytics() {
+    const root = document.getElementById('analyticsRoot');
+
+    try {
+        const [overview, content] = await Promise.all([
+            adminFetch('/api/admin/analytics/overview'),
+            adminFetch('/api/admin/analytics/content')
+        ]);
+
+        const revenueData  = IS_SUPERADMIN ? await adminFetch('/api/admin/analytics/revenue').catch(() => null)  : null;
+        const exploreData  = IS_SUPERADMIN ? await adminFetch('/api/admin/analytics/explore').catch(() => null)  : null;
+
+        const signupRecent  = overview.series.usersByDay.slice(-7).reduce((s, d) => s + d.count, 0);
+        const bucketsRecent = overview.series.bucketsByDay.slice(-7).reduce((s, d) => s + d.count, 0);
+
+        root.innerHTML = `
+        <!-- KPI cards -->
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            ${kpiCard('Total users',   overview.totals.users.toLocaleString(),   `+${signupRecent} last 7 days`)}
+            ${kpiCard('Total buckets', overview.totals.buckets.toLocaleString(), `+${bucketsRecent} last 7 days`)}
+            ${kpiCard('Top topic',     esc(content.topTopics[0]?._id || '—'),    `${(content.topTopics[0]?.bucketCount || 0).toLocaleString()} buckets`)}
+            ${kpiCard('Top bucket views', (content.topBuckets[0]?.viewCount || 0).toLocaleString(), esc(content.topBuckets[0]?.name || '—'))}
+        </div>
+
+        <!-- Growth charts -->
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div class="bg-white border border-silver-100 rounded-md p-5 space-y-3">
+                ${sectionHeader('Signups — last 30 days')}
+                <div class="space-y-1.5">
+                    ${barChart(overview.series.usersByDay, '_id', 'count', 'bg-orchid-400')}
+                </div>
+            </div>
+            <div class="bg-white border border-silver-100 rounded-md p-5 space-y-3">
+                ${sectionHeader('Buckets created — last 30 days')}
+                <div class="space-y-1.5">
+                    ${barChart(overview.series.bucketsByDay, '_id', 'count', 'bg-blue-400')}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top content -->
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div class="bg-white border border-silver-100 rounded-md overflow-hidden">
+                <div class="px-5 py-4 border-b border-silver-100">${sectionHeader('Top buckets by views')}</div>
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-silver-50 border-b border-silver-100">
+                            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Bucket</th>
+                            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Topic</th>
+                            <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Views</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${content.topBuckets.map(b => `
+                        <tr class="border-b border-silver-50 hover:bg-silver-50">
+                            <td class="px-4 py-2.5">
+                                <div class="font-medium text-woodsmoke-900 truncate max-w-[160px]">${esc(b.name)}</div>
+                                <div class="text-xs text-woodsmoke-400">${esc(b.userId?.username || '—')}</div>
+                            </td>
+                            <td class="px-4 py-2.5 text-xs text-woodsmoke-500">${esc(b.topic || '—')}</td>
+                            <td class="px-4 py-2.5 text-right text-woodsmoke-700 font-medium">${(b.viewCount || 0).toLocaleString()}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-white border border-silver-100 rounded-md overflow-hidden">
+                <div class="px-5 py-4 border-b border-silver-100">${sectionHeader('Top topics by bucket count')}</div>
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-silver-50 border-b border-silver-100">
+                            <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Topic</th>
+                            <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Buckets</th>
+                            <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Total views</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${content.topTopics.map(t => `
+                        <tr class="border-b border-silver-50 hover:bg-silver-50">
+                            <td class="px-4 py-2.5 font-medium text-woodsmoke-900">${esc(t._id || '—')}</td>
+                            <td class="px-4 py-2.5 text-right text-woodsmoke-700">${(t.bucketCount || 0).toLocaleString()}</td>
+                            <td class="px-4 py-2.5 text-right text-woodsmoke-400 text-xs">${(t.totalViews || 0).toLocaleString()}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        ${revenueData ? `
+        <!-- Revenue (superadmin) -->
+        <div class="bg-white border border-silver-100 rounded-md overflow-hidden">
+            <div class="px-5 py-4 border-b border-silver-100">${sectionHeader('Revenue — last 30 days')}</div>
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-silver-50 border-b border-silver-100">
+                        <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Date</th>
+                        <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Type</th>
+                        <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Count</th>
+                        <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${revenueData.revenueByDay.length
+                        ? revenueData.revenueByDay.map(r => `
+                        <tr class="border-b border-silver-50 hover:bg-silver-50">
+                            <td class="px-4 py-2.5 text-woodsmoke-700">${esc(r._id?.date || '—')}</td>
+                            <td class="px-4 py-2.5 text-woodsmoke-500 text-xs">${esc(r._id?.type || '—')}</td>
+                            <td class="px-4 py-2.5 text-right text-woodsmoke-400">${r.count || 0}</td>
+                            <td class="px-4 py-2.5 text-right font-medium text-woodsmoke-900">${(r.total || 0).toLocaleString()}</td>
+                        </tr>`).join('')
+                        : `<tr><td colspan="4" class="px-4 py-8 text-center text-woodsmoke-400 text-sm">No revenue data</td></tr>`
+                    }
+                </tbody>
+            </table>
+        </div>` : ''}
+
+        ${exploreData ? `
+        <!-- Explore impressions (superadmin) -->
+        <div class="bg-white border border-silver-100 rounded-md overflow-hidden">
+            <div class="px-5 py-4 border-b border-silver-100">${sectionHeader('Explore feed — impressions by topic (last 30 days)')}</div>
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-silver-50 border-b border-silver-100">
+                        <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Topic</th>
+                        <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Impressions</th>
+                        <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Clicks</th>
+                        <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Skips</th>
+                        <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">CTR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${exploreData.impressionsByTopic.length
+                        ? exploreData.impressionsByTopic.map(t => {
+                            const ctr = t.impressions ? ((t.clicks / t.impressions) * 100).toFixed(1) : '0.0';
+                            return `
+                            <tr class="border-b border-silver-50 hover:bg-silver-50">
+                                <td class="px-4 py-2.5 font-medium text-woodsmoke-900">${esc(t._id || '—')}</td>
+                                <td class="px-4 py-2.5 text-right text-woodsmoke-700">${(t.impressions || 0).toLocaleString()}</td>
+                                <td class="px-4 py-2.5 text-right text-emerald-600">${(t.clicks || 0).toLocaleString()}</td>
+                                <td class="px-4 py-2.5 text-right text-woodsmoke-400">${(t.skips || 0).toLocaleString()}</td>
+                                <td class="px-4 py-2.5 text-right text-woodsmoke-600">${ctr}%</td>
+                            </tr>`;
+                          }).join('')
+                        : `<tr><td colspan="5" class="px-4 py-8 text-center text-woodsmoke-400 text-sm">No impression data</td></tr>`
+                    }
+                </tbody>
+            </table>
+        </div>` : ''}
+        `;
+    } catch (err) {
+        root.innerHTML = `<div class="text-center py-16 text-red-400 text-sm">Failed to load analytics</div>`;
+    }
+}
+
+loadAnalytics();
+</script>
+
+<%- include('layout-end') %>

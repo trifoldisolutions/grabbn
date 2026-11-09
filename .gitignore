@@ -23,3 +23,4 @@ public/assets/ui inspo/
 # Logs
 *.log
 npm-debug.log*
+dev_resources/

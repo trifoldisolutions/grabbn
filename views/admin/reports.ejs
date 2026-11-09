@@ -1,0 +1,159 @@
+<%
+  title     = 'Reports'
+  subtitle  = 'Moderation queue — reported buckets and comments'
+  adminPage = 'reports'
+%>
+<%- include('layout') %>
+
+<div class="p-6 space-y-5">
+
+    <!-- ── Filters ──────────────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-md p-4 flex flex-wrap items-end gap-3">
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Type</label>
+            <select id="filterType" class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 bg-white">
+                <option value="">All</option>
+                <option value="bucket">Buckets</option>
+                <option value="comment">Comments</option>
+            </select>
+        </div>
+        <button id="loadBtn"
+            class="h-9 px-4 flex items-center justify-center bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+            Load
+        </button>
+        <div class="ml-auto text-xs text-woodsmoke-400 self-center" id="resultCount"></div>
+    </div>
+
+    <!-- ── Table ─────────────────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-silver-100 bg-silver-50">
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Type</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Content</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Reason</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Reported</th>
+                        <th class="text-right px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center py-12 text-woodsmoke-400 text-sm">Click Load to fetch reports</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between px-4 py-3 border-t border-silver-100">
+            <button id="prevPageBtn"
+                class="h-8 px-3 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                ← Prev
+            </button>
+            <span id="pageIndicator" class="text-xs text-woodsmoke-400"></span>
+            <button id="nextPageBtn"
+                class="h-8 px-3 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                Next →
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPage = 1;
+let lastPageSize = 0;
+
+function esc(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+async function fetchReports(page = 1) {
+    const type   = document.getElementById('filterType').value;
+    const params = new URLSearchParams({ page, limit: 20 });
+    if (type) params.set('type', type);
+
+    const tbody = document.getElementById('reportsTableBody');
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-woodsmoke-400 text-sm">Loading…</td></tr>`;
+
+    try {
+        const data    = await adminFetch(`/api/admin/reports?${params}`);
+        const reports = data.reports || [];
+        currentPage   = page;
+        lastPageSize  = reports.length;
+
+        document.getElementById('resultCount').textContent    = `${reports.length} result${reports.length !== 1 ? 's' : ''}`;
+        document.getElementById('pageIndicator').textContent  = `Page ${page}`;
+        document.getElementById('prevPageBtn').disabled       = page <= 1;
+        document.getElementById('nextPageBtn').disabled       = reports.length < 20;
+
+        if (!reports.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-woodsmoke-400 text-sm">No reports found</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = reports.map(r => {
+            const rtype   = r.reportType || '—';
+            const content = rtype === 'bucket'
+                ? esc(r.name || '—')
+                : esc((r.text || r.body || '').slice(0, 80) || '—');
+            const reason  = esc(r.reports?.reason || '—');
+            const date    = formatDate(r.reports?.createdAt);
+            return `
+            <tr class="border-b border-silver-50 hover:bg-silver-50 transition-colors">
+                <td class="px-4 py-3">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${rtype === 'bucket' ? 'bg-blue-100 text-blue-700' : 'bg-silver-100 text-woodsmoke-500'}">
+                        ${esc(rtype)}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-woodsmoke-900 max-w-xs truncate">${content}</td>
+                <td class="px-4 py-3 text-woodsmoke-500 text-xs">${reason}</td>
+                <td class="px-4 py-3 text-woodsmoke-400 text-xs">${date}</td>
+                <td class="px-4 py-3">
+                    <div class="flex items-center justify-end gap-1">
+                        <button onclick="doAction('${esc(rtype)}', '${r._id}', 'dismiss', this)"
+                            class="h-7 px-2.5 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded transition-colors">
+                            Dismiss
+                        </button>
+                        <button onclick="doAction('${esc(rtype)}', '${r._id}', 'remove', this)"
+                            class="h-7 px-2.5 flex items-center justify-center text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded transition-colors">
+                            Remove
+                        </button>
+                        <button onclick="doAction('${esc(rtype)}', '${r._id}', 'ban', this)"
+                            class="h-7 px-2.5 flex items-center justify-center text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded transition-colors">
+                            Ban
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    } catch {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-red-400 text-sm">Failed to load reports</td></tr>`;
+    }
+}
+
+async function doAction(type, contentId, action, btn) {
+    const labels = {
+        dismiss: 'Dismiss this report without taking action?',
+        remove:  'Remove this content?',
+        ban:     'Remove this content and suspend the owner?'
+    };
+    if (!adminConfirm(labels[action])) return;
+    btn.disabled = true;
+    try {
+        await adminFetch(`/api/admin/reports/${type}/${contentId}/${action}`, { method: 'PATCH' });
+        showToast(action === 'dismiss' ? 'Report dismissed' : action === 'remove' ? 'Content removed' : 'Content removed and user banned');
+        fetchReports(currentPage);
+    } finally { btn.disabled = false; }
+}
+
+document.getElementById('loadBtn').addEventListener('click', () => fetchReports(1));
+document.getElementById('prevPageBtn').addEventListener('click', () => { if (currentPage > 1) fetchReports(currentPage - 1); });
+document.getElementById('nextPageBtn').addEventListener('click', () => fetchReports(currentPage + 1));
+</script>
+
+<%- include('layout-end') %>

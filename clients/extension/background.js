@@ -2,7 +2,7 @@ const BASE_URL_CANDIDATES = [
   'https://app.grabbn.com',
   'https://grabbn.com',
   'https://www.grabbn.com',
-  'http://localhost:3000',
+  'http://localhost:3004',
 ];
 const ACTIVE_BASE_URL_KEY = 'activeBaseUrl';
 const API_REQUEST_TIMEOUT_MS = 7000;
@@ -363,6 +363,21 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             sendResponse({ ok: true, buckets });
           } catch (err) {
             sendResponse({ ok: false, error: normalizeRequestError(err) });
+          }
+          break;
+        }
+
+        case 'CHECK_DUPLICATES': {
+          try {
+            const res = await apiRequest('/api/links/check-duplicates', {
+              method: 'POST',
+              body: JSON.stringify({ hrefs: msg.hrefs || [] }),
+            });
+            if (!res.ok) { sendResponse({ ok: true, duplicates: {} }); return; }
+            const data = await res.json();
+            sendResponse({ ok: true, duplicates: data.duplicates || {} });
+          } catch (err) {
+            sendResponse({ ok: true, duplicates: {} });
           }
           break;
         }

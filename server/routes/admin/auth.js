@@ -7,7 +7,7 @@ import express      from 'express';
 import crypto       from 'crypto';
 import User         from '../../models/user.js';
 import { sendOtpEmail, sendPasswordResetEmail } from '../../utils/email.js';
-import { ADMIN_COOKIE } from '../../middleware/adminSessionAuth.js';
+import { ADMIN_COOKIE, ADMIN_SESSION_MS, createAdminSession, deleteAdminSession } from '../../middleware/adminSessionAuth.js';
 
 const router     = express.Router();
 const ADMIN_ROLES = ['moderator', 'superadmin'];
@@ -94,8 +94,9 @@ router.post('/verify-otp', async (req, res) => {
         await user.save();
 
         // Set admin-only session cookie — completely separate from anonymousId
-        res.cookie(ADMIN_COOKIE, user._id.toString(), {
-            maxAge:   8 * 60 * 60 * 1000, // 8-hour admin session
+        const sessionToken = await createAdminSession(user._id);
+        res.cookie(ADMIN_COOKIE, sessionToken, {
+            maxAge:   ADMIN_SESSION_MS,
             httpOnly: true,
             sameSite: isProd ? 'none' : 'lax',
             secure:   isProd,
@@ -202,8 +203,14 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // ── POST /api/admin/auth/logout ───────────────────────────────────────────────
-// Clears only the admin cookie — regular user session is untouched.
-router.post('/logout', (req, res) => {
+// Ends the admin session and clears its cookie — regular user session is untouched.
+router.post('/logout', async (req, res) => {
+    try {
+        const token = req.cookies?.[ADMIN_COOKIE];
+        if (token) await deleteAdminSession(token);
+    } catch (err) {
+        console.error('[admin/auth] logout error:', err);
+    }
     res.clearCookie(ADMIN_COOKIE);
     res.json({ success: true });
 });

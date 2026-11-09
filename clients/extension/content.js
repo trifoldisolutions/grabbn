@@ -80,7 +80,7 @@ if (window.__grabbnInjected) {
   function detectListings() {
     const skipSelector = 'header, nav, footer, [role="navigation"], [role="banner"], [role="contentinfo"]';
     const seen = new Set();
-    for (const link of document.querySelectorAll('a[href]')) {
+    for (const link of deepQuerySelectorAll(document, 'a[href]')) {
       if (link.closest('#grabbn-sel-panel, #grabbn-review-panel, #grabbn-hint')) continue;
       if (link.closest(skipSelector)) continue;
       const card = findCardAncestor(link);
@@ -289,7 +289,7 @@ if (window.__grabbnInjected) {
     for (const el of document.querySelectorAll(sel)) {
       if (el === anchor) continue;
       if (el.closest('#grabbn-sel-panel, #grabbn-review-panel, #grabbn-hint')) continue;
-      const sibLink = el.querySelector('a[href]');
+      const sibLink = deepQuerySelector(el, 'a[href]');
       if (!sibLink) continue;
       if (highlightedEls.length >= MAX_SELECTION) break;
       addElementWithCheckbox(el, sibLink);
@@ -405,7 +405,7 @@ if (window.__grabbnInjected) {
       if (!checkedEls.has(el)) continue;
 
       let text = '';
-      const h = el.querySelector('h1,h2,h3,h4,h5,h6');
+      const h = deepQuerySelector(el, 'h1,h2,h3,h4,h5,h6');
       if (h) text = h.textContent.trim();
       if (!text) text = (link.title || link.getAttribute('aria-label') || '').trim();
       if (!text) text = el.textContent.trim().replace(/\s+/g, ' ').slice(0, 120);
@@ -474,6 +474,7 @@ if (window.__grabbnInjected) {
           <button id="grabbn-review-save" disabled>Save</button>
         </div>
         <div id="grabbn-review-status" class="grabbn-hidden"></div>
+        <div id="grabbn-dup-warn" class="grabbn-hidden"></div>
       </div>
     `;
 
@@ -592,12 +593,14 @@ if (window.__grabbnInjected) {
   // Save
   // ---------------------------------------------------------------------------
 
-  async function doSave() {
+  async function doSave(skipDupCheck = false) {
     if (reviewSelectedUrls.size === 0 || reviewSelectedBuckets.size === 0) return;
 
     const saveBtn = reviewPanel?.querySelector('#grabbn-review-save');
     const status  = reviewPanel?.querySelector('#grabbn-review-status');
+    const dupWarn = reviewPanel?.querySelector('#grabbn-dup-warn');
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+    if (dupWarn) { dupWarn.classList.add('grabbn-hidden'); dupWarn.innerHTML = ''; }
 
     // Wait for any pending meta fetches
     const pending = [...reviewSelectedUrls]
@@ -621,6 +624,43 @@ if (window.__grabbnInjected) {
         })
     );
 
+    if (!skipDupCheck) {
+      if (saveBtn) saveBtn.textContent = 'Checking…';
+      const checkResp = await chrome.runtime.sendMessage({
+        type:  'CHECK_DUPLICATES',
+        hrefs: linksPayload.map(l => l.href),
+      }).catch(() => ({ ok: true, duplicates: {} }));
+
+      const dups = checkResp.duplicates || {};
+      const dupEntries = Object.entries(dups).map(([href, buckets]) => {
+        const item = linksPayload.find(l => l.href === href) || {};
+        const label = (item.text || href).slice(0, 50) + ((item.text || href).length > 50 ? '…' : '');
+        return { label, buckets };
+      });
+
+      if (dupEntries.length > 0 && dupWarn) {
+        const listHtml = dupEntries.map(e =>
+          `<li><strong>${e.label}</strong> — ${e.buckets.join(', ')}</li>`
+        ).join('');
+        dupWarn.innerHTML = `
+          <p class="grabbn-dup-title">Already saved in your library:</p>
+          <ul class="grabbn-dup-list">${listHtml}</ul>
+          <div class="grabbn-dup-actions">
+            <button id="grabbn-dup-anyway">Save anyway</button>
+            <button id="grabbn-dup-cancel">Cancel</button>
+          </div>`;
+        dupWarn.classList.remove('grabbn-hidden');
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+        dupWarn.querySelector('#grabbn-dup-anyway').addEventListener('click', () => doSave(true));
+        dupWarn.querySelector('#grabbn-dup-cancel').addEventListener('click', () => {
+          dupWarn.classList.add('grabbn-hidden');
+          dupWarn.innerHTML = '';
+        });
+        return;
+      }
+    }
+
+    if (saveBtn) saveBtn.textContent = 'Saving…';
     const resp = await chrome.runtime.sendMessage({
       type:        'SAVE_LINKS',
       links:       linksPayload,
@@ -684,6 +724,34 @@ if (window.__grabbnInjected) {
     reviewSelectedUrls   = new Set();
     reviewSelectedBuckets = new Set();
     reviewBucketsLoaded  = [];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shadow-DOM-piercing query helpers
+  // ---------------------------------------------------------------------------
+
+  function deepQuerySelector(root, selector) {
+    const found = root.querySelector(selector);
+    if (found) return found;
+    for (const el of root.querySelectorAll('*')) {
+      if (el.shadowRoot) {
+        const found2 = deepQuerySelector(el.shadowRoot, selector);
+        if (found2) return found2;
+      }
+    }
+    return null;
+  }
+
+  function deepQuerySelectorAll(root, selector) {
+    const results = [...root.querySelectorAll(selector)];
+    for (const el of root.querySelectorAll('*')) {
+      if (el.shadowRoot) {
+        for (const found of deepQuerySelectorAll(el.shadowRoot, selector)) {
+          results.push(found);
+        }
+      }
+    }
+    return results;
   }
 
   // ---------------------------------------------------------------------------

@@ -468,6 +468,43 @@ body.grabbn-pick-mode * {
 
 .grabbn-status-error { color: #dc2626; }
 
+/* ── Duplicate warning ───────────────────────────────────────────────────── */
+
+#grabbn-dup-warn {
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.grabbn-dup-title {
+  font-weight: 600;
+  color: #92400e;
+  margin: 0 0 4px;
+}
+.grabbn-dup-list {
+  margin: 0 0 6px;
+  padding-left: 14px;
+  color: #78350f;
+  max-height: 48px;
+  overflow-y: auto;
+}
+.grabbn-dup-list li { margin-bottom: 2px; }
+.grabbn-dup-actions { display: flex; gap: 8px; align-items: center; }
+.grabbn-dup-actions button {
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+#grabbn-dup-anyway { background: #7c3aed; color: #fff; }
+#grabbn-dup-anyway:hover { background: #6d28d9; }
+#grabbn-dup-cancel { background: transparent; color: #6b7280; padding: 3px 4px; }
+#grabbn-dup-cancel:hover { color: #374151; }
+
 /* ── Success state ───────────────────────────────────────────────────────── */
 
 #grabbn-success {

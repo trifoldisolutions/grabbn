@@ -8,7 +8,8 @@
 
 <!-- ── Embed bucket data for client-side modal ─────────────────────────── -->
 <script>
-    window.__PROFILE_OWN__           = <%- JSON.stringify(ownBuckets) %>;
+    window.__PROFILE_OWN__           = <%- JSON.stringify([...ownBuckets, ...(typeof archivedBuckets !== 'undefined' ? archivedBuckets : [])]) %>;
+    window.__PROFILE_ARCHIVED__      = <%- JSON.stringify(typeof archivedBuckets !== 'undefined' ? archivedBuckets : []) %>;
     window.__PROFILE_GRABBED__       = <%- JSON.stringify(grabbedBuckets) %>;
     window.__PROFILE_REPOS__         = <%- JSON.stringify(userRepos) %>;
     window.__PROFILE_IS_OWNER__      = <%- JSON.stringify(isOwner) %>;
@@ -184,7 +185,7 @@
         <div class="flex gap-0">
             <button id="tabBuckets" class="profile-tab px-5 py-3 text-sm font-semibold border-b-2 border-orchid-600 text-orchid-600 transition-colors" data-tab="buckets">
                 Buckets
-                <span class="ml-1.5 text-xs bg-orchid-100 text-orchid-600 px-1.5 py-0.5 rounded-full"><%= isOwner ? ownBuckets.length : publicBucketCount %></span>
+                <span id="bucketsTabCount" class="ml-1.5 text-xs bg-orchid-100 text-orchid-600 px-1.5 py-0.5 rounded-full"><%= isOwner ? ownBuckets.length : publicBucketCount %></span>
             </button>
             <% if (grabbedBuckets.length > 0 || isOwner) { %>
                 <button id="tabGrabbed" class="profile-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-colors" data-tab="grabbed">
@@ -196,6 +197,12 @@
                 <button id="tabRepos" class="profile-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-colors" data-tab="repos">
                     Repos
                     <span id="reposTabCount" class="ml-1.5 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full"><%= isOwner ? userRepos.length : publicRepoCount %></span>
+                </button>
+            <% } %>
+            <% if (isOwner) { %>
+                <button id="tabArchived" class="profile-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-colors" data-tab="archived">
+                    Archived
+                    <span id="archivedTabCount" class="ml-1.5 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full"><%= archivedBuckets.length %></span>
                 </button>
             <% } %>
         </div>
@@ -240,6 +247,29 @@
         </div>
     <% } %>
 
+    <!-- ── Archived tab (owner only) ────────────────────────────────────── -->
+    <% if (isOwner) { %>
+    <div id="panelArchived" class="hidden">
+        <% if (archivedBuckets.length === 0) { %>
+            <div class="flex flex-col items-center justify-center py-16 gap-3 text-center text-silver-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M3 3h18a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1m1 5h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm5 4a1 1 0 0 0 0 2h4a1 1 0 1 0 0-2z"/></g></svg>
+                <p class="text-sm text-gray-400">No archived buckets.</p>
+            </div>
+        <% } else { %>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <% archivedBuckets.forEach(function(b) { %>
+                    <div class="flex flex-col gap-2" data-archived-wrap="<%= b._id %>">
+                        <div class="flex-1 min-h-0"><%- include('partials/bucket-card', { b, isOwn: false }) %></div>
+                        <button class="unarchive-btn w-full flex items-center justify-center h-9 text-sm font-semibold border border-silver-200 rounded-md text-gray-600 hover:bg-silver-50 transition-colors" data-bucket-id="<%= b._id %>">
+                            Unarchive
+                        </button>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+    </div>
+    <% } %>
+
 </div>
 
 <!-- ── Credit badge JS (owner only) ──────────────────────────────────── -->
@@ -261,6 +291,18 @@
         .catch(() => {});
 })();
 </script>
+<% } %>
+
+<!-- ── Bulk select action bar (owner only) ────────────────────────────── -->
+<% if (isOwner) { %>
+<div id="bulkActionBar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-white border border-silver-200 rounded-md shadow-xl px-4 py-2.5 whitespace-nowrap">
+    <span id="bulkSelCount" class="text-sm font-medium text-gray-500 mr-1">0 selected</span>
+    <button id="bulkArchiveBtn" disabled class="flex items-center justify-center gap-1.5 px-4 h-9 text-sm font-semibold border border-silver-200 rounded-md text-gray-600 hover:bg-silver-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Archive</button>
+    <button id="bulkDeleteBtn" disabled class="flex items-center justify-center gap-1.5 px-4 h-9 text-sm font-semibold rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Delete</button>
+    <button id="bulkCancelBtn" class="flex items-center justify-center w-8 h-8 ml-1 rounded-md text-gray-400 hover:bg-silver-50 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59L7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12L5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z"/></svg>
+    </button>
+</div>
 <% } %>
 
 <!-- ── Bucket edit modal (owner only) ────────────────────────────────── -->
@@ -367,9 +409,10 @@
     // ── Tab switching ────────────────────────────────────────────────────────
     const tabs   = document.querySelectorAll('.profile-tab');
     const panels = {
-        buckets: document.getElementById('panelBuckets'),
-        grabbed: document.getElementById('panelGrabbed'),
-        repos:   document.getElementById('panelRepos'),
+        buckets:  document.getElementById('panelBuckets'),
+        grabbed:  document.getElementById('panelGrabbed'),
+        repos:    document.getElementById('panelRepos'),
+        archived: document.getElementById('panelArchived'),
     };
     const TAB_KEY = 'profile_active_tab_<%= profileUser.username %>';
 
@@ -870,18 +913,245 @@
         });
     }
 
-    // ── Card click: own buckets → edit modal, grabbed buckets → bucket page ──
+    // ── Bulk select state (owner only, panelBuckets) ─────────────────────────
+    let bulkMode = false;
+    const bulkSelected = new Set();
+
+    const bulkBar      = document.getElementById('bulkActionBar');
+    const bulkCountEl  = document.getElementById('bulkSelCount');
+    const bulkArchBtn  = document.getElementById('bulkArchiveBtn');
+    const bulkDelBtn   = document.getElementById('bulkDeleteBtn');
+    const bulkCancelBtn = document.getElementById('bulkCancelBtn');
+
+    function bulkToggleCard(id, force) {
+        const bucketsPanel = document.getElementById('panelBuckets');
+        if (!bucketsPanel) return;
+        const card = bucketsPanel.querySelector(`[data-bucket-id="${id}"]`);
+        if (!card) return;
+        const select = force !== undefined ? force : !bulkSelected.has(id);
+        if (select) {
+            bulkSelected.add(id);
+            card.classList.add('ring-2', 'ring-orchid-500', 'ring-offset-2');
+            if (!card.querySelector('.bulk-check')) {
+                const chk = document.createElement('div');
+                chk.className = 'bulk-check absolute top-2.5 right-2.5 z-20 w-4 h-4 pointer-events-none';
+                chk.innerHTML = `
+                    <span class="absolute inset-0 rounded border-2 border-orchid-500 bg-orchid-500"></span>
+                    <span class="absolute inset-0 flex items-center justify-center">
+                        <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>`;
+                card.style.position = 'relative';
+                card.appendChild(chk);
+            }
+        } else {
+            bulkSelected.delete(id);
+            card.classList.remove('ring-2', 'ring-orchid-500', 'ring-offset-2');
+            card.querySelector('.bulk-check')?.remove();
+        }
+        bulkSyncBar();
+    }
+
+    function bulkSyncBar() {
+        const n = bulkSelected.size;
+        if (bulkCountEl) bulkCountEl.textContent = `${n} selected`;
+        if (bulkArchBtn) bulkArchBtn.disabled = n === 0;
+        if (bulkDelBtn)  bulkDelBtn.disabled  = n === 0;
+    }
+
+    function enterBulkMode(seedId) {
+        bulkMode = true;
+        if (bulkBar) bulkBar.classList.remove('hidden');
+        bulkToggleCard(seedId, true);
+    }
+
+    function exitBulkMode() {
+        bulkMode = false;
+        const bucketsPanel = document.getElementById('panelBuckets');
+        if (bucketsPanel) {
+            bucketsPanel.querySelectorAll('[data-bucket-id]').forEach(c => {
+                c.classList.remove('ring-2', 'ring-orchid-500', 'ring-offset-2');
+                c.querySelector('.bulk-check')?.remove();
+            });
+        }
+        bulkSelected.clear();
+        if (bulkBar) bulkBar.classList.add('hidden');
+        if (bulkDelBtn) { bulkDelBtn.textContent = 'Delete'; bulkDelBtn.dataset.confirm = ''; }
+    }
+
+    function bulkRemoveCards(ids, removeFromPool = false) {
+        const bucketsPanel = document.getElementById('panelBuckets');
+        if (!bucketsPanel) return;
+        ids.forEach(id => {
+            bucketsPanel.querySelector(`[data-bucket-id="${id}"]`)?.remove();
+            if (removeFromPool) {
+                const pool = window.__PROFILE_OWN__;
+                if (pool) { const i = pool.findIndex(b => b._id === id); if (i !== -1) pool.splice(i, 1); }
+            }
+        });
+        const remaining = bucketsPanel.querySelectorAll('[data-bucket-id]');
+        if (remaining.length === 0) {
+            bucketsPanel.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-16 gap-3 text-center text-silver-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>
+                    <p class="text-sm text-gray-400">No buckets yet. Start curating!</p>
+                </div>`;
+        }
+    }
+
+    function adjustTabCount(elId, delta) {
+        const el = document.getElementById(elId);
+        if (el) el.textContent = Math.max(0, (parseInt(el.textContent, 10) || 0) + delta);
+    }
+
+    if (isOwner && bulkCancelBtn) {
+        bulkCancelBtn.addEventListener('click', exitBulkMode);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && bulkMode) exitBulkMode(); });
+
+        if (bulkArchBtn) {
+            bulkArchBtn.addEventListener('click', async () => {
+                if (bulkSelected.size === 0) return;
+                const ids = [...bulkSelected];
+                bulkArchBtn.disabled = true;
+                bulkArchBtn.textContent = 'Archiving…';
+                try {
+                    const res = await fetch('/api/buckets/bulk/archive', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ ids })
+                    });
+                    if (!res.ok) throw new Error();
+                    bulkRemoveCards(ids, false);
+                    adjustTabCount('bucketsTabCount',  -ids.length);
+                    adjustTabCount('archivedTabCount', +ids.length);
+                    exitBulkMode();
+                    window.showToast?.(`${ids.length} bucket${ids.length !== 1 ? 's' : ''} archived`, 'success');
+                } catch (_) {
+                    window.showToast?.('Failed to archive', 'error');
+                    bulkArchBtn.disabled = false;
+                    bulkArchBtn.textContent = 'Archive';
+                }
+            });
+        }
+
+        if (bulkDelBtn) {
+            bulkDelBtn.addEventListener('click', async () => {
+                if (bulkSelected.size === 0) return;
+                if (!bulkDelBtn.dataset.confirm) {
+                    bulkDelBtn.dataset.confirm = '1';
+                    bulkDelBtn.textContent = 'Confirm delete';
+                    setTimeout(() => {
+                        if (bulkDelBtn.dataset.confirm) {
+                            bulkDelBtn.dataset.confirm = '';
+                            bulkDelBtn.textContent = 'Delete';
+                        }
+                    }, 3000);
+                    return;
+                }
+                const ids = [...bulkSelected];
+                bulkDelBtn.disabled = true;
+                bulkDelBtn.textContent = 'Deleting…';
+                try {
+                    const res = await fetch('/api/buckets/bulk', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ ids })
+                    });
+                    if (!res.ok) throw new Error();
+                    bulkRemoveCards(ids, true);
+                    adjustTabCount('bucketsTabCount', -ids.length);
+                    exitBulkMode();
+                    window.showToast?.(`${ids.length} bucket${ids.length !== 1 ? 's' : ''} deleted`, 'success');
+                } catch (_) {
+                    window.showToast?.('Failed to delete', 'error');
+                    bulkDelBtn.disabled = false;
+                    bulkDelBtn.textContent = 'Delete';
+                    bulkDelBtn.dataset.confirm = '';
+                }
+            });
+        }
+
+        // ── Unarchive buttons ─────────────────────────────────────────────────
+        document.querySelectorAll('.unarchive-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.bucketId;
+                if (!id || btn.dataset.busy) return;
+                btn.dataset.busy = '1';
+                btn.textContent = 'Unarchiving…';
+                btn.disabled = true;
+                try {
+                    const res = await fetch(`/api/buckets/${id}/unarchive`, {
+                        method: 'PATCH',
+                        credentials: 'include'
+                    });
+                    if (!res.ok) throw new Error();
+                    // Remove from archived panel
+                    document.querySelector(`[data-archived-wrap="${id}"]`)?.remove();
+                    adjustTabCount('archivedTabCount',  -1);
+                    adjustTabCount('bucketsTabCount',   +1);
+                    // Show empty state in archived panel if nothing left
+                    const archivedPanel = document.getElementById('panelArchived');
+                    if (archivedPanel && !archivedPanel.querySelector('[data-archived-wrap]')) {
+                        archivedPanel.innerHTML = `
+                            <div class="flex flex-col items-center justify-center py-16 gap-3 text-center text-silver-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M3 3h18a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1m1 5h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm5 4a1 1 0 0 0 0 2h4a1 1 0 1 0 0-2z"/></g></svg>
+                                <p class="text-sm text-gray-400">No archived buckets.</p>
+                            </div>`;
+                    }
+                    window.showToast?.('Bucket restored to your profile', 'success');
+                } catch (_) {
+                    window.showToast?.('Failed to unarchive', 'error');
+                    btn.textContent = 'Unarchive';
+                    btn.disabled = false;
+                    delete btn.dataset.busy;
+                }
+            });
+        });
+    }
+
+    // ── Card click: own buckets → edit modal (or bulk toggle), grabbed → page ──
     ['panelBuckets', 'panelGrabbed'].forEach(id => {
         const panel = document.getElementById(id);
         if (!panel) return;
         panel.querySelectorAll('[data-bucket-id]').forEach(card => {
             if (card.closest('[data-bucket-id]') !== card) return;
             card.style.cursor = 'pointer';
+
+            // Long press → enter bulk select (owner, panelBuckets only)
+            if (id === 'panelBuckets' && isOwner) {
+                let lpTimer = null;
+                let lpFired = false;
+                const lpStart = () => {
+                    lpFired = false;
+                    lpTimer = setTimeout(() => {
+                        lpTimer = null;
+                        lpFired = true;
+                        if (!bulkMode) enterBulkMode(card.dataset.bucketId);
+                        else bulkToggleCard(card.dataset.bucketId);
+                    }, 500);
+                };
+                const lpCancel = () => { clearTimeout(lpTimer); lpTimer = null; };
+                card.addEventListener('mousedown',  e => { if (e.button === 0) lpStart(); });
+                card.addEventListener('mouseup',    lpCancel);
+                card.addEventListener('mouseleave', lpCancel);
+                card.addEventListener('touchstart', lpStart,  { passive: true });
+                card.addEventListener('touchend',   lpCancel, { passive: true });
+                card.addEventListener('touchmove',  lpCancel, { passive: true });
+                card.addEventListener('click', e => { if (lpFired) { lpFired = false; e.stopImmediatePropagation(); } }, true);
+            }
+
             card.addEventListener('click', e => {
                 if (e.target.closest('.card-share-btn')) return;
                 if (e.target.closest('.card-menu-btn')) return;
                 if (e.target.closest('.card-context-menu')) return;
                 if (e.target.closest('a[href]')) return;
+                if (id === 'panelBuckets' && bulkMode) {
+                    bulkToggleCard(card.dataset.bucketId);
+                    return;
+                }
                 if (id === 'panelBuckets' && isOwner && window.openBucketModal) {
                     const bucket = window.__PROFILE_OWN__?.find(b => b._id === card.dataset.bucketId);
                     if (bucket) { window.openBucketModal(bucket); return; }

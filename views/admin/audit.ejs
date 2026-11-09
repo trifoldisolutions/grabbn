@@ -1,0 +1,151 @@
+<%
+  title     = 'Audit Log'
+  subtitle  = 'Record of all privileged admin actions'
+  adminPage = 'audit'
+%>
+<%- include('layout') %>
+
+<div class="p-6 space-y-5">
+
+    <!-- ── Filters ──────────────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-md p-4 flex flex-wrap items-end gap-3">
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Action</label>
+            <input id="filterAction" type="text" placeholder="e.g. user_suspend…"
+                class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 w-44" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label class="text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Target type</label>
+            <select id="filterTargetType" class="h-9 px-3 text-sm border border-silver-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orchid-400 bg-white">
+                <option value="">All</option>
+                <option value="user">User</option>
+                <option value="bucket">Bucket</option>
+                <option value="report">Report</option>
+                <option value="partner_application">Partner application</option>
+            </select>
+        </div>
+
+        <button id="applyFiltersBtn"
+            class="h-9 px-4 flex items-center justify-center bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold rounded-md transition-colors">
+            Apply
+        </button>
+        <button id="clearFiltersBtn"
+            class="h-9 px-4 flex items-center justify-center bg-silver-100 hover:bg-silver-200 text-woodsmoke-700 text-sm font-medium rounded-md transition-colors">
+            Clear
+        </button>
+
+        <div class="ml-auto text-xs text-woodsmoke-400 self-center" id="resultCount"></div>
+    </div>
+
+    <!-- ── Table ─────────────────────────────────────────────────────────────── -->
+    <div class="bg-white border border-silver-100 rounded-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-silver-100 bg-silver-50">
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Admin</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Action</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Target type</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Target ID</th>
+                        <th class="text-left px-4 py-3 text-[11px] font-semibold text-woodsmoke-500 uppercase tracking-wider">Date</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center py-12 text-woodsmoke-400 text-sm">Loading…</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between px-4 py-3 border-t border-silver-100">
+            <button id="prevPageBtn"
+                class="h-8 px-3 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                ← Prev
+            </button>
+            <span id="pageIndicator" class="text-xs text-woodsmoke-400"></span>
+            <button id="nextPageBtn"
+                class="h-8 px-3 flex items-center justify-center text-xs font-medium text-woodsmoke-600 bg-silver-100 hover:bg-silver-200 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                Next →
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPage = 1;
+let totalPages  = 1;
+
+function esc(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatDateTime(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+}
+
+async function fetchLogs(page = 1) {
+    const action     = document.getElementById('filterAction').value.trim();
+    const targetType = document.getElementById('filterTargetType').value;
+
+    const params = new URLSearchParams({ page, limit: 50 });
+    if (action)     params.set('action', action);
+    if (targetType) params.set('targetType', targetType);
+
+    const tbody = document.getElementById('auditTableBody');
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-woodsmoke-400 text-sm">Loading…</td></tr>`;
+
+    try {
+        const data = await adminFetch(`/api/admin/audit?${params}`);
+        currentPage = data.pagination.page;
+        totalPages  = data.pagination.pages;
+
+        document.getElementById('resultCount').textContent   = `${data.pagination.total.toLocaleString()} entry${data.pagination.total !== 1 ? 'ies' : 'y'}`;
+        document.getElementById('pageIndicator').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+        document.getElementById('prevPageBtn').disabled      = currentPage <= 1;
+        document.getElementById('nextPageBtn').disabled      = currentPage >= totalPages;
+
+        if (!data.logs.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-woodsmoke-400 text-sm">No audit entries found</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.logs.map(l => `
+            <tr class="border-b border-silver-50 hover:bg-silver-50 transition-colors">
+                <td class="px-4 py-3">
+                    <div class="font-medium text-woodsmoke-900 text-sm">${esc(l.adminUserId?.username || l.adminUserId?.email || '—')}</div>
+                    <div class="text-xs text-woodsmoke-400">${esc(l.adminUserId?.role || '—')}</div>
+                </td>
+                <td class="px-4 py-3">
+                    <code class="text-xs bg-silver-100 text-woodsmoke-700 px-1.5 py-0.5 rounded">${esc(l.action || '—')}</code>
+                </td>
+                <td class="px-4 py-3 text-woodsmoke-500 text-xs">${esc(l.targetType || '—')}</td>
+                <td class="px-4 py-3 text-woodsmoke-400 text-xs font-mono">${esc(l.targetId ? String(l.targetId).slice(-8) : '—')}</td>
+                <td class="px-4 py-3 text-woodsmoke-400 text-xs">${formatDateTime(l.createdAt)}</td>
+            </tr>
+        `).join('');
+    } catch {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-12 text-red-400 text-sm">Failed to load audit log</td></tr>`;
+    }
+}
+
+document.getElementById('applyFiltersBtn').addEventListener('click', () => fetchLogs(1));
+document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+    document.getElementById('filterAction').value     = '';
+    document.getElementById('filterTargetType').value = '';
+    fetchLogs(1);
+});
+document.getElementById('filterAction').addEventListener('keydown', e => { if (e.key === 'Enter') fetchLogs(1); });
+document.getElementById('prevPageBtn').addEventListener('click', () => { if (currentPage > 1) fetchLogs(currentPage - 1); });
+document.getElementById('nextPageBtn').addEventListener('click', () => { if (currentPage < totalPages) fetchLogs(currentPage + 1); });
+
+fetchLogs(1);
+</script>
+
+<%- include('layout-end') %>

@@ -147,6 +147,20 @@
                 </button>
             </div>
             <div id="saveStatus" class="hidden text-xs"></div>
+            <div id="dupWarning" class="hidden flex-col gap-y-1.5">
+                <p class="text-xs font-medium text-amber-700">Already saved in your library:</p>
+                <ul id="dupList" class="text-xs text-gray-500 space-y-0.5 max-h-[60px] overflow-y-auto"></ul>
+                <div class="flex items-center gap-2 pt-0.5">
+                    <button id="dupSaveAnywayBtn"
+                        class="flex items-center justify-center px-3 py-1 rounded-md bg-orchid-600 text-white text-xs font-semibold hover:bg-orchid-700 transition-colors">
+                        Save anyway
+                    </button>
+                    <button id="dupCancelBtn"
+                        class="flex items-center justify-center text-xs text-gray-500 hover:text-gray-700 font-medium">
+                        Cancel
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -446,16 +460,17 @@
         }
 
         // ── save ────────────────────────────────────────────────────
-        saveBtn.addEventListener('click', async () => {
-            if (selectedUrls.size === 0 || selectedBuckets.size === 0) return;
+        const dupWarning   = document.getElementById('dupWarning');
+        const dupList      = document.getElementById('dupList');
+        const dupSaveAnywayBtn = document.getElementById('dupSaveAnywayBtn');
+        const dupCancelBtn = document.getElementById('dupCancelBtn');
 
-            const linksToSave = allItems
-                .filter(l => selectedUrls.has(l.href))
-                .map(l => ({ href: l.href, text: l.text, image: l.image || null, sourceUrl }));
-
+        async function doSave(linksToSave) {
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving…';
             saveStatus.classList.add('hidden');
+            dupWarning.classList.add('hidden');
+            dupWarning.classList.remove('flex');
 
             try {
                 const res = await fetch('/api/links', fetchOpts({
@@ -487,6 +502,55 @@
 
             saveBtn.textContent = 'Save';
             updateSaveBtn();
+        }
+
+        saveBtn.addEventListener('click', async () => {
+            if (selectedUrls.size === 0 || selectedBuckets.size === 0) return;
+
+            const linksToSave = allItems
+                .filter(l => selectedUrls.has(l.href))
+                .map(l => ({ href: l.href, text: l.text, image: l.image || null, sourceUrl }));
+
+            // Check for duplicates across all user buckets before saving
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Checking…';
+            saveStatus.classList.add('hidden');
+
+            try {
+                const checkRes = await fetch('/api/links/check-duplicates', fetchOpts({
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hrefs: linksToSave.map(l => l.href) })
+                }));
+
+                if (checkRes.ok) {
+                    const { duplicates } = await checkRes.json();
+                    const dupEntries = Object.entries(duplicates);
+
+                    if (dupEntries.length > 0) {
+                        // Show duplicate warning instead of saving immediately
+                        dupList.innerHTML = dupEntries.map(([href, bucketNames]) => {
+                            const label = (linksToSave.find(l => l.href === href) || {}).text || href;
+                            const truncLabel = label.length > 40 ? label.slice(0, 40) + '…' : label;
+                            return `<li class="truncate" title="${href}"><span class="font-medium text-gray-700">${truncLabel}</span> — ${bucketNames.join(', ')}</li>`;
+                        }).join('');
+                        dupWarning.classList.remove('hidden');
+                        dupWarning.classList.add('flex');
+                        saveBtn.textContent = 'Save';
+                        updateSaveBtn();
+
+                        // Wire one-time handlers
+                        dupSaveAnywayBtn.onclick = () => doSave(linksToSave);
+                        dupCancelBtn.onclick = () => {
+                            dupWarning.classList.add('hidden');
+                            dupWarning.classList.remove('flex');
+                        };
+                        return;
+                    }
+                }
+            } catch { /* network issue — fall through to save */ }
+
+            await doSave(linksToSave);
         });
 
         // ── messages from bookmarklet parent ─────────────────────────

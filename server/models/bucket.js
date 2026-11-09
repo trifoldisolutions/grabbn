@@ -126,6 +126,11 @@ const bucketSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    isArchived: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
     // Direct views only (not explore- or showroom-driven) — used in exploreScore to avoid circular feedback
     directViewCount: {
       type: Number,
