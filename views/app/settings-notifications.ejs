@@ -1,0 +1,259 @@
+<%
+  title           = 'Notifications'
+  page            = 'settings'
+  settingsSection = 'notifications'
+%>
+<%- include('../partials/layout') %>
+
+<div class="flex flex-1 overflow-hidden justify-center">
+  <div class="flex flex-col md:flex-row w-full max-w-[992px] overflow-hidden">
+
+    <%- include('partials/settings-nav') %>
+
+    <div class="flex-1 overflow-y-auto scrollbar-hide">
+      <div class="w-full px-6 py-6 pb-20 md:pb-6">
+
+        <% if (user && !user.isAnonymous) { %>
+
+        <%
+          const inapp = user.notificationPrefs      || {};
+          const email = user.emailNotificationPrefs || {};
+
+          const items = [
+            { key: 'new_follower',           label: 'New follower',                       desc: 'Someone started following you',                  channels: ['inapp', 'email'] },
+            { key: 'bucket_grabbed',         label: 'Bucket grabbed',                     desc: 'Someone grabbed one of your buckets',            channels: ['inapp', 'email'] },
+            { key: 'bucket_unlocked',        label: 'Bucket unlocked',                    desc: 'Someone unlocked one of your paid buckets',      channels: ['inapp', 'email'] },
+            { key: 'new_bucket_published',   label: 'New bucket from someone you follow', desc: 'A curator you follow published a new bucket',    channels: ['inapp', 'email'] },
+            { key: 'grabbed_bucket_updated', label: 'Grabbed bucket updated',             desc: 'A curator updated a bucket you grabbed',         channels: ['inapp', 'email'] },
+            { key: 'comment_mention',        label: 'Comment mention',                    desc: 'Someone mentioned you in a comment',             channels: ['inapp', 'email'] },
+            { key: 'comment_reply',          label: 'Comment reply',                      desc: 'Someone replied to your comment',                channels: ['inapp', 'email'] },
+            { key: 'comment_agreed',         label: 'Comment agreed',                     desc: 'Someone agreed with your comment',               channels: ['inapp', 'email'] },
+            { key: 'bucket_tagged',          label: 'Bucket tagged',                      desc: 'Someone referenced your bucket in a comment',    channels: ['inapp', 'email'] },
+            { key: 'new_dm',                 label: 'New direct message',                 desc: 'You received a new direct message',              channels: ['inapp', 'email'] },
+            { key: 'newsletter',             label: 'Grabbn newsletter',                  desc: 'Product updates, tips and announcements',        channels: ['inapp', 'email'] },
+          ];
+
+          function notifLabel(channels, inappOn, emailOn) {
+            if (!inappOn && !emailOn) return 'Not allowed';
+            if (channels.includes('inapp') && channels.includes('email')) {
+              if (inappOn && emailOn) return 'In app & email';
+              return inappOn ? 'In app' : 'Email';
+            }
+            return channels[0] === 'inapp' ? 'In app' : 'Email';
+          }
+        %>
+
+        <div class="border border-silver-200 rounded-md divide-y divide-silver-100">
+
+          <div class="px-5 py-4">
+            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Notifications</p>
+          </div>
+
+          <% items.forEach(function(item) {
+            const inappOn = item.channels.includes('inapp')
+              ? (inapp[item.key] !== false)
+              : false;
+            const emailOn = item.channels.includes('email')
+              ? (item.key === 'newsletter' ? user.newsletterSubscribed === true : email[item.key] === true)
+              : false;
+            const label   = notifLabel(item.channels, inappOn, emailOn);
+            const noneOn  = !inappOn && !emailOn;
+          %>
+          <div class="notif-row px-5 py-4 flex items-center justify-between gap-4"
+               data-key="<%= item.key %>"
+               data-channels="<%= item.channels.join(',') %>"
+               data-inapp="<%= inappOn ? 'true' : 'false' %>"
+               data-email="<%= emailOn ? 'true' : 'false' %>">
+
+            <div class="flex flex-col gap-0.5 min-w-0">
+              <span class="text-sm font-semibold text-woodsmoke-900"><%= item.label %></span>
+              <span class="text-sm text-woodsmoke-400"><%= item.desc %></span>
+            </div>
+
+            <div class="relative shrink-0">
+              <button class="notif-btn flex items-center gap-2 h-9 px-3 text-sm border border-silver-200 rounded-md text-woodsmoke-700 hover:border-woodsmoke-300 transition-colors w-[148px] justify-between">
+                <span class="notif-label truncate"><%= label %></span>
+                <svg class="notif-chevron shrink-0 text-woodsmoke-400 transition-transform" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none" fill-rule="evenodd"><path d="M24 0v24H0V0zM12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.019-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12.707 15.707a1 1 0 0 1-1.414 0L5.636 10.05A1 1 0 1 1 7.05 8.636l4.95 4.95l4.95-4.95a1 1 0 0 1 1.414 1.414z"/></g></svg>
+              </button>
+
+              <div class="notif-dropdown hidden absolute right-0 top-[42px] z-20 bg-white border border-silver-200 rounded-md shadow-md py-1.5 w-[160px]">
+                <% if (item.channels.includes('inapp')) { %>
+                <label class="flex items-center gap-2.5 px-4 py-2 cursor-pointer hover:bg-silver-50 select-none">
+                  <span class="relative w-4 h-4 shrink-0">
+                    <input type="checkbox" class="notif-cb-inapp peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" <%= inappOn ? 'checked' : '' %>>
+                    <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+                    <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                      <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </span>
+                  <span class="text-sm text-woodsmoke-800">In app</span>
+                </label>
+                <% } %>
+                <% if (item.channels.includes('email')) { %>
+                <label class="flex items-center gap-2.5 px-4 py-2 cursor-pointer hover:bg-silver-50 select-none">
+                  <span class="relative w-4 h-4 shrink-0">
+                    <input type="checkbox" class="notif-cb-email peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" <%= emailOn ? 'checked' : '' %>>
+                    <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+                    <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                      <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </span>
+                  <span class="text-sm text-woodsmoke-800">Email</span>
+                </label>
+                <% } %>
+                <div class="my-1 border-t border-silver-100"></div>
+                <label class="flex items-center gap-2.5 px-4 py-2 cursor-pointer hover:bg-silver-50 select-none">
+                  <span class="relative w-4 h-4 shrink-0">
+                    <input type="checkbox" class="notif-cb-none peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" <%= noneOn ? 'checked' : '' %>>
+                    <span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span>
+                    <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+                      <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </span>
+                  <span class="text-sm text-woodsmoke-800">Not allowed</span>
+                </label>
+              </div>
+            </div>
+
+          </div>
+          <% }); %>
+
+        </div>
+
+        <p id="notifFeedback" class="hidden text-sm text-center mt-4"></p>
+
+        <% } else { %>
+          <p class="text-sm text-woodsmoke-400">Please <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">sign in</a> to manage your settings.</p>
+        <% } %>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const feedback = document.getElementById('notifFeedback');
+
+  function showFeedback(msg, ok) {
+    feedback.textContent = msg;
+    feedback.className = `mt-4 text-sm text-center ${ok ? 'text-emerald-600' : 'text-red-500'}`;
+    clearTimeout(feedback._t);
+    feedback._t = setTimeout(() => { feedback.className = 'hidden text-sm text-center mt-4'; }, 3000);
+  }
+
+  function computeLabel(channels, inappOn, emailOn) {
+    if (!inappOn && !emailOn) return 'Not allowed';
+    if (channels.includes('inapp') && channels.includes('email')) {
+      if (inappOn && emailOn) return 'In app & email';
+      return inappOn ? 'In app' : 'Email';
+    }
+    return channels[0] === 'inapp' ? 'In app' : 'Email';
+  }
+
+  function syncCheckboxes(row) {
+    const inappOn = row.dataset.inapp === 'true';
+    const emailOn = row.dataset.email === 'true';
+    const cbInapp = row.querySelector('.notif-cb-inapp');
+    const cbEmail = row.querySelector('.notif-cb-email');
+    const cbNone  = row.querySelector('.notif-cb-none');
+    if (cbInapp) cbInapp.checked = inappOn;
+    if (cbEmail) cbEmail.checked = emailOn;
+    if (cbNone)  cbNone.checked  = !inappOn && !emailOn;
+  }
+
+  async function save(row, inappOn, emailOn) {
+    const key      = row.dataset.key;
+    const channels = row.dataset.channels.split(',');
+    try {
+      const calls = [];
+      if (channels.includes('inapp')) {
+        calls.push(fetch('/api/user/notification-prefs', {
+          method: 'PATCH', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [key]: inappOn }),
+        }));
+      }
+      if (channels.includes('email')) {
+        const isNewsletter = key === 'newsletter';
+        calls.push(fetch(isNewsletter ? '/api/user/settings' : '/api/user/email-notification-prefs', {
+          method: 'PATCH', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(isNewsletter ? { newsletterSubscribed: emailOn } : { [key]: emailOn }),
+        }));
+      }
+      const results = await Promise.all(calls);
+      if (results.some(r => !r.ok)) throw new Error();
+      row.dataset.inapp = String(inappOn);
+      row.dataset.email = String(emailOn);
+      row.querySelector('.notif-label').textContent = computeLabel(channels, inappOn, emailOn);
+    } catch {
+      showFeedback('Could not save. Try again.', false);
+      syncCheckboxes(row);
+    }
+  }
+
+  document.querySelectorAll('.notif-row').forEach(row => {
+    const btn      = row.querySelector('.notif-btn');
+    const dropdown = row.querySelector('.notif-dropdown');
+    const chevron  = row.querySelector('.notif-chevron');
+    const cbInapp  = row.querySelector('.notif-cb-inapp');
+    const cbEmail  = row.querySelector('.notif-cb-email');
+    const cbNone   = row.querySelector('.notif-cb-none');
+    const channels = row.dataset.channels.split(',');
+
+    // Toggle dropdown
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const opening = dropdown.classList.contains('hidden');
+      document.querySelectorAll('.notif-dropdown').forEach(d => d.classList.add('hidden'));
+      document.querySelectorAll('.notif-chevron').forEach(c => c.classList.remove('rotate-180'));
+      if (opening) {
+        dropdown.classList.remove('hidden');
+        chevron.classList.add('rotate-180');
+      }
+    });
+
+    // Stop clicks inside the dropdown from closing it
+    dropdown.addEventListener('click', e => e.stopPropagation());
+
+    function handleChange(changed) {
+      let inappOn = cbInapp ? cbInapp.checked : false;
+      let emailOn = cbEmail ? cbEmail.checked : false;
+
+      if (changed === cbNone) {
+        if (cbNone.checked) {
+          // Not allowed selected — clear everything else
+          inappOn = false;
+          emailOn = false;
+          if (cbInapp) cbInapp.checked = false;
+          if (cbEmail) cbEmail.checked = false;
+        } else {
+          // User unchecked "Not allowed" with nothing else on — snap it back
+          if (!inappOn && !emailOn) { cbNone.checked = true; return; }
+        }
+      } else {
+        // A channel was toggled — clear "Not allowed"
+        if (cbNone) cbNone.checked = false;
+        // If everything ended up unchecked, enforce "Not allowed"
+        if (!inappOn && !emailOn && cbNone) cbNone.checked = true;
+      }
+
+      save(row, inappOn, emailOn);
+    }
+
+    if (cbInapp) cbInapp.addEventListener('change', () => handleChange(cbInapp));
+    if (cbEmail) cbEmail.addEventListener('change', () => handleChange(cbEmail));
+    if (cbNone)  cbNone.addEventListener('change',  () => handleChange(cbNone));
+  });
+
+  // Close all dropdowns when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.notif-dropdown').forEach(d => d.classList.add('hidden'));
+    document.querySelectorAll('.notif-chevron').forEach(c => c.classList.remove('rotate-180'));
+  });
+})();
+</script>
+
+<%- include('../partials/layout-end') %>

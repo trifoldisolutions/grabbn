@@ -1,0 +1,46 @@
+<%
+  title = `#${tag} in ${domain}`
+  page  = 'repository'
+%>
+<%- include('../partials/layout') %>
+
+<div class="flex h-full">
+    <div class="flex-1 overflow-y-auto">
+
+        <!-- Sticky header -->
+        <div class="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+            <div class="w-full max-w-[62rem] mx-auto px-4 md:px-6 py-3.5 flex items-center gap-4">
+                <a href="javascript:history.back()" class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-woodsmoke-950 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </a>
+                <div class="flex-1 min-w-0">
+                    <h1 class="text-base font-bold text-woodsmoke-950 leading-tight">
+                        <span class="text-orchid-600">#</span><%= tag %>
+                    </h1>
+                    <p class="text-xs text-gray-400">in <%= domain %></p>
+                </div>
+                <p id="repo-meta" class="text-xs text-gray-400 shrink-0"></p>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="w-full max-w-[62rem] mx-auto px-4 md:px-6 py-6 space-y-10">
+
+            <!-- Buckets grid — primary focus -->
+            <section>
+                <div id="repo-buckets" class="grid grid-cols-2 sm:grid-cols-3 gap-1"></div>
+                <div id="repo-empty" class="hidden text-center py-20 text-sm text-gray-400">No buckets found for this collection.</div>
+                <div id="repo-error" class="hidden text-center py-20 text-sm text-red-400">Failed to load repository.</div>
+            </section>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    window.__REPO_DOMAIN__ = '<%= domain.replace(/'/g, "\\'") %>';
+    window.__REPO_TAG__    = '<%= tag.replace(/'/g, "\\'") %>';
+</script>
+<script src="/js/repository.js"></script>
+
+<%- include('../partials/layout-end') %>

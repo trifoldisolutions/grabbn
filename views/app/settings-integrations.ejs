@@ -1,0 +1,59 @@
+<%
+  title          = 'Integrations'
+  page           = 'settings'
+  settingsSection = 'integrations'
+%>
+<%- include('../partials/layout') %>
+
+<div class="flex flex-1 overflow-hidden justify-center">
+  <div class="flex flex-col md:flex-row w-full max-w-[992px] overflow-hidden">
+
+    <%- include('partials/settings-nav') %>
+
+    <!-- Content area -->
+    <div class="flex-1 overflow-y-auto scrollbar-hide">
+      <div class="w-full px-6 py-6 pb-20 md:pb-6">
+
+        <% if (user && !user.isAnonymous) { %>
+
+        <!-- ── Browser Extension ─────────────────────────────────────────────── -->
+        <div class="border border-silver-200 rounded-md divide-y divide-silver-100 mb-6">
+
+          <div class="px-5 py-4">
+            <p class="text-sm font-semibold uppercase tracking-wide text-woodsmoke-400">Browser extension</p>
+          </div>
+
+          <div class="px-5 py-4 flex items-center justify-between gap-4">
+            <div class="flex flex-col gap-0.5 min-w-0">
+              <span class="text-sm font-semibold text-woodsmoke-900">Chrome / Edge</span>
+              <span class="text-sm text-woodsmoke-400">Install the Grabbn extension from the Chrome Web Store</span>
+            </div>
+            <button class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
+              Install
+            </button>
+          </div>
+
+          <div class="px-5 py-4 flex items-center justify-between gap-4">
+            <div class="flex flex-col gap-0.5 min-w-0">
+              <span class="text-sm font-semibold text-woodsmoke-900">Firefox</span>
+              <span class="text-sm text-woodsmoke-400">Install the Grabbn add-on from Firefox Add-ons</span>
+            </div>
+            <button class="flex items-center justify-center text-sm font-semibold px-5 h-9 border border-silver-200 rounded-md text-woodsmoke-600 opacity-50 cursor-not-allowed" disabled>
+              Install
+            </button>
+          </div>
+
+        </div>
+
+        <% } else { %>
+          <p class="text-sm text-woodsmoke-400">Please <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">sign in</a> to manage your settings.</p>
+        <% } %>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<%- include('../partials/layout-end') %>

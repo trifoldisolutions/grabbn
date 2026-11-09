@@ -1,7 +1,13 @@
 {
     "watch": [
+        "server.js",
         "serve.js",
-        "server/**/*"
+        "config/**/*",
+        "routes/**/*",
+        "models/**/*",
+        "middleware/**/*",
+        "services/**/*",
+        "scripts/**/*"
     ],
     "ext": "js,json",
     "ignore": [

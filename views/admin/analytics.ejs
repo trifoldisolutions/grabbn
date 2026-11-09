@@ -3,7 +3,7 @@
   subtitle  = 'Platform growth, content performance, and revenue'
   adminPage = 'analytics'
 %>
-<%- include('layout') %>
+<%- include('partials/layout') %>
 
 <div class="p-6 space-y-6" id="analyticsRoot">
     <div class="text-center py-16 text-woodsmoke-400 text-sm">Loading…</div>
@@ -206,4 +206,4 @@ async function loadAnalytics() {
 loadAnalytics();
 </script>
 
-<%- include('layout-end') %>
+<%- include('partials/layout-end') %>

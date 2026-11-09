@@ -3,10 +3,10 @@
 > After making any edit or running tests, and before ending a turn or task, check that `npm run tw` is still running, and that any server you started against a local database still is. If one has stopped, treat it as crashed — don't assume it restarts on its own — and restart it before finishing, following the Live Database rule below. Never start `npm run dev` to satisfy this check. This check is silent: don't tell the user the services are still running, and don't mention a restart either. Only bring them up if one won't stay running after a restart.
 
 ## Stack
-- Node.js (Express): `serve.js`
+- Node.js (Express): `server.js`
 - Mongoose (MongoDB)
 - EJS (Templating)
-- Tailwind CSS (Styling): `public/tailwind/input.css` to `public/tailwind/output.css`, which this project commits
+- Tailwind CSS (Styling): `src/input.css` to `public/output.css`, which this project commits
 - WebSockets (ws)
 - Stripe (Payments)
 - Cloudflare R2 (Storage)
@@ -16,16 +16,62 @@
 ## Scripts
 - `npm run tw`: Starts Tailwind CSS watch mode.
 - `npm run dev`: Starts the server with nodemon. Read the Live Database rule first.
-- `npm run watch`: The same, restarting only for changes in `server/` and `serve.js`. Read the Live Database rule first.
+- `npm run watch`: The same, restarting only for changes in the server code. Read the Live Database rule first.
 - `npm start`: Starts the server without nodemon. Read the Live Database rule first.
 - `npm run make-admin`: Makes an account an admin. It uses `.env`, so it acts on the live database.
+
+## File and Folder Structure
+**Hard rule:** Whenever you create, move or edit files, follow this layout. Put new code where it says, even if the project doesn't have that folder yet. If something has no place here, ask before adding a new top-level folder. Don't move existing files as a side effect of other work unless the user asks.
+
+```
+grabbn/
+├── server.js            App setup, WebSocket server, facades list, startup jobs, startup route map
+├── serve.js             One line that imports server.js, kept until the host's start command is confirmed
+├── AGENTS.md, readme.md
+├── package.json, nodemon.json, .env, .gitignore
+├── .vscode/tasks.json   Runs `npm run tw` and `npm run dev` on folder open: don't allow it here, see the Live Database rule
+├── config/              config.js holds credit rules and limits; locales/ holds the translations
+├── models/              Mongoose models, one per file
+├── routes/
+│   ├── public.js        Public pages, mounted at /
+│   ├── app.js           The app and its sign-in pages, mounted at /
+│   ├── admin.js         Admin pages, mounted at /admin, and the admin API, mounted at /api/admin
+│   ├── api.js           JSON API, mounted at /api, and the bookmarklet session, mounted at /api before CORS
+│   └── webhooks.js      Stripe webhooks, mounted at /api before express.json()
+├── middleware/          Express middleware: visitor sessions and admin sessions
+├── services/            Shared logic and outside services (email, storage, link previews, credits, translations, WebSocket registry)
+│   └── jobs/            Scheduled jobs that rebuild repositories and explore scores
+├── views/
+│   ├── partials/        Shared by public and app pages: layout, layout-end, sidebar, topbar
+│   ├── public/          Public pages, with their own partials in public/partials/
+│   ├── app/             App pages, with their own partials in app/partials/ and sign-in pages in app/auth/
+│   └── admin/           Admin pages, with their own partials in admin/partials/
+├── src/input.css        Tailwind source, the only CSS file to edit
+├── public/
+│   ├── output.css       Built by Tailwind and committed: never edit it by hand
+│   ├── landing.html, popup.html
+│   ├── js/              Browser scripts
+│   └── data/            categories.json, read by the browser and by services/categories.js
+├── clients/extension/   The browser extension
+├── scripts/             Scripts run by hand. Only make-admin has an npm script
+└── dev_resources/       Git-ignored and internal: journal, tasks, commit message, plans, drafts, one-off scripts, source images
+```
+
+- **Routes:** Add each route to its section's file, with a line in that file's `router.routes` list (`{ method, path, label }`). No routes in `server.js`, and no new route file per feature. Logic that several routes share, or that calls an outside service, goes in `services/`.
+- **Route order:** Express tries routes in order, so keep a fixed path like `/buckets/bulk` ahead of `/buckets/:name`. In `server.js`, the Stripe webhooks stay before `express.json()`, because their signatures are checked against the raw body, and the bookmarklet session stays before CORS, because any site can call it.
+- **Built CSS:** Commit `public/output.css` with any change that adds or removes classes. `npm run build` does nothing, so the host relies on the committed file.
+- **Folder names:** No `utils/`, `lib/` or `helpers/`. Helpers go in `services/`, or in `middleware/` if they handle a request.
+- **Views:** Every page goes in its section's folder, never directly in `views/`. The folder already says the section, so name files for what they show. A section's own partials go in `views/<section>/partials/`.
+- **Local-only files:** Notes, screenshots, logs, prompts, one-off scripts and source images go in `dev_resources/`, not the project root.
+- **Instruction files:** `AGENTS.md` is the only one. No `CLAUDE.md` or `.claude/` folder.
 
 ## Live Database (hard rule)
 This project is live. Its `.env` points at the hosted Atlas database, and startup runs jobs that delete anonymous users and their buckets, so `npm run dev`, `npm run watch` and `npm start` all act on live data.
 
 - Never boot the server with `.env` as it is, and never test against the live site or read its database without the project lead's approval.
 - `.vscode/tasks.json` runs `npm run dev` when the folder opens, so don't allow automatic tasks for this folder.
-- To test, set every variable named in `.env` in the environment first: `MONGODB_URI`, `ATLAS_URL` and `MONGODB_URI_SAMPLE` to `mongodb://127.0.0.1:27017`, `MONGODB_DB` to a throwaway name, and placeholders for the rest. Run `node <path to project>/serve.js` from a folder with no `.env`, because `serve.js` calls `dotenv.config()`. Confirm the override took effect before booting.
+- The scripts in `scripts/` read `.env` too, so they also act on live data. `scripts/seed.js` adds fake curators and buckets, and with `SEED_WIPE=true` it deletes every bucket that has links, plus all link clicks, topic scores and subscriptions.
+- To test, set every variable named in `.env` in the environment first: `MONGODB_URI`, `ATLAS_URL` and `MONGODB_URI_SAMPLE` to `mongodb://127.0.0.1:27017`, `MONGODB_DB` to a throwaway name, and placeholders for the rest. Run `node <path to project>/server.js` from a folder with no `.env`, because `server.js` calls `dotenv.config()`. Confirm the override took effect before booting.
 
 ## Git Rules
 

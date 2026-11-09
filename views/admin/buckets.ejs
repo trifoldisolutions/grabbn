@@ -3,7 +3,7 @@
   subtitle  = 'Browse and manage all buckets'
   adminPage = 'buckets'
 %>
-<%- include('layout') %>
+<%- include('partials/layout') %>
 
 <div class="p-6 space-y-5">
 
@@ -258,4 +258,4 @@ document.getElementById('nextPageBtn').addEventListener('click', () => { if (cur
 fetchBuckets(1);
 </script>
 
-<%- include('layout-end') %>
+<%- include('partials/layout-end') %>

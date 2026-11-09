@@ -1,0 +1,534 @@
+<%
+  title = repo.name
+  page  = 'repo'
+%>
+<%- include('../partials/layout') %>
+
+<% if (buckets.some(b => b.mature) && !isOwner && (!user || user.isAnonymous || user.isMatureGated !== false) && !matureAck) { %><%- include('partials/mature-gate', { matureContext: 'repo' }) %><% } %>
+
+<div class="w-full max-w-5xl mx-auto px-4 md:px-6 py-5 md:py-8">
+
+    <!-- ── Repo header ────────────────────────────────────────────────────── -->
+    <div class="mb-5 md:mb-8">
+
+        <!-- Top row: icon + title/meta + desktop-only actions -->
+        <div class="flex items-start gap-3 md:gap-5">
+
+            <!-- Icon / first bucket thumbnail -->
+            <% const repoThumb = buckets.find(b => b.displayThumb)?.displayThumb || null; %>
+            <div class="w-14 md:w-16 aspect-square rounded-md shrink-0 overflow-hidden <%= repoThumb ? '' : 'bg-orchid-50 flex items-center justify-center text-orchid-500' %>">
+                <% if (repoThumb) { %>
+                    <img src="<%= repoThumb %>" class="w-full h-full object-cover" alt="">
+                <% } else { %>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>
+                <% } %>
+            </div>
+
+            <!-- Title + meta -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start gap-2">
+                    <h1 class="flex-1 min-w-0 text-xl md:text-3xl font-bold text-woodsmoke-950 leading-tight break-words"><%= repo.name %></h1>
+                    <!-- Actions — desktop only (sm+) -->
+                    <div class="hidden sm:flex items-center gap-2 shrink-0">
+                        <% if (isOwner) { %>
+                            <a href="/u/<%= owner.username %>"
+                                class="h-9 px-4 flex items-center justify-center gap-1.5 rounded-lg border border-silver-200 text-sm font-semibold text-woodsmoke-600 hover:border-orchid-300 hover:text-orchid-600 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.756 6.17l7.07 7.071l-7.173 7.174a2 2 0 0 1-1.238.578L9.239 21H4.006a1.01 1.01 0 0 1-1.004-.9l-.006-.11v-5.233a2 2 0 0 1 .467-1.284l.12-.13l7.173-7.174Zm3.14-3.14a2 2 0 0 1 2.701-.117l.127.117l4.243 4.243a2 2 0 0 1 .117 2.7l-.117.128l-1.726 1.726l-7.07-7.071z"/></g></svg>
+                                Edit
+                            </a>
+                        <% } %>
+                        <button id="shareRepoBtn"
+                            class="h-9 px-4 flex items-center justify-center gap-1.5 rounded-lg border border-silver-200 text-sm font-semibold text-woodsmoke-600 hover:border-orchid-300 hover:text-orchid-600 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
+                            Share
+                        </button>
+                        <% if (!isOwner) { %>
+                            <button id="reportRepoBtn"
+                                class="h-9 px-4 flex items-center justify-center gap-1.5 rounded-lg border border-silver-200 text-sm font-semibold text-woodsmoke-600 hover:border-red-300 hover:text-red-500 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m13.299 3.148l8.634 14.954a1.5 1.5 0 0 1-1.299 2.25H3.366a1.5 1.5 0 0 1-1.299-2.25l8.634-14.954c.577-1 2.02-1 2.598 0M12 15a1 1 0 1 0 0 2a1 1 0 0 0 0-2m0-7a1 1 0 0 0-.993.883L11 9v4a1 1 0 0 0 1.993.117L13 13V9a1 1 0 0 0-1-1"/></g></svg>
+                                Report
+                            </button>
+                        <% } %>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-sm text-gray-400">
+                    <a href="/u/<%= owner.username %>" class="flex items-center gap-1.5 hover:text-orchid-600 transition-colors">
+                        <% if (owner.avatar) { %>
+                            <img src="<%= owner.avatar %>" class="w-6 h-6 rounded-full object-cover" alt="">
+                        <% } else { %>
+                            <div class="w-6 h-6 rounded-full bg-orchid-100 shrink-0 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" class="text-orchid-600"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>
+                            </div>
+                        <% } %>
+                        @<%= owner.username %>
+                    </a>
+                    <span class="text-silver-300">·</span>
+                    <span><%= buckets.length %> bucket<%= buckets.length !== 1 ? 's' : '' %></span>
+                </div>
+
+                <!-- Description -->
+                <% if (repo.description) { %>
+                <p class="mt-2.5 text-sm text-woodsmoke-600 leading-relaxed"><%= repo.description %></p>
+                <% } %>
+
+            </div>
+
+        </div>
+
+        <!-- Mobile-only action buttons row -->
+        <div class="flex sm:hidden items-center gap-2 mt-3">
+            <% if (isOwner) { %>
+                <a href="/u/<%= owner.username %>"
+                    class="h-9 px-4 flex items-center justify-center gap-1.5 rounded-lg border border-silver-200 text-sm font-semibold text-woodsmoke-600 hover:border-orchid-300 hover:text-orchid-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.756 6.17l7.07 7.071l-7.173 7.174a2 2 0 0 1-1.238.578L9.239 21H4.006a1.01 1.01 0 0 1-1.004-.9l-.006-.11v-5.233a2 2 0 0 1 .467-1.284l.12-.13l7.173-7.174Zm3.14-3.14a2 2 0 0 1 2.701-.117l.127.117l4.243 4.243a2 2 0 0 1 .117 2.7l-.117.128l-1.726 1.726l-7.07-7.071z"/></g></svg>
+                    Edit
+                </a>
+            <% } %>
+            <button id="shareRepoBtnMobile"
+                class="h-9 px-4 flex items-center justify-center gap-1.5 rounded-lg border border-silver-200 text-sm font-semibold text-woodsmoke-600 hover:border-orchid-300 hover:text-orchid-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
+                Share
+            </button>
+            <% if (!isOwner) { %>
+                <button id="reportRepoBtnMobile"
+                    class="h-9 px-4 flex items-center justify-center gap-1.5 rounded-lg border border-silver-200 text-sm font-semibold text-woodsmoke-600 hover:border-red-300 hover:text-red-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m13.299 3.148l8.634 14.954a1.5 1.5 0 0 1-1.299 2.25H3.366a1.5 1.5 0 0 1-1.299-2.25l8.634-14.954c.577-1 2.02-1 2.598 0M12 15a1 1 0 1 0 0 2a1 1 0 0 0 0-2m0-7a1 1 0 0 0-.993.883L11 9v4a1 1 0 0 0 1.993.117L13 13V9a1 1 0 0 0-1-1"/></g></svg>
+                    Report
+                </button>
+            <% } %>
+        </div>
+
+    </div>
+
+    <!-- ── Divider ─────────────────────────────────────────────────────────── -->
+    <div class="border-b border-silver-100 mb-4 md:mb-6"></div>
+
+    <!-- ── Bucket grid ────────────────────────────────────────────────────── -->
+    <% if (buckets.length === 0) { %>
+        <div class="flex flex-col items-center justify-center py-20 gap-3 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" class="text-gray-300"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>
+            <p class="text-sm text-gray-400">
+                <%= isOwner ? 'No buckets in this repo yet. Add some from the bucket editor.' : 'No public buckets in this repo yet.' %>
+            </p>
+        </div>
+    <% } else { %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+            <% buckets.forEach(function(b) { %>
+                <%- include('partials/bucket-card', { b, isOwn: isOwner, showMenu: isOwner, plain: true }) %>
+            <% }); %>
+        </div>
+    <% } %>
+
+</div>
+
+<!-- ── Move to another repo modal ────────────────────────────────────────── -->
+<div id="repoMoveModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div id="repoMoveBackdrop" class="absolute inset-0 bg-woodsmoke-950/60 backdrop-blur-sm"></div>
+    <div class="relative w-full sm:max-w-sm bg-white sm:rounded-xl shadow-xl flex flex-col max-h-[85dvh]">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-silver-100 shrink-0">
+            <h2 class="text-sm font-semibold text-woodsmoke-950">Move to another repo</h2>
+            <button id="repoMoveClose" class="w-7 h-7 flex items-center justify-center rounded-md text-woodsmoke-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 10.586L6.707 5.293a1 1 0 0 0-1.414 1.414L10.586 12l-5.293 5.293a1 1 0 1 0 1.414 1.414L12 13.414l5.293 5.293a1 1 0 0 0 1.414-1.414L13.414 12l5.293-5.293a1 1 0 0 0-1.414-1.414z"/></g></svg>
+            </button>
+        </div>
+        <div id="repoMoveList" class="overflow-y-auto flex-1 py-1">
+            <!-- populated by JS -->
+        </div>
+        <div class="px-4 py-3 border-t border-silver-100 shrink-0">
+            <button id="repoMoveConfirm" disabled class="w-full h-10 bg-orchid-700 hover:bg-orchid-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-md transition-colors flex items-center justify-center gap-2">
+                Move here
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Clone to another repo modal ───────────────────────────────────────── -->
+<div id="repoCloneModal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div id="repoCloneBackdrop" class="absolute inset-0 bg-woodsmoke-950/60 backdrop-blur-sm"></div>
+    <div class="relative w-full sm:max-w-sm bg-white sm:rounded-xl shadow-xl flex flex-col max-h-[85dvh]">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-silver-100 shrink-0">
+            <h2 class="text-sm font-semibold text-woodsmoke-950">Clone to another repo</h2>
+            <button id="repoCloneClose" class="w-7 h-7 flex items-center justify-center rounded-md text-woodsmoke-400 hover:text-woodsmoke-700 hover:bg-silver-100 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.10z"/><path fill="currentColor" d="M12 10.586L6.707 5.293a1 1 0 0 0-1.414 1.414L10.586 12l-5.293 5.293a1 1 0 1 0 1.414 1.414L12 13.414l5.293 5.293a1 1 0 0 0 1.414-1.414L13.414 12l5.293-5.293a1 1 0 0 0-1.414-1.414z"/></g></svg>
+            </button>
+        </div>
+        <div id="repoCloneList" class="overflow-y-auto flex-1 py-1">
+            <!-- populated by JS -->
+        </div>
+        <div class="px-4 py-3 border-t border-silver-100 shrink-0">
+            <button id="repoCloneConfirm" disabled class="w-full h-10 bg-orchid-700 hover:bg-orchid-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-md transition-colors flex items-center justify-center gap-2">
+                Clone here
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    // ── Share ────────────────────────────────────────────────────────────────
+    function attachShare(btn) {
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+            const url = '<%- pageUrl %>';
+            if (navigator.share) {
+                try { await navigator.share({ title: '<%- repo.name.replace(/'/g, "\\'") %>', url }); } catch (_) {}
+            } else {
+                await navigator.clipboard.writeText(url).catch(() => {});
+                const orig = btn.innerHTML;
+                btn.textContent = 'Link copied!';
+                setTimeout(() => { btn.innerHTML = orig; }, 2000);
+            }
+        });
+    }
+    attachShare(document.getElementById('shareRepoBtn'));
+    attachShare(document.getElementById('shareRepoBtnMobile'));
+
+    // ── Report ───────────────────────────────────────────────────────────────
+    function attachReport(btn) {
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            const orig = btn.innerHTML;
+            if (btn.dataset.confirm) {
+                btn.innerHTML = '<span>Sending…</span>';
+                fetch('/api/reports', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetType: 'repo', targetId: '<%- repo._id %>' }),
+                }).then(r => {
+                    btn.innerHTML = r.ok ? '<span>Reported</span>' : '<span>Failed</span>';
+                    btn.disabled = true;
+                    // disable sibling button too
+                    const other = btn.id === 'reportRepoBtn'
+                        ? document.getElementById('reportRepoBtnMobile')
+                        : document.getElementById('reportRepoBtn');
+                    if (other) { other.innerHTML = btn.innerHTML; other.disabled = true; }
+                }).catch(() => {
+                    btn.innerHTML = '<span>Failed</span>';
+                    btn.disabled = true;
+                });
+            } else {
+                btn.dataset.confirm = '1';
+                btn.innerHTML = '<span>Confirm report?</span>';
+                btn.classList.add('border-red-300', 'text-red-500');
+                setTimeout(() => {
+                    if (btn.dataset.confirm) {
+                        delete btn.dataset.confirm;
+                        btn.innerHTML = orig;
+                        btn.classList.remove('border-red-300', 'text-red-500');
+                    }
+                }, 3000);
+            }
+        });
+    }
+    attachReport(document.getElementById('reportRepoBtn'));
+    attachReport(document.getElementById('reportRepoBtnMobile'));
+
+    // ── Card context menus (three-dots) ──────────────────────────────────────
+    document.querySelectorAll('.card-menu-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const menu   = btn.nextElementSibling;
+            const isOpen = !menu.classList.contains('hidden');
+            document.querySelectorAll('.card-context-menu').forEach(m => m.classList.add('hidden'));
+            if (!isOpen) menu.classList.remove('hidden');
+        });
+    });
+
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.card-context-menu').forEach(m => m.classList.add('hidden'));
+    });
+
+    // ── Move to another repo modal ───────────────────────────────────────────
+    (function () {
+        const modal      = document.getElementById('repoMoveModal');
+        const backdrop   = document.getElementById('repoMoveBackdrop');
+        const closeBtn   = document.getElementById('repoMoveClose');
+        const listEl     = document.getElementById('repoMoveList');
+        const confirmBtn = document.getElementById('repoMoveConfirm');
+        let pendingBucketId = null;
+        let pendingRepoIds  = [];
+        let repoCache       = null;
+
+        function openModal(bucketId, repoIds) {
+            pendingBucketId = bucketId;
+            pendingRepoIds  = repoIds || [];
+            modal.classList.remove('hidden');
+            window.lockScroll ? window.lockScroll() : (document.body.style.overflow = 'hidden');
+            if (repoCache) { renderRepos(repoCache); } else { loadRepos(); }
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            window.unlockScroll ? window.unlockScroll() : (document.body.style.overflow = '');
+            listEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+            confirmBtn.disabled = true;
+        }
+
+        function loadRepos() {
+            listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">Loading…</p>';
+            fetch('/api/repos', { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => { repoCache = data; renderRepos(data); })
+                .catch(() => {
+                    listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-red-400">Failed to load repos.</p>';
+                });
+        }
+
+        function renderRepos(repos) {
+            const currentRepoId = '<%= typeof repo !== "undefined" ? repo._id : "" %>';
+            const filtered = repos.filter(r => r._id.toString() !== currentRepoId);
+            if (!filtered.length) {
+                listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">No other repos available.</p>';
+                return;
+            }
+            listEl.innerHTML = filtered.map(r => {
+                const alreadyHere = pendingRepoIds.includes(r._id.toString());
+                const thumb = r.thumb
+                    ? `<img src="${r.thumb}" alt="" class="w-10 h-10 object-cover rounded-md bg-silver-100">`
+                    : `<div class="w-10 h-10 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-silver-300"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg></div>`;
+                return `<label class="flex items-center gap-3 px-4 py-2.5 ${alreadyHere ? 'opacity-50 cursor-not-allowed' : 'hover:bg-silver-50 cursor-pointer'}">
+                    <span class="relative w-4 h-4 shrink-0"><input type="checkbox" class="repo-move-cb peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" value="${r._id}"${alreadyHere ? ' disabled' : ''}><span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span><span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"><svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
+                    <span class="shrink-0">${thumb}</span>
+                    <span class="flex flex-col min-w-0 flex-1">
+                        <span class="text-sm font-medium text-woodsmoke-950 truncate">${r.name}</span>
+                        <span class="text-xs text-woodsmoke-400">${alreadyHere ? 'Already here' : `${r.bucketCount} bucket${r.bucketCount !== 1 ? 's' : ''}`}</span>
+                    </span>
+                </label>`;
+            }).join('');
+            listEl.querySelectorAll('.repo-move-cb:not(:disabled)').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    confirmBtn.disabled = !listEl.querySelector('.repo-move-cb:checked');
+                });
+            });
+            confirmBtn.disabled = true;
+        }
+
+        confirmBtn.addEventListener('click', async () => {
+            const selected = Array.from(listEl.querySelectorAll('.repo-move-cb:checked')).map(cb => cb.value);
+            if (!selected.length || !pendingBucketId) return;
+            const DOTS = '<svg width="24" height="10" viewBox="0 0 24 10" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><circle cx="3" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0s" repeatCount="indefinite"/></circle><circle cx="12" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.2s" repeatCount="indefinite"/></circle><circle cx="21" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.4s" repeatCount="indefinite"/></circle></svg>';
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = DOTS;
+            try {
+                await fetch(`/api/buckets/${pendingBucketId}/full`, {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repoIds: selected }),
+                });
+                confirmBtn.textContent = 'Moved!';
+                setTimeout(() => {
+                    document.querySelector(`[data-bucket-id="${pendingBucketId}"]`)?.remove();
+                    closeModal();
+                    confirmBtn.textContent = 'Move here';
+                }, 1000);
+            } catch {
+                confirmBtn.textContent = 'Failed — try again';
+                setTimeout(() => { confirmBtn.textContent = 'Move here'; confirmBtn.disabled = false; }, 2000);
+            }
+        });
+
+        closeBtn.addEventListener('click', closeModal);
+        backdrop.addEventListener('click', closeModal);
+
+        document.querySelectorAll('.card-move-to-repo').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                document.querySelectorAll('.card-context-menu').forEach(m => m.classList.add('hidden'));
+                const card = btn.closest('[data-bucket-id]');
+                const repoIds = JSON.parse(card.dataset.repoIds || '[]');
+                openModal(btn.dataset.bucketId, repoIds);
+            });
+        });
+    })();
+
+    // ── Clone to another repo modal ──────────────────────────────────────────
+    (function () {
+        const modal      = document.getElementById('repoCloneModal');
+        const backdrop   = document.getElementById('repoCloneBackdrop');
+        const closeBtn   = document.getElementById('repoCloneClose');
+        const listEl     = document.getElementById('repoCloneList');
+        const confirmBtn = document.getElementById('repoCloneConfirm');
+        let pendingBucketId = null;
+        let pendingRepoIds  = [];
+        let repoCache       = null;
+
+        function openModal(bucketId, repoIds) {
+            pendingBucketId = bucketId;
+            pendingRepoIds  = repoIds || [];
+            modal.classList.remove('hidden');
+            window.lockScroll ? window.lockScroll() : (document.body.style.overflow = 'hidden');
+            if (repoCache) { renderRepos(repoCache); } else { loadRepos(); }
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            window.unlockScroll ? window.unlockScroll() : (document.body.style.overflow = '');
+            listEl.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+            confirmBtn.disabled = true;
+        }
+
+        function loadRepos() {
+            listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">Loading…</p>';
+            fetch('/api/repos', { credentials: 'include' })
+                .then(r => r.json())
+                .then(data => { repoCache = data; renderRepos(data); })
+                .catch(() => {
+                    listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-red-400">Failed to load repos.</p>';
+                });
+        }
+
+        function renderRepos(repos) {
+            const currentRepoId = '<%= typeof repo !== "undefined" ? repo._id : "" %>';
+            // For clone, also treat the current repo as "already here"
+            const allExistingIds = [...pendingRepoIds, currentRepoId].filter(Boolean);
+            const filtered = repos.filter(r => r._id.toString() !== currentRepoId);
+            if (!filtered.length) {
+                listEl.innerHTML = '<p class="px-4 py-8 text-center text-sm text-woodsmoke-400">No other repos available.</p>';
+                return;
+            }
+            listEl.innerHTML = filtered.map(r => {
+                const alreadyHere = allExistingIds.includes(r._id.toString());
+                const thumb = r.thumb
+                    ? `<img src="${r.thumb}" alt="" class="w-10 h-10 object-cover rounded-md bg-silver-100">`
+                    : `<div class="w-10 h-10 rounded-md bg-silver-100 shrink-0 flex items-center justify-center text-silver-300"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg></div>`;
+                return `<label class="flex items-center gap-3 px-4 py-2.5 ${alreadyHere ? 'opacity-50 cursor-not-allowed' : 'hover:bg-silver-50 cursor-pointer'}">
+                    <span class="relative w-4 h-4 shrink-0"><input type="checkbox" class="repo-clone-cb peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0" value="${r._id}"${alreadyHere ? ' disabled' : ''}><span class="absolute inset-0 rounded border-2 border-silver-300 peer-checked:border-orchid-500 peer-checked:bg-orchid-500 transition-colors"></span><span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"><svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
+                    <span class="shrink-0">${thumb}</span>
+                    <span class="flex flex-col min-w-0 flex-1">
+                        <span class="text-sm font-medium text-woodsmoke-950 truncate">${r.name}</span>
+                        <span class="text-xs text-woodsmoke-400">${alreadyHere ? 'Already here' : `${r.bucketCount} bucket${r.bucketCount !== 1 ? 's' : ''}`}</span>
+                    </span>
+                </label>`;
+            }).join('');
+            listEl.querySelectorAll('.repo-clone-cb:not(:disabled)').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    confirmBtn.disabled = !listEl.querySelector('.repo-clone-cb:checked');
+                });
+            });
+            confirmBtn.disabled = true;
+        }
+
+        confirmBtn.addEventListener('click', async () => {
+            const selected = Array.from(listEl.querySelectorAll('.repo-clone-cb:checked')).map(cb => cb.value);
+            if (!selected.length || !pendingBucketId) return;
+            const DOTS = '<svg width="24" height="10" viewBox="0 0 24 10" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><circle cx="3" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0s" repeatCount="indefinite"/></circle><circle cx="12" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.2s" repeatCount="indefinite"/></circle><circle cx="21" cy="5" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1s" begin="0.4s" repeatCount="indefinite"/></circle></svg>';
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = DOTS;
+            try {
+                await fetch(`/api/buckets/${pendingBucketId}/full`, {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ addRepoIds: selected }),
+                });
+                confirmBtn.textContent = 'Cloned!';
+                setTimeout(() => {
+                    closeModal();
+                    confirmBtn.textContent = 'Clone here';
+                }, 1000);
+            } catch {
+                confirmBtn.textContent = 'Failed — try again';
+                setTimeout(() => { confirmBtn.textContent = 'Clone here'; confirmBtn.disabled = false; }, 2000);
+            }
+        });
+
+        closeBtn.addEventListener('click', closeModal);
+        backdrop.addEventListener('click', closeModal);
+
+        document.querySelectorAll('.card-clone-to-repo').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                document.querySelectorAll('.card-context-menu').forEach(m => m.classList.add('hidden'));
+                const card = btn.closest('[data-bucket-id]');
+                const repoIds = JSON.parse(card.dataset.repoIds || '[]');
+                openModal(btn.dataset.bucketId, repoIds);
+            });
+        });
+    })();
+
+    // ── Report bucket ────────────────────────────────────────────────────────
+    document.querySelectorAll('.card-report-bucket').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            document.querySelectorAll('.card-context-menu').forEach(m => m.classList.add('hidden'));
+            window.location.href = `/report/${btn.dataset.bucketId}`;
+        });
+    });
+
+    document.querySelectorAll('.card-remove-from-repo').forEach(btn => {
+        btn.addEventListener('click', async e => {
+            e.stopPropagation();
+            const bucketId = btn.dataset.bucketId;
+            const card     = btn.closest('[data-bucket-id]');
+            btn.textContent = 'Removing…';
+            btn.disabled    = true;
+            try {
+                const res = await fetch(`/api/buckets/${bucketId}/full`, {
+                    method:      'PATCH',
+                    credentials: 'include',
+                    headers:     { 'Content-Type': 'application/json' },
+                    body:        JSON.stringify({ removeRepoId: '<%= repo._id %>' }),
+                });
+                if (res.ok) {
+                    card?.remove();
+                } else {
+                    btn.textContent = 'Failed';
+                    setTimeout(() => { btn.textContent = 'Remove'; btn.disabled = false; }, 2000);
+                }
+            } catch {
+                btn.textContent = 'Failed';
+                setTimeout(() => { btn.textContent = 'Remove'; btn.disabled = false; }, 2000);
+            }
+        });
+    });
+
+    // ── Bucket card clicks → navigate to bucket page ─────────────────────────
+    document.querySelectorAll('[data-bucket-id]').forEach(card => {
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', e => {
+            if (e.target.closest('.card-share-btn')) return;
+            if (e.target.closest('.card-menu-btn')) return;
+            if (e.target.closest('.card-context-menu')) return;
+            if (e.target.closest('a[href]')) return;
+            window.location.href = `/b/${card.dataset.bucketId}`;
+        });
+    });
+
+    // ── Bucket card share buttons ─────────────────────────────────────────────
+    function generateSid() {
+        try {
+            const arr = new Uint8Array(9);
+            crypto.getRandomValues(arr);
+            return Array.from(arr, b => b.toString(36).padStart(2, '0')).join('').slice(0, 12);
+        } catch (_) {
+            return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+        }
+    }
+
+    document.querySelectorAll('.card-share-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (btn.dataset.busy) return;
+            btn.dataset.busy = '1';
+            const bucketId = btn.dataset.bucketId;
+            const url      = `${window.location.origin}/b/${bucketId}?ref=share&sid=${generateSid()}`;
+            const origHtml = btn.innerHTML;
+            const showFeedback = () => {
+                btn.innerHTML = '<span>Copied!</span>';
+                setTimeout(() => { btn.innerHTML = origHtml; delete btn.dataset.busy; }, 2000);
+            };
+            if (navigator.share) {
+                try { await navigator.share({ url }); delete btn.dataset.busy; }
+                catch (_) { await navigator.clipboard.writeText(url).catch(() => {}); showFeedback(); }
+            } else {
+                await navigator.clipboard.writeText(url).catch(() => {});
+                showFeedback();
+            }
+            fetch(`/api/buckets/${bucketId}/share`, { method: 'POST', credentials: 'include' }).catch(() => {});
+        });
+    });
+})();
+</script>
+
+<%- include('../partials/layout-end') %>

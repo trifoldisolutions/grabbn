@@ -1,0 +1,30 @@
+<%
+  title          = 'Settings'
+  page           = 'settings'
+  settingsSection = 'account'
+%>
+<%- include('../partials/layout') %>
+
+<div class="flex flex-1 overflow-hidden">
+
+  <%- include('partials/settings-nav') %>
+
+  <!-- Content area -->
+  <div class="flex-1 overflow-y-auto scrollbar-hide">
+    <div class="w-full max-w-2xl mx-auto px-6 py-8">
+
+      <h1 class="text-lg font-semibold text-woodsmoke-950 mb-1">Profile</h1>
+      <p class="text-xs text-woodsmoke-400 mb-8">Manage your public profile</p>
+
+      <% if (user && !user.isAnonymous) { %>
+        <p class="text-sm text-woodsmoke-400">Profile settings coming soon.</p>
+      <% } else { %>
+        <p class="text-sm text-woodsmoke-400">Please <a href="/?openAuth=true" class="text-orchid-600 font-semibold hover:underline">sign in</a> to manage your settings.</p>
+      <% } %>
+
+    </div>
+  </div>
+
+</div>
+
+<%- include('../partials/layout-end') %>

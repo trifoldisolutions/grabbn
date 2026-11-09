@@ -1,0 +1,1335 @@
+<%
+  title = `@${profileUser.username}`
+  page  = 'profile'
+%>
+<%- include('../partials/layout') %>
+
+<% if (showMatureGate) { %><%- include('partials/mature-gate', { matureContext: 'profile' }) %><% } %>
+
+<!-- ── Embed bucket data for client-side modal ─────────────────────────── -->
+<script>
+    window.__PROFILE_OWN__           = <%- JSON.stringify([...ownBuckets, ...(typeof archivedBuckets !== 'undefined' ? archivedBuckets : [])]) %>;
+    window.__PROFILE_ARCHIVED__      = <%- JSON.stringify(typeof archivedBuckets !== 'undefined' ? archivedBuckets : []) %>;
+    window.__PROFILE_GRABBED__       = <%- JSON.stringify(grabbedBuckets) %>;
+    window.__PROFILE_REPOS__         = <%- JSON.stringify(userRepos) %>;
+    window.__PROFILE_IS_OWNER__      = <%- JSON.stringify(isOwner) %>;
+    window.__PROFILE_VIEWER_AUTHED__ = <%- JSON.stringify(!!(user && !user.isAnonymous)) %>;
+    window.__PROFILE_ANON_ID__       = <%- JSON.stringify(profileUser.anonymousId) %>;
+</script>
+
+<div class="w-full max-w-5xl mx-auto px-4 md:px-6 py-8">
+
+    <!-- ── Profile header ─────────────────────────────────────────────── -->
+    <div class="flex flex-col items-center gap-4 mb-8">
+
+        <!-- Avatar -->
+        <div class="w-24 h-24 rounded-full overflow-hidden shrink-0 flex items-center justify-center <%= profileUser.avatar ? '' : 'bg-orchid-100' %>">
+            <% if (profileUser.avatar) { %>
+                <img src="<%= profileUser.avatar %>" alt="avatar" class="w-full h-full object-cover">
+            <% } else { %>
+                <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" class="text-orchid-600"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 13c2.396 0 4.575.694 6.178 1.672c.8.488 1.484 1.064 1.978 1.69c.486.615.844 1.351.844 2.138c0 .845-.411 1.511-1.003 1.986c-.56.45-1.299.748-2.084.956c-1.578.417-3.684.558-5.913.558s-4.335-.14-5.913-.558c-.785-.208-1.524-.506-2.084-.956C3.41 20.01 3 19.345 3 18.5c0-.787.358-1.523.844-2.139c.494-.625 1.177-1.2 1.978-1.69C7.425 13.695 9.605 13 12 13m0-11a5 5 0 1 1 0 10a5 5 0 0 1 0-10"/></g></svg>
+            <% } %>
+        </div>
+
+        <!-- Username, bio, links -->
+        <div class="text-center">
+            <% if (profileUser.displayName) { %>
+              <h1 class="text-2xl font-bold text-woodsmoke-950"><%= profileUser.displayName %></h1>
+            <% } %>
+            <div class="flex items-center justify-center gap-2 flex-wrap <%= profileUser.displayName ? 'mt-0.5' : '' %>">
+              <span class="<%= profileUser.displayName ? 'text-sm font-medium text-woodsmoke-500' : 'text-2xl font-bold' %>">@<%= profileUser.username %></span>
+              <% if (profileUser.category) {
+                   const _isAdultCat = ['adult-content','webcam-live','nsfw-art','adult-education'].includes(profileUser.category);
+                   const _catLabel   = profileUser.category.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                 %>
+                <% if (profileUser.displayName) { %><span class="text-woodsmoke-300 text-xs">•</span><% } %>
+                <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-md border <%= _isAdultCat ? 'bg-red-50 border-red-200 text-red-500' : 'bg-orchid-50 border-orchid-200 text-orchid-600' %>">
+                  <% if (_isAdultCat) { %><span class="text-[9px] font-bold leading-none">18+</span><% } %>
+                  <%= _catLabel %>
+                </span>
+              <% } %>
+            </div>
+            <% if (profileUser.bio) { %>
+                <p class="text-sm text-gray-500 mt-1 max-w-xs"><%= profileUser.bio %></p>
+            <% } else if (isOwner) { %>
+                <a href="/settings/account" class="text-xs text-gray-400 hover:text-orchid-500 mt-1 inline-block transition-colors">Add a bio</a>
+            <% } %>
+            <% if (!profileUser.category && isOwner) { %>
+                <a href="/settings/account" class="text-[10px] text-silver-400 hover:text-orchid-500 mt-1.5 inline-block transition-colors">+ Set a category</a>
+            <% } %>
+            <%
+              const _profileLinks = [];
+              if (profileUser.website) _profileLinks.push({ url: profileUser.website });
+              (profileUser.socialLinks || []).forEach(function(s) { if (s.url) _profileLinks.push({ url: s.url }); });
+            %>
+            <% if (_profileLinks.length) { %>
+                <div class="flex items-center gap-2 mt-2.5 flex-wrap justify-center">
+                  <% _profileLinks.forEach(function(lk) { %>
+                    <% let host = ''; try { host = new URL(lk.url).hostname.replace(/^www\./, ''); } catch {} %>
+                    <a href="<%= lk.url %>" target="_blank" rel="noopener noreferrer"
+                      class="text-xs text-woodsmoke-500 hover:text-orchid-500 border border-silver-200 hover:border-orchid-200 px-2.5 py-1 rounded-md transition-colors truncate max-w-[160px]">
+                      <%= host || lk.url %>
+                    </a>
+                  <% }); %>
+                </div>
+            <% } %>
+            <% if (isOwner) { %>
+                <div class="flex flex-col items-center mt-3">
+                    <div class="relative w-full max-w-sm mt-3">
+                        <span class="absolute left-1/2 -translate-x-1/2 -top-2.75 flex items-center gap-1 text-xs text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded-full whitespace-nowrap z-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 2a5 5 0 1 0 0 10A5 5 0 0 0 12 2M4 13a8 8 0 0 0 8 8a8 8 0 0 0 8-8z" opacity=".3"/><path fill="currentColor" fill-rule="evenodd" d="M12 4a3 3 0 1 0 0 6a3 3 0 0 0 0-6M7 7a5 5 0 1 1 10 0A5 5 0 0 1 7 7m-3 6a8 8 0 0 1 16 0v1H4v-1zm2.1 3H18.9A8 8 0 0 1 4.1 16z" clip-rule="evenodd"/></g></svg>
+                            Only visible to you
+                        </span>
+                        <div class="border border-gray-100 rounded-xl overflow-hidden">
+                        <div class="flex items-center gap-4 bg-gray-50 px-4 py-2.5">
+                            <a href="/topup" title="Top Up" class="h-12 aspect-square flex items-center justify-center rounded-lg text-orchid-500 hover:text-orchid-700 hover:bg-orchid-50 transition-colors shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M10.5 20a1.5 1.5 0 0 0 3 0v-6.5H20a1.5 1.5 0 0 0 0-3h-6.5V4a1.5 1.5 0 0 0-3 0v6.5H4a1.5 1.5 0 0 0 0 3h6.5z"/></g></svg>
+                            </a>
+                            <div class="w-px h-8 bg-gray-200 shrink-0"></div>
+                            <div class="flex flex-col items-center">
+                                <span id="profileCreditBalance" class="text-lg font-bold text-gray-800 leading-tight">—</span>
+                                <span class="text-xs text-gray-500">Balance</span>
+                            </div>
+                            <div class="w-px h-8 bg-gray-200 shrink-0"></div>
+                            <div class="flex flex-col items-center">
+                                <span id="profileCreditEarned" class="text-lg font-bold text-emerald-600 leading-tight">—</span>
+                                <span class="text-xs text-gray-500">7d earnings</span>
+                            </div>
+                            <div class="w-px h-8 bg-gray-200 shrink-0"></div>
+                            <div class="flex flex-col items-center">
+                                <span id="profileCreditSpent" class="text-lg font-bold text-red-500 leading-tight">—</span>
+                                <span class="text-xs text-gray-500">7d spendings</span>
+                            </div>
+                        </div>
+                        <div class="py-1.5 text-center">
+                            <a href="/transactions" class="text-sm text-orchid-500 hover:text-orchid-700 transition-colors">Get more insights →</a>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
+        </div>
+
+        <!-- Stats row -->
+        <div class="flex items-center gap-8 mt-1">
+            <div class="flex flex-col items-center">
+                <span class="text-lg font-bold"><%= isOwner ? ownBuckets.length : publicBucketCount %></span>
+                <span class="text-xs text-gray-500">Buckets</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <span class="text-lg font-bold"><%= totalGrabs.toLocaleString() %></span>
+                <span class="text-xs text-gray-500">Grabs</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <span class="text-lg font-bold" data-stat="subscribers"><%= subscriberCount.toLocaleString() %></span>
+                <span class="text-xs text-gray-500">Subscribers</span>
+            </div>
+            <div class="flex flex-col items-center">
+                <span class="text-lg font-bold"><%= followingCount.toLocaleString() %></span>
+                <span class="text-xs text-gray-500">Following</span>
+            </div>
+        </div>
+
+        <!-- Member since -->
+        <p class="text-xs text-gray-400">Member since <%= memberSince %></p>
+
+        <!-- Action buttons -->
+        <div class="flex items-center gap-2">
+            <% if (isOwner) { %>
+                <a href="/settings" class="flex items-center justify-center px-5 py-2 text-sm font-semibold border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
+                    Edit Profile
+                </a>
+            <% } else { %>
+                <button id="followBtn" disabled class="flex items-center justify-center px-5 py-2 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors opacity-50 cursor-not-allowed">
+                    Follow
+                </button>
+                <button id="dmBtn" <%= !canMessage ? 'disabled title="This user isn\'t accepting messages"' : '' %> class="flex items-center justify-center gap-1.5 px-5 py-2 text-sm font-semibold border border-silver-200 rounded-md transition-colors <%= canMessage ? 'hover:bg-silver-50' : 'opacity-40 cursor-not-allowed' %>">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10a9.96 9.96 0 0 1-4.644-1.142L3.31 21.97a1 1 0 0 1-1.282-1.282l1.114-4.044A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2m0 2a8 8 0 0 0-6.992 11.923l.16.282l-1.005 3.646l3.646-1.005l.282.16A8 8 0 1 0 12 4m-3 7a1 1 0 1 1 0 2a1 1 0 0 1 0-2m3 0a1 1 0 1 1 0 2a1 1 0 0 1 0-2m3 0a1 1 0 1 1 0 2a1 1 0 0 1 0-2"/></g></svg>
+                    Message
+                </button>
+            <% } %>
+            <button id="shareProfileBtn" class="flex items-center justify-center gap-1.5 px-5 py-2 text-sm font-semibold border border-silver-200 rounded-md hover:bg-silver-50 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.114 4.491l-.203 3.144l-.02.417l-.09.01C5.363 8.582 2 12.366 2 17q0 .686.102 1.357c.279 1.845.489 2.024 1.772.498a9 9 0 0 1 1.04-1.03a7.96 7.96 0 0 1 4.754-1.818l.226-.005l.061 1.229l.166 2.345c.08.804.926 1.353 1.704.914c.352-.198.695-.41 1.04-.62c1.787-1.118 3.46-2.403 5.09-3.738c.96-.8 1.8-1.558 2.516-2.248c.33-.323.66-.646.979-.98c.462-.484.508-1.285.024-1.792c-1.114-1.165-2.688-2.624-4.647-4.172c-1.588-1.242-3.23-2.402-4.97-3.421c-.837-.477-1.667.177-1.743.972"/></g></svg>
+                Share
+            </button>
+            <% if (!isOwner && user && !user.isAnonymous) { %>
+            <div class="relative" id="profileMoreWrap">
+              <button id="profileMoreBtn" class="flex items-center justify-center w-9 h-9 border border-silver-200 rounded-md hover:bg-silver-50 transition-colors" aria-label="More options">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 3a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3m0 7.5a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3M12 18a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>
+              </button>
+              <div id="profileMoreMenu" class="hidden absolute right-0 top-full mt-1 bg-white border border-silver-200 rounded-md shadow-md z-30 py-1" style="min-width:max-content">
+                <button id="profileReportBtn"
+                  data-userid="<%= profileUser._id %>"
+                  data-username="<%= profileUser.username %>"
+                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm whitespace-nowrap text-woodsmoke-600 hover:bg-silver-50 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10S22 17.523 22 12S17.523 2 12 2m0 2a8 8 0 1 1 0 16A8 8 0 0 1 12 4m0 3a1 1 0 0 0-1 1v5a1 1 0 1 0 2 0V8a1 1 0 0 0-1-1m0 9a1 1 0 1 0 0 2a1 1 0 0 0 0-2"/></g></svg>
+                  Report @<%= profileUser.username %>
+                </button>
+                <button id="profileBlockBtn"
+                  data-userid="<%= profileUser._id %>"
+                  data-username="<%= profileUser.username %>"
+                  data-blocked="<%= isBlocked ? 'true' : 'false' %>"
+                  class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm whitespace-nowrap hover:bg-red-50 text-red-500 transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10S22 17.523 22 12S17.523 2 12 2M4 12a8 8 0 0 1 12.906-6.32L5.68 16.907A7.96 7.96 0 0 1 4 12m8 8a7.96 7.96 0 0 1-4.906-1.68L18.32 7.094A7.96 7.96 0 0 1 20 12a8 8 0 0 1-8 8"/></g></svg>
+                  <span id="profileBlockLabel"><%= isBlocked ? 'Unblock' : 'Block' %> @<%= profileUser.username %></span>
+                </button>
+              </div>
+            </div>
+            <% } %>
+        </div>
+
+    </div>
+
+    <!-- ── Tabs ────────────────────────────────────────────────────────── -->
+    <div class="border-b border-gray-100 mb-6">
+        <div class="flex gap-0">
+            <button id="tabBuckets" class="profile-tab px-5 py-3 text-sm font-semibold border-b-2 border-orchid-600 text-orchid-600 transition-colors" data-tab="buckets">
+                Buckets
+                <span id="bucketsTabCount" class="ml-1.5 text-xs bg-orchid-100 text-orchid-600 px-1.5 py-0.5 rounded-full"><%= isOwner ? ownBuckets.length : publicBucketCount %></span>
+            </button>
+            <% if (grabbedBuckets.length > 0 || isOwner) { %>
+                <button id="tabGrabbed" class="profile-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-colors" data-tab="grabbed">
+                    Grabbed
+                    <span class="ml-1.5 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full"><%= grabbedBuckets.length %></span>
+                </button>
+            <% } %>
+            <% if (userRepos.length > 0 || isOwner) { %>
+                <button id="tabRepos" class="profile-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-colors" data-tab="repos">
+                    Repos
+                    <span id="reposTabCount" class="ml-1.5 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full"><%= isOwner ? userRepos.length : publicRepoCount %></span>
+                </button>
+            <% } %>
+            <% if (isOwner) { %>
+                <button id="tabArchived" class="profile-tab px-5 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-colors" data-tab="archived">
+                    Archived
+                    <span id="archivedTabCount" class="ml-1.5 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full"><%= archivedBuckets.length %></span>
+                </button>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- ── Buckets tab ─────────────────────────────────────────────────── -->
+    <div id="panelBuckets">
+        <% if (ownBuckets.length === 0) { %>
+            <div class="flex flex-col items-center justify-center py-16 gap-3 text-center text-silver-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>
+                <p class="text-sm text-gray-400"><%= isOwner ? "No buckets yet. Start curating!" : "No public buckets yet." %></p>
+            </div>
+        <% } else { %>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <% ownBuckets.forEach(function(b) { %>
+                    <%- include('partials/bucket-card', { b, isOwn: isOwner }) %>
+                <% }); %>
+            </div>
+        <% } %>
+    </div>
+
+    <!-- ── Repos tab ────────────────────────────────────────────────────── -->
+    <% if (userRepos.length > 0 || isOwner) { %>
+        <div id="panelRepos" class="hidden"></div>
+    <% } %>
+
+    <!-- ── Grabbed tab ───────────────────────────────────────────────────── -->
+    <% if (grabbedBuckets.length > 0 || isOwner) { %>
+        <div id="panelGrabbed" class="hidden">
+            <% if (grabbedBuckets.length === 0) { %>
+                <div class="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" class="text-gray-300"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M17.961 7.058a2.5 2.5 0 0 0-3.349-1.896a2.498 2.498 0 0 0-4.225 0A2.5 2.5 0 0 0 7 7.5l.001.962a4.7 4.7 0 0 0-.87-.584C5.11 7.36 4.12 7.44 3.077 7.866c-.84.345-1.107 1.308-.747 2.028l2.842 5.684A8 8 0 0 0 12.326 20H13a8 8 0 0 0 8-8V9.5a2.5 2.5 0 0 0-3.039-2.442M10 7.5a.5.5 0 1 0-1 0V11a1 1 0 0 1-1.78.625c-.925-1.156-1.517-1.72-1.995-1.964a1.2 1.2 0 0 0-.835-.117l2.57 5.14A6 6 0 0 0 12.326 18H13a6 6 0 0 0 6-6V9.5a.5.5 0 1 0-1 0v.5a1 1 0 1 1-2 0V7.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0V6.5a.5.5 0 1 0-1 0V10a1 1 0 1 1-2 0z"/></g></svg>
+                    <p class="text-sm text-gray-400"><%= isOwner ? "You haven't grabbed any buckets yet." : "No grabbed buckets." %></p>
+                </div>
+            <% } else { %>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <% grabbedBuckets.forEach(function(b) { %>
+                        <%- include('partials/bucket-card', { b, isOwn: false }) %>
+                    <% }); %>
+                </div>
+            <% } %>
+        </div>
+    <% } %>
+
+    <!-- ── Archived tab (owner only) ────────────────────────────────────── -->
+    <% if (isOwner) { %>
+    <div id="panelArchived" class="hidden">
+        <% if (archivedBuckets.length === 0) { %>
+            <div class="flex flex-col items-center justify-center py-16 gap-3 text-center text-silver-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M3 3h18a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1m1 5h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm5 4a1 1 0 0 0 0 2h4a1 1 0 1 0 0-2z"/></g></svg>
+                <p class="text-sm text-gray-400">No archived buckets.</p>
+            </div>
+        <% } else { %>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <% archivedBuckets.forEach(function(b) { %>
+                    <div class="flex flex-col gap-2" data-archived-wrap="<%= b._id %>">
+                        <div class="flex-1 min-h-0"><%- include('partials/bucket-card', { b, isOwn: false }) %></div>
+                        <button class="unarchive-btn w-full flex items-center justify-center h-9 text-sm font-semibold border border-silver-200 rounded-md text-gray-600 hover:bg-silver-50 transition-colors" data-bucket-id="<%= b._id %>">
+                            Unarchive
+                        </button>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+    </div>
+    <% } %>
+
+</div>
+
+<!-- ── Credit badge JS (owner only) ──────────────────────────────────── -->
+<% if (isOwner) { %>
+<script>
+(function () {
+    const balanceEl = document.getElementById('profileCreditBalance');
+    const earnedEl  = document.getElementById('profileCreditEarned');
+    const spentEl   = document.getElementById('profileCreditSpent');
+
+    fetch('/api/credits/summary', { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (!data) return;
+            balanceEl.textContent = data.balance.toLocaleString();
+            earnedEl.textContent  = data.earned7d.toLocaleString();
+            spentEl.textContent   = data.spent7d.toLocaleString();
+        })
+        .catch(() => {});
+})();
+</script>
+<% } %>
+
+<!-- ── Bulk select action bar (owner only) ────────────────────────────── -->
+<% if (isOwner) { %>
+<div id="bulkActionBar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-white border border-silver-200 rounded-md shadow-xl px-4 py-2.5 whitespace-nowrap">
+    <span id="bulkSelCount" class="text-sm font-medium text-gray-500 mr-1">0 selected</span>
+    <button id="bulkArchiveBtn" disabled class="flex items-center justify-center gap-1.5 px-4 h-9 text-sm font-semibold border border-silver-200 rounded-md text-gray-600 hover:bg-silver-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Archive</button>
+    <button id="bulkDeleteBtn" disabled class="flex items-center justify-center gap-1.5 px-4 h-9 text-sm font-semibold rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Delete</button>
+    <button id="bulkCancelBtn" class="flex items-center justify-center w-8 h-8 ml-1 rounded-md text-gray-400 hover:bg-silver-50 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59L7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12L5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z"/></svg>
+    </button>
+</div>
+<% } %>
+
+<!-- ── Bucket edit modal (owner only) ────────────────────────────────── -->
+<% if (isOwner) { %>
+<div id="editBucketModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 flex flex-col gap-y-4">
+        <div class="flex items-center justify-between">
+            <h3 id="editBucketModalTitle" class="font-bold text-gray-900 text-base">Edit Bucket</h3>
+            <button id="closeEditBucketModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M6.4 19L5 17.6l5.6-5.6L5 6.4L6.4 5l5.6 5.6L17.6 5L19 6.4L13.4 12l5.6 5.6l-1.4 1.4l-5.6-5.6z"/></svg>
+            </button>
+        </div>
+        <input id="editBucketNameInput" type="text" placeholder="Bucket name…" maxlength="80"
+            class="w-full h-11 px-3 text-sm border border-gray-200 rounded-lg outline-none focus:border-orchid-400 transition-colors">
+        <p id="editBucketError" class="hidden text-xs text-red-500"></p>
+        <button id="editBucketConfirmBtn"
+            class="h-11 w-full rounded-lg bg-orchid-600 hover:bg-orchid-700 text-white text-sm font-semibold transition-colors flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed">
+            Save Changes
+        </button>
+    </div>
+</div>
+<% } %>
+
+
+<script>
+(function () {
+    const isOwner = window.__PROFILE_IS_OWNER__;
+
+    // ── Bucket edit modal (owner only) ───────────────────────────────────────
+    const editModal      = document.getElementById('editBucketModal');
+    const editInput      = document.getElementById('editBucketNameInput');
+    const editConfirmBtn = document.getElementById('editBucketConfirmBtn');
+    const editErrorEl    = document.getElementById('editBucketError');
+    const closeEditBtn   = document.getElementById('closeEditBucketModal');
+
+    let _editingBucket = null; // bucket object currently being edited
+
+    function openEditModal(bucket) {
+        _editingBucket = bucket;
+        if (editInput)  { editInput.value = bucket.name; editInput.disabled = false; }
+        if (editConfirmBtn) { editConfirmBtn.disabled = false; editConfirmBtn.textContent = 'Save Changes'; }
+        if (editErrorEl) { editErrorEl.textContent = ''; editErrorEl.classList.add('hidden'); }
+        editModal?.classList.remove('hidden');
+        if (window.lockScroll) window.lockScroll();
+        setTimeout(() => { editInput?.select(); }, 50);
+    }
+
+    function closeEditModal() {
+        editModal?.classList.add('hidden');
+        if (window.unlockScroll) window.unlockScroll();
+        _editingBucket = null;
+    }
+
+    if (editModal) {
+        closeEditBtn?.addEventListener('click', closeEditModal);
+        editModal.addEventListener('click', e => { if (e.target === editModal) closeEditModal(); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && !editModal.classList.contains('hidden')) closeEditModal();
+        });
+
+        async function handleEditSave() {
+            if (!_editingBucket) return;
+            const newName = editInput?.value.trim();
+            if (!newName) { editInput?.focus(); return; }
+
+            if (editConfirmBtn) { editConfirmBtn.disabled = true; editConfirmBtn.textContent = 'Saving…'; }
+            if (editInput) editInput.disabled = true;
+            if (editErrorEl) editErrorEl.classList.add('hidden');
+
+            try {
+                const res = await fetch(`/api/buckets/${encodeURIComponent(_editingBucket.name)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ newName })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to save');
+
+                // Update embedded data so subsequent opens use the new name
+                const pool = window.__PROFILE_OWN__;
+                const entry = pool?.find(b => b._id === _editingBucket._id);
+                if (entry) entry.name = data.name;
+
+                // Update the card's visual name on the page
+                const card = document.querySelector(`[data-bucket-id="${_editingBucket._id}"]`);
+                if (card) {
+                    const nameEl = card.querySelector('p.font-medium');
+                    if (nameEl) nameEl.textContent = data.name;
+                }
+
+                closeEditModal();
+            } catch (err) {
+                window.showToast(err.message || 'Failed to save changes', 'error');
+                if (editConfirmBtn) { editConfirmBtn.disabled = false; editConfirmBtn.textContent = 'Save Changes'; }
+                if (editInput) { editInput.disabled = false; editInput.focus(); }
+            }
+        }
+
+        editConfirmBtn?.addEventListener('click', handleEditSave);
+        editInput?.addEventListener('keydown', e => { if (e.key === 'Enter') handleEditSave(); });
+    }
+
+    // ── Tab switching ────────────────────────────────────────────────────────
+    const tabs   = document.querySelectorAll('.profile-tab');
+    const panels = {
+        buckets:  document.getElementById('panelBuckets'),
+        grabbed:  document.getElementById('panelGrabbed'),
+        repos:    document.getElementById('panelRepos'),
+        archived: document.getElementById('panelArchived'),
+    };
+    const TAB_KEY = 'profile_active_tab_<%= profileUser.username %>';
+
+    function activateTab(target) {
+        tabs.forEach(t => {
+            const active = t.dataset.tab === target;
+            t.classList.toggle('border-orchid-600',  active);
+            t.classList.toggle('text-orchid-600',    active);
+            t.classList.toggle('border-transparent', !active);
+            t.classList.toggle('text-gray-400',      !active);
+        });
+        Object.entries(panels).forEach(([key, el]) => {
+            if (el) el.classList.toggle('hidden', key !== target);
+        });
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            activateTab(target);
+            try { localStorage.setItem(TAB_KEY, target); } catch (_) {}
+        });
+    });
+
+    // Restore last active tab on load
+    const savedTab = (() => { try { return localStorage.getItem(TAB_KEY); } catch (_) { return null; } })();
+    if (savedTab && panels[savedTab]) activateTab(savedTab);
+
+    // ── Repos panel ──────────────────────────────────────────────────────────
+    (function () {
+        const reposPanel = document.getElementById('panelRepos');
+        if (!reposPanel) return;
+
+        const IS_OWNER   = <%- isOwner ? 'true' : 'false' %>;
+        const ownBuckets = window.__PROFILE_OWN__ || [];
+        let repos        = (window.__PROFILE_REPOS__ || []).slice();
+        if (!IS_OWNER) repos = repos.filter(r => ownBuckets.some(b => b.repoIds && b.repoIds.some(id => String(id) === String(r._id))));
+
+        function getBucketsForRepo(repoId) {
+            return ownBuckets.filter(b => b.repoIds && b.repoIds.some(id => String(id) === String(repoId)));
+        }
+
+        function updateTabCount() {
+            const el = document.getElementById('reposTabCount');
+            if (el) el.textContent = repos.length;
+        }
+
+        // ── Render ─────────────────────────────────────────────────────────
+        function renderRepos() {
+            reposPanel.innerHTML = '';
+
+            if (repos.length === 0) {
+                reposPanel.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-16 gap-3 text-center text-silver-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M21.328 10a.5.5 0 0 1 .496.563l-.017.08l-2.89 9.644a1 1 0 0 1-.84.706L17.96 21H4a2 2 0 0 1-1.099-.328a.5.5 0 0 1-.026-.234l.017-.082l2.894-9.643a1 1 0 0 1 .839-.706L6.744 10zM9.52 3a2 2 0 0 1 1.443.614l.12.137L12.48 5.5H19a2 2 0 0 1 1.995 1.85L21 7.5V8H6.744A3 3 0 0 0 3.93 9.96l-.06.178L2 16.37V5a2 2 0 0 1 1.85-1.995L4 3z"/></g></svg>
+                        <p class="text-sm text-gray-400">${IS_OWNER ? 'No repos yet. Create one from the bucket editor.' : 'No public repos yet.'}</p>
+                    </div>`;
+                return;
+            }
+
+            const list = document.createElement('div');
+            list.className = 'flex flex-col gap-4';
+            repos.forEach(repo => list.appendChild(buildRepoCard(repo)));
+            reposPanel.appendChild(list);
+        }
+
+        // ── Build a single repo card ────────────────────────────────────────
+        const BUCKET_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>`;
+
+        const IMG_PLACEHOLDER = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M20 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H4v10.1l4.995-4.994a1.25 1.25 0 0 1 1.768 0l4.065 4.066l1.238-1.238a1.25 1.25 0 0 1 1.768 0L20 15.101zm-4.5 2a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3"/></g></svg>`;
+
+        function buildBucketCard(b) {
+            const vis = b.visibility || (b.isPublic ? 'public' : 'private');
+            const badge = b.isDraft
+                ? `<span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-500">Draft</span>`
+                : vis === 'public'
+                    ? `<span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orchid-100 text-orchid-600">Public</span>`
+                    : vis === 'unlisted'
+                        ? `<span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-500">Unlisted</span>`
+                        : `<span class="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400">Private</span>`;
+            const thumb = b.displayThumb
+                ? `<img src="${escHtml(b.displayThumb)}" class="w-full aspect-square object-cover rounded-md" loading="lazy" onerror="this.style.display='none'">`
+                : `<div class="w-full aspect-square bg-silver-100 rounded-md flex items-center justify-center text-gray-300">${IMG_PLACEHOLDER}</div>`;
+            return `
+                <div class="flex flex-col rounded-md bg-white border border-silver-100 cursor-pointer hover:shadow-md transition-shadow w-[44%] sm:w-[30%] shrink-0"
+                    data-action="open-bucket" data-bucket-id="${escHtml(b._id)}">
+                    <div class="p-1.5">${thumb}</div>
+                    <div class="px-3 pt-1 pb-3 flex flex-col gap-0.5">
+                        <div class="flex items-center gap-1">
+                            <p class="font-medium text-base leading-snug truncate flex-1">${escHtml(b.name)}</p>
+                            ${badge}
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function buildRepoCard(repo) {
+            const buckets = getBucketsForRepo(repo._id);
+            const card = document.createElement('div');
+            card.className = 'bg-white border border-silver-100 rounded-xl overflow-hidden';
+            card.dataset.repoId = repo._id;
+
+            card.innerHTML = `
+                <div class="flex items-center justify-between px-4 py-3.5 border-b border-silver-100">
+                    <div class="flex items-center gap-2 min-w-0 flex-1 mr-3">
+                        <span class="text-orchid-400 shrink-0">${BUCKET_ICON}</span>
+                        <a href="/o/${escHtml(repo._id)}" class="repo-name-display font-semibold text-sm text-woodsmoke-900 hover:text-orchid-600 transition-colors truncate">${escHtml(repo.name)}</a>
+                        <span class="repo-bucket-count text-xs bg-orchid-50 text-orchid-600 px-1.5 py-0.5 rounded-full shrink-0">${buckets.length}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button data-action="rename" data-repo-id="${repo._id}"
+                            class="h-7 px-3 flex items-center justify-center rounded-md text-xs font-semibold border border-silver-200 text-woodsmoke-600 hover:border-orchid-300 hover:text-orchid-600 transition-colors">Edit</button>
+                        <button data-action="share" data-repo-id="${repo._id}"
+                            class="h-7 px-3 flex items-center justify-center rounded-md text-xs font-semibold border border-silver-200 text-woodsmoke-600 hover:border-orchid-300 hover:text-orchid-600 transition-colors">Share</button>
+                        <button data-action="delete" data-repo-id="${repo._id}"
+                            class="h-7 px-3 flex items-center justify-center rounded-md text-xs font-semibold border border-silver-200 text-woodsmoke-600 hover:border-red-200 hover:text-red-500 transition-colors">Delete</button>
+                    </div>
+                </div>
+                <div class="repo-inline-rename hidden px-4 py-3 border-b border-silver-100 flex items-center gap-2">
+                    <input type="text" maxlength="80" placeholder="Repo name…"
+                        class="repo-rename-input flex-1 px-3 py-1.5 rounded-md border border-silver-200 text-sm text-woodsmoke-950 outline-none focus:border-orchid-400 focus:ring-2 focus:ring-orchid-100 transition"/>
+                    <button data-action="rename-save" data-repo-id="${repo._id}"
+                        class="px-3 h-8 flex items-center justify-center bg-woodsmoke-950 text-white text-xs font-semibold rounded-md hover:bg-woodsmoke-800 transition-colors shrink-0">Save</button>
+                    <button data-action="rename-cancel" data-repo-id="${repo._id}"
+                        class="w-8 h-8 flex items-center justify-center rounded-md border border-silver-200 text-gray-400 hover:text-red-500 transition-colors shrink-0">✕</button>
+                    <p class="repo-rename-error hidden text-xs text-red-500"></p>
+                </div>
+                <div class="repo-desc-row px-4 py-2.5 border-b border-silver-100">
+                    <div class="repo-desc-display flex items-start gap-2 group cursor-pointer">
+                        <p class="repo-desc-text text-sm leading-relaxed flex-1 ${repo.description ? 'text-woodsmoke-500' : 'text-silver-400 italic'}"
+                           data-value="${escHtml(repo.description || '')}">${repo.description ? escHtml(repo.description) : 'Add a description…'}</p>
+                        <button data-action="desc-edit" data-repo-id="${repo._id}"
+                            class="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-silver-400 hover:text-orchid-600" aria-label="Edit description">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="m10.756 6.17l7.07 7.071l-7.173 7.174a2 2 0 0 1-1.238.578L9.239 21H4.006a1.01 1.01 0 0 1-1.004-.9l-.006-.11v-5.233a2 2 0 0 1 .467-1.284l.12-.13l7.173-7.174Zm3.14-3.14a2 2 0 0 1 2.701-.117l.127.117l4.243 4.243a2 2 0 0 1 .117 2.7l-.117.128l-1.726 1.726l-7.07-7.071z"/></g></svg>
+                        </button>
+                    </div>
+                    <div class="repo-desc-editor hidden mt-1.5">
+                        <textarea class="repo-desc-input w-full px-3 py-2 text-sm text-woodsmoke-950 rounded-md border border-silver-200 outline-none focus:border-orchid-400 focus:ring-2 focus:ring-orchid-100 transition resize-none" maxlength="256" rows="2" placeholder="Add a description for this repo…"></textarea>
+                        <div class="flex items-center justify-center gap-2 mt-1.5">
+                            <button data-action="desc-save" data-repo-id="${repo._id}"
+                                class="h-7 px-3 text-xs flex items-center justify-center font-semibold bg-woodsmoke-950 text-white rounded-md hover:bg-woodsmoke-800 transition-colors">Save</button>
+                            <button data-action="desc-cancel" data-repo-id="${repo._id}"
+                                class="h-7 px-3 text-xs flex items-center justify-center font-semibold border border-silver-200 text-woodsmoke-500 rounded-md hover:border-red-200 hover:text-red-500 transition-colors">Cancel</button>
+                            <span class="repo-desc-count text-xs text-silver-400">0 / 256</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="repo-buckets-area p-4">
+                    ${buckets.length === 0
+                        ? `<p class="text-xs text-gray-400 italic">No buckets assigned yet. Open a bucket and pick this repo from the Settings tab.</p>`
+                        : `<div class="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">${buckets.map(buildBucketCard).join('')}</div>`
+                    }
+                </div>`;
+
+            return card;
+        }
+
+        // ── Helpers ────────────────────────────────────────────────────────
+        function escHtml(str) {
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function findCard(repoId) {
+            return reposPanel.querySelector(`[data-repo-id="${repoId}"]`);
+        }
+
+        // ── Rename ─────────────────────────────────────────────────────────
+        function startRename(repoId) {
+            const card = findCard(repoId);
+            if (!card) return;
+            const repo = repos.find(r => String(r._id) === String(repoId));
+            if (!repo) return;
+            const inlineRow = card.querySelector('.repo-inline-rename');
+            const input     = card.querySelector('.repo-rename-input');
+            const errEl     = card.querySelector('.repo-rename-error');
+            inlineRow.classList.remove('hidden');
+            errEl.classList.add('hidden');
+            input.value = repo.name;
+            input.focus();
+            input.select();
+        }
+
+        function cancelRename(repoId) {
+            const card = findCard(repoId);
+            if (!card) return;
+            card.querySelector('.repo-inline-rename').classList.add('hidden');
+        }
+
+        async function saveRename(repoId) {
+            const card  = findCard(repoId);
+            if (!card) return;
+            const input  = card.querySelector('.repo-rename-input');
+            const errEl  = card.querySelector('.repo-rename-error');
+            const saveBtn = card.querySelector('[data-action="rename-save"]');
+            const name   = input.value.trim();
+
+            if (!name) { errEl.textContent = 'Name cannot be empty.'; errEl.classList.remove('hidden'); return; }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = '…';
+            errEl.classList.add('hidden');
+
+            try {
+                const res  = await fetch(`/api/repos/${repoId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ name }),
+                });
+                const data = await res.json();
+                if (!res.ok) { window.showToast(data.error || 'Failed to rename.', 'error'); return; }
+
+                // Update local data + DOM
+                const repo = repos.find(r => String(r._id) === String(repoId));
+                if (repo) repo.name = data.name;
+                const nameDisplay = card.querySelector('.repo-name-display');
+                if (nameDisplay) nameDisplay.textContent = data.name;
+                card.querySelector('.repo-inline-rename').classList.add('hidden');
+            } catch (_) {
+                window.showToast('Network error.', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save';
+            }
+        }
+
+        // ── Delete ─────────────────────────────────────────────────────────
+        async function handleDelete(repoId, btn) {
+            if (btn.dataset.confirm !== 'yes') {
+                btn.dataset.confirm = 'yes';
+                btn.textContent = 'Confirm?';
+                btn.classList.add('border-red-300', 'text-red-500');
+                btn.classList.remove('border-silver-200', 'text-woodsmoke-600');
+                setTimeout(() => {
+                    if (btn.dataset.confirm === 'yes') {
+                        btn.dataset.confirm = '';
+                        btn.textContent = 'Delete';
+                        btn.classList.remove('border-red-300', 'text-red-500');
+                        btn.classList.add('border-silver-200', 'text-woodsmoke-600');
+                    }
+                }, 3500);
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '…';
+            try {
+                const res = await fetch(`/api/repos/${repoId}`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) { btn.disabled = false; btn.textContent = 'Delete'; return; }
+
+                ownBuckets.forEach(b => { if (b.repoIds) b.repoIds = b.repoIds.filter(id => String(id) !== String(repoId)); });
+                repos = repos.filter(r => String(r._id) !== String(repoId));
+                updateTabCount();
+                renderRepos();
+            } catch (_) {
+                btn.disabled = false;
+                btn.textContent = 'Delete';
+            }
+        }
+
+        // ── Description ─────────────────────────────────────────────────────
+        function openDescEditor(repoId) {
+            const card = findCard(repoId);
+            if (!card) return;
+            const row      = card.querySelector('.repo-desc-row');
+            const display  = row.querySelector('.repo-desc-display');
+            const editor   = row.querySelector('.repo-desc-editor');
+            const textarea = row.querySelector('.repo-desc-input');
+            const counter  = row.querySelector('.repo-desc-count');
+            textarea.value = row.querySelector('.repo-desc-text').dataset.value || '';
+            counter.textContent = `${textarea.value.length} / 256`;
+            display.classList.add('hidden');
+            editor.classList.remove('hidden');
+            textarea.focus();
+        }
+
+        function closeDescEditor(repoId) {
+            const card = findCard(repoId);
+            if (!card) return;
+            const row = card.querySelector('.repo-desc-row');
+            row.querySelector('.repo-desc-display').classList.remove('hidden');
+            row.querySelector('.repo-desc-editor').classList.add('hidden');
+        }
+
+        async function saveDesc(repoId, btn) {
+            const card = findCard(repoId);
+            if (!card) return;
+            const row      = card.querySelector('.repo-desc-row');
+            const textarea = row.querySelector('.repo-desc-input');
+            const descText = row.querySelector('.repo-desc-text');
+            const value    = textarea.value.trim();
+            const origLabel = btn.textContent;
+            btn.textContent = 'Saving…';
+            btn.disabled = true;
+            try {
+                const res = await fetch(`/api/repos/${repoId}`, {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description: value }),
+                });
+                if (res.ok) {
+                    descText.dataset.value = value;
+                    if (value) {
+                        descText.textContent = value;
+                        descText.classList.remove('text-silver-400', 'italic');
+                        descText.classList.add('text-woodsmoke-500');
+                    } else {
+                        descText.textContent = 'Add a description…';
+                        descText.classList.add('text-silver-400', 'italic');
+                        descText.classList.remove('text-woodsmoke-500');
+                    }
+                    closeDescEditor(repoId);
+                } else {
+                    btn.textContent = 'Failed';
+                    setTimeout(() => { btn.textContent = origLabel; btn.disabled = false; }, 2000);
+                }
+            } catch {
+                btn.textContent = 'Failed';
+                setTimeout(() => { btn.textContent = origLabel; btn.disabled = false; }, 2000);
+            }
+            btn.disabled = false;
+        }
+
+        // ── Share ───────────────────────────────────────────────────────────
+        async function handleShare(repoId, btn) {
+            const url = `${window.location.origin}/o/${repoId}`;
+            const orig = btn.textContent;
+            if (navigator.share) {
+                try { await navigator.share({ url }); } catch (_) {}
+            } else {
+                await navigator.clipboard.writeText(url).catch(() => {});
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = orig; }, 2000);
+            }
+        }
+
+        // ── Event delegation ────────────────────────────────────────────────
+        reposPanel.addEventListener('click', function (e) {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const action   = btn.dataset.action;
+            const repoId   = btn.dataset.repoId;
+            const bucketId = btn.dataset.bucketId;
+
+            if (action === 'rename')        startRename(repoId);
+            if (action === 'rename-cancel') cancelRename(repoId);
+            if (action === 'rename-save')   saveRename(repoId);
+            if (action === 'delete')        handleDelete(repoId, btn);
+            if (action === 'share')         handleShare(repoId, btn);
+            if (action === 'desc-edit')     openDescEditor(repoId);
+            if (action === 'desc-cancel')   closeDescEditor(repoId);
+            if (action === 'desc-save')     saveDesc(repoId, btn);
+            if (action === 'open-bucket') {
+                const bucket = ownBuckets.find(b => b._id === bucketId);
+                if (bucket && window.openBucketModal) window.openBucketModal(bucket);
+            }
+        });
+
+        reposPanel.addEventListener('click', function (e) {
+            const text = e.target.closest('.repo-desc-text');
+            if (!text) return;
+            const card = text.closest('[data-repo-id]');
+            if (card) openDescEditor(card.dataset.repoId);
+        });
+
+        reposPanel.addEventListener('input', function (e) {
+            const textarea = e.target.closest('.repo-desc-input');
+            if (!textarea) return;
+            const row = textarea.closest('.repo-desc-row');
+            if (row) row.querySelector('.repo-desc-count').textContent = `${textarea.value.length} / 256`;
+        });
+
+        reposPanel.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            const input = e.target.closest('.repo-rename-input');
+            if (!input) return;
+            const card  = input.closest('[data-repo-id]');
+            if (card) saveRename(card.dataset.repoId);
+        });
+
+        // Initial render
+        renderRepos();
+    })();
+
+    // ── Follow button ─────────────────────────────────────────────────────────
+    const followBtn = document.getElementById('followBtn');
+    if (followBtn) {
+        const curatorAnonId = window.__PROFILE_ANON_ID__;
+
+        function setFollowState(following) {
+            followBtn.dataset.following = following ? '1' : '0';
+            followBtn.disabled = false;
+            followBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-red-50', 'text-red-600', 'border-red-200');
+            if (following) {
+                followBtn.textContent = 'Following';
+                followBtn.classList.remove('bg-orchid-600', 'hover:bg-orchid-700', 'text-white');
+                followBtn.classList.add('border', 'border-silver-200', 'text-woodsmoke-800');
+            } else {
+                followBtn.textContent = 'Follow';
+                followBtn.classList.add('bg-orchid-600', 'hover:bg-orchid-700', 'text-white');
+                followBtn.classList.remove('border', 'border-silver-200', 'text-woodsmoke-800');
+            }
+        }
+
+        // Hover effect for "Following" → "Unfollow"
+        followBtn.addEventListener('mouseenter', () => {
+            if (followBtn.dataset.following !== '1') return;
+            followBtn.textContent = 'Unfollow';
+            followBtn.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
+            followBtn.classList.remove('text-woodsmoke-800', 'border-silver-200');
+        });
+        followBtn.addEventListener('mouseleave', () => {
+            if (followBtn.dataset.following !== '1') return;
+            followBtn.textContent = 'Following';
+            followBtn.classList.remove('bg-red-50', 'text-red-600', 'border-red-200');
+            followBtn.classList.add('text-woodsmoke-800', 'border-silver-200');
+        });
+
+        // Check initial follow state (unauthenticated users get the btn enabled immediately pointing to login)
+        if (window.__PROFILE_VIEWER_AUTHED__) {
+            fetch(`/api/users/${curatorAnonId}/subscribe`, { credentials: 'include' })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (data) setFollowState(data.isSubscribed);
+                    else { followBtn.disabled = false; followBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+                })
+                .catch(() => { followBtn.disabled = false; followBtn.classList.remove('opacity-50', 'cursor-not-allowed'); });
+        } else {
+            followBtn.disabled = false;
+            followBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        followBtn.addEventListener('click', async () => {
+            if (!window.__PROFILE_VIEWER_AUTHED__) {
+                window.location.href = '/login';
+                return;
+            }
+            const isFollowing = followBtn.dataset.following === '1';
+            followBtn.disabled = true;
+            followBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            try {
+                const res = await fetch(`/api/users/${curatorAnonId}/subscribe`, {
+                    method: isFollowing ? 'DELETE' : 'POST',
+                    credentials: 'include',
+                });
+                if (res.ok) {
+                    setFollowState(!isFollowing);
+                    const subCountEl = document.querySelector('[data-stat="subscribers"]');
+                    if (subCountEl) {
+                        const current = parseInt(subCountEl.textContent.replace(/,/g, ''), 10) || 0;
+                        subCountEl.textContent = (current + (isFollowing ? -1 : 1)).toLocaleString();
+                    }
+                } else {
+                    followBtn.disabled = false;
+                    followBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            } catch (_) {
+                followBtn.disabled = false;
+                followBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    }
+
+    // ── Direct message button ─────────────────────────────────────────────────
+    const dmBtn = document.getElementById('dmBtn');
+    if (dmBtn) {
+        dmBtn.addEventListener('click', async () => {
+            dmBtn.disabled = true;
+            dmBtn.textContent = '…';
+            try {
+                // Send an empty probe message is wrong — instead navigate to messages
+                // and let the user compose. But we need a conversationId first.
+                // POST /api/dm/send with a placeholder triggers conversation creation
+                // only on actual send, so we just navigate to messages with recipientId
+                // as a query param so the inbox can open the right conversation or scaffold a new one.
+                window.location.href = '/messages?recipient=<%= profileUser._id %>&username=<%= profileUser.username %>';
+            } catch (_) {
+                dmBtn.disabled = false;
+                dmBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none"><path fill="currentColor" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10a9.96 9.96 0 0 1-4.644-1.142L3.31 21.97a1 1 0 0 1-1.282-1.282l1.114-4.044A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2m0 2a8 8 0 0 0-6.992 11.923l.16.282l-1.005 3.646l3.646-1.005l.282.16A8 8 0 1 0 12 4m-3 7a1 1 0 1 1 0 2a1 1 0 0 1 0-2m3 0a1 1 0 1 1 0 2a1 1 0 0 1 0-2m3 0a1 1 0 1 1 0 2a1 1 0 0 1 0-2"/></g></svg> Message`;
+            }
+        });
+    }
+
+    // ── Share profile button ─────────────────────────────────────────────────
+    const shareBtn = document.getElementById('shareProfileBtn');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', async () => {
+            const url = window.location.href;
+            if (navigator.share) {
+                try { await navigator.share({ title: '@<%= profileUser.username %> on Grabbn', url }); } catch (_) {}
+            } else {
+                await navigator.clipboard.writeText(url).catch(() => {});
+                const orig = shareBtn.innerHTML;
+                shareBtn.textContent = 'Link copied!';
+                setTimeout(() => { shareBtn.innerHTML = orig; }, 2000);
+            }
+        });
+    }
+
+    // ── Bulk select state (owner only, panelBuckets) ─────────────────────────
+    let bulkMode = false;
+    const bulkSelected = new Set();
+
+    const bulkBar      = document.getElementById('bulkActionBar');
+    const bulkCountEl  = document.getElementById('bulkSelCount');
+    const bulkArchBtn  = document.getElementById('bulkArchiveBtn');
+    const bulkDelBtn   = document.getElementById('bulkDeleteBtn');
+    const bulkCancelBtn = document.getElementById('bulkCancelBtn');
+
+    function bulkToggleCard(id, force) {
+        const bucketsPanel = document.getElementById('panelBuckets');
+        if (!bucketsPanel) return;
+        const card = bucketsPanel.querySelector(`[data-bucket-id="${id}"]`);
+        if (!card) return;
+        const select = force !== undefined ? force : !bulkSelected.has(id);
+        if (select) {
+            bulkSelected.add(id);
+            card.classList.add('ring-2', 'ring-orchid-500', 'ring-offset-2');
+            if (!card.querySelector('.bulk-check')) {
+                const chk = document.createElement('div');
+                chk.className = 'bulk-check absolute top-2.5 right-2.5 z-20 w-4 h-4 pointer-events-none';
+                chk.innerHTML = `
+                    <span class="absolute inset-0 rounded border-2 border-orchid-500 bg-orchid-500"></span>
+                    <span class="absolute inset-0 flex items-center justify-center">
+                        <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>`;
+                card.style.position = 'relative';
+                card.appendChild(chk);
+            }
+        } else {
+            bulkSelected.delete(id);
+            card.classList.remove('ring-2', 'ring-orchid-500', 'ring-offset-2');
+            card.querySelector('.bulk-check')?.remove();
+        }
+        bulkSyncBar();
+    }
+
+    function bulkSyncBar() {
+        const n = bulkSelected.size;
+        if (bulkCountEl) bulkCountEl.textContent = `${n} selected`;
+        if (bulkArchBtn) bulkArchBtn.disabled = n === 0;
+        if (bulkDelBtn)  bulkDelBtn.disabled  = n === 0;
+    }
+
+    function enterBulkMode(seedId) {
+        bulkMode = true;
+        if (bulkBar) bulkBar.classList.remove('hidden');
+        bulkToggleCard(seedId, true);
+    }
+
+    function exitBulkMode() {
+        bulkMode = false;
+        const bucketsPanel = document.getElementById('panelBuckets');
+        if (bucketsPanel) {
+            bucketsPanel.querySelectorAll('[data-bucket-id]').forEach(c => {
+                c.classList.remove('ring-2', 'ring-orchid-500', 'ring-offset-2');
+                c.querySelector('.bulk-check')?.remove();
+            });
+        }
+        bulkSelected.clear();
+        if (bulkBar) bulkBar.classList.add('hidden');
+        if (bulkDelBtn) { bulkDelBtn.textContent = 'Delete'; bulkDelBtn.dataset.confirm = ''; }
+    }
+
+    function bulkRemoveCards(ids, removeFromPool = false) {
+        const bucketsPanel = document.getElementById('panelBuckets');
+        if (!bucketsPanel) return;
+        ids.forEach(id => {
+            bucketsPanel.querySelector(`[data-bucket-id="${id}"]`)?.remove();
+            if (removeFromPool) {
+                const pool = window.__PROFILE_OWN__;
+                if (pool) { const i = pool.findIndex(b => b._id === id); if (i !== -1) pool.splice(i, 1); }
+            }
+        });
+        const remaining = bucketsPanel.querySelectorAll('[data-bucket-id]');
+        if (remaining.length === 0) {
+            bucketsPanel.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-16 gap-3 text-center text-silver-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M19.82 6a2 2 0 0 1 1.972 2.329l-1.666 10A2 2 0 0 1 18.153 20H5.847a2 2 0 0 1-1.973-1.671l-1.666-10A2 2 0 0 1 4.18 6ZM18 3a1 1 0 1 1 0 2H6a1 1 0 0 1 0-2Z"/></g></svg>
+                    <p class="text-sm text-gray-400">No buckets yet. Start curating!</p>
+                </div>`;
+        }
+    }
+
+    function adjustTabCount(elId, delta) {
+        const el = document.getElementById(elId);
+        if (el) el.textContent = Math.max(0, (parseInt(el.textContent, 10) || 0) + delta);
+    }
+
+    if (isOwner && bulkCancelBtn) {
+        bulkCancelBtn.addEventListener('click', exitBulkMode);
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && bulkMode) exitBulkMode(); });
+
+        if (bulkArchBtn) {
+            bulkArchBtn.addEventListener('click', async () => {
+                if (bulkSelected.size === 0) return;
+                const ids = [...bulkSelected];
+                bulkArchBtn.disabled = true;
+                bulkArchBtn.textContent = 'Archiving…';
+                try {
+                    const res = await fetch('/api/buckets/bulk/archive', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ ids })
+                    });
+                    if (!res.ok) throw new Error();
+                    bulkRemoveCards(ids, false);
+                    adjustTabCount('bucketsTabCount',  -ids.length);
+                    adjustTabCount('archivedTabCount', +ids.length);
+                    exitBulkMode();
+                    window.showToast?.(`${ids.length} bucket${ids.length !== 1 ? 's' : ''} archived`, 'success');
+                } catch (_) {
+                    window.showToast?.('Failed to archive', 'error');
+                    bulkArchBtn.disabled = false;
+                    bulkArchBtn.textContent = 'Archive';
+                }
+            });
+        }
+
+        if (bulkDelBtn) {
+            bulkDelBtn.addEventListener('click', async () => {
+                if (bulkSelected.size === 0) return;
+                if (!bulkDelBtn.dataset.confirm) {
+                    bulkDelBtn.dataset.confirm = '1';
+                    bulkDelBtn.textContent = 'Confirm delete';
+                    setTimeout(() => {
+                        if (bulkDelBtn.dataset.confirm) {
+                            bulkDelBtn.dataset.confirm = '';
+                            bulkDelBtn.textContent = 'Delete';
+                        }
+                    }, 3000);
+                    return;
+                }
+                const ids = [...bulkSelected];
+                bulkDelBtn.disabled = true;
+                bulkDelBtn.textContent = 'Deleting…';
+                try {
+                    const res = await fetch('/api/buckets/bulk', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ ids })
+                    });
+                    if (!res.ok) throw new Error();
+                    bulkRemoveCards(ids, true);
+                    adjustTabCount('bucketsTabCount', -ids.length);
+                    exitBulkMode();
+                    window.showToast?.(`${ids.length} bucket${ids.length !== 1 ? 's' : ''} deleted`, 'success');
+                } catch (_) {
+                    window.showToast?.('Failed to delete', 'error');
+                    bulkDelBtn.disabled = false;
+                    bulkDelBtn.textContent = 'Delete';
+                    bulkDelBtn.dataset.confirm = '';
+                }
+            });
+        }
+
+        // ── Unarchive buttons ─────────────────────────────────────────────────
+        document.querySelectorAll('.unarchive-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.bucketId;
+                if (!id || btn.dataset.busy) return;
+                btn.dataset.busy = '1';
+                btn.textContent = 'Unarchiving…';
+                btn.disabled = true;
+                try {
+                    const res = await fetch(`/api/buckets/${id}/unarchive`, {
+                        method: 'PATCH',
+                        credentials: 'include'
+                    });
+                    if (!res.ok) throw new Error();
+                    // Remove from archived panel
+                    document.querySelector(`[data-archived-wrap="${id}"]`)?.remove();
+                    adjustTabCount('archivedTabCount',  -1);
+                    adjustTabCount('bucketsTabCount',   +1);
+                    // Show empty state in archived panel if nothing left
+                    const archivedPanel = document.getElementById('panelArchived');
+                    if (archivedPanel && !archivedPanel.querySelector('[data-archived-wrap]')) {
+                        archivedPanel.innerHTML = `
+                            <div class="flex flex-col items-center justify-center py-16 gap-3 text-center text-silver-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><g fill="none"><path d="m12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035q-.016-.005-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427q-.004-.016-.017-.018m.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093q.019.005.029-.008l.004-.014l-.034-.614q-.005-.018-.02-.022m-.715.002a.02.02 0 0 0-.027.006l-.006.014l-.034.614q.001.018.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01z"/><path fill="currentColor" d="M3 3h18a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1m1 5h16v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm5 4a1 1 0 0 0 0 2h4a1 1 0 1 0 0-2z"/></g></svg>
+                                <p class="text-sm text-gray-400">No archived buckets.</p>
+                            </div>`;
+                    }
+                    window.showToast?.('Bucket restored to your profile', 'success');
+                } catch (_) {
+                    window.showToast?.('Failed to unarchive', 'error');
+                    btn.textContent = 'Unarchive';
+                    btn.disabled = false;
+                    delete btn.dataset.busy;
+                }
+            });
+        });
+    }
+
+    // ── Card click: own buckets → edit modal (or bulk toggle), grabbed → page ──
+    ['panelBuckets', 'panelGrabbed'].forEach(id => {
+        const panel = document.getElementById(id);
+        if (!panel) return;
+        panel.querySelectorAll('[data-bucket-id]').forEach(card => {
+            if (card.closest('[data-bucket-id]') !== card) return;
+            card.style.cursor = 'pointer';
+
+            // Long press → enter bulk select (owner, panelBuckets only)
+            if (id === 'panelBuckets' && isOwner) {
+                let lpTimer = null;
+                let lpFired = false;
+                const lpStart = () => {
+                    lpFired = false;
+                    lpTimer = setTimeout(() => {
+                        lpTimer = null;
+                        lpFired = true;
+                        if (!bulkMode) enterBulkMode(card.dataset.bucketId);
+                        else bulkToggleCard(card.dataset.bucketId);
+                    }, 500);
+                };
+                const lpCancel = () => { clearTimeout(lpTimer); lpTimer = null; };
+                card.addEventListener('mousedown',  e => { if (e.button === 0) lpStart(); });
+                card.addEventListener('mouseup',    lpCancel);
+                card.addEventListener('mouseleave', lpCancel);
+                card.addEventListener('touchstart', lpStart,  { passive: true });
+                card.addEventListener('touchend',   lpCancel, { passive: true });
+                card.addEventListener('touchmove',  lpCancel, { passive: true });
+                card.addEventListener('click', e => { if (lpFired) { lpFired = false; e.stopImmediatePropagation(); } }, true);
+            }
+
+            card.addEventListener('click', e => {
+                if (e.target.closest('.card-share-btn')) return;
+                if (e.target.closest('.card-menu-btn')) return;
+                if (e.target.closest('.card-context-menu')) return;
+                if (e.target.closest('a[href]')) return;
+                if (id === 'panelBuckets' && bulkMode) {
+                    bulkToggleCard(card.dataset.bucketId);
+                    return;
+                }
+                if (id === 'panelBuckets' && isOwner && window.openBucketModal) {
+                    const bucket = window.__PROFILE_OWN__?.find(b => b._id === card.dataset.bucketId);
+                    if (bucket) { window.openBucketModal(bucket); return; }
+                }
+                window.location.href = `/b/${card.dataset.bucketId}`;
+            });
+        });
+    });
+
+    // ── Shared sid generator ──────────────────────────────────────────────────
+    function generateSid() {
+        try {
+            const arr = new Uint8Array(9);
+            crypto.getRandomValues(arr);
+            return Array.from(arr, b => b.toString(36).padStart(2, '0')).join('').slice(0, 12);
+        } catch (_) {
+            return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+        }
+    }
+
+    // ── Share button on bucket cards ──────────────────────────────────────────
+    async function handleCardShare(btn) {
+        if (btn.dataset.busy) return;
+        btn.dataset.busy = '1';
+
+        const bucketId = btn.dataset.bucketId;
+        const url      = `${window.location.origin}/b/${bucketId}?ref=share&sid=${generateSid()}`;
+        const origHtml = btn.innerHTML;
+
+        const showFeedback = () => {
+            btn.innerHTML = '<span>Link copied!</span>';
+            setTimeout(() => { btn.innerHTML = origHtml; delete btn.dataset.busy; }, 2000);
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ url });
+                delete btn.dataset.busy;
+            } catch (_) {
+                await navigator.clipboard.writeText(url).catch(() => {});
+                showFeedback();
+            }
+        } else {
+            await navigator.clipboard.writeText(url).catch(() => {});
+            showFeedback();
+        }
+        fetch(`/api/buckets/${bucketId}/share`, { method: 'POST', credentials: 'include' }).catch(() => {});
+    }
+
+    document.querySelectorAll('.card-share-btn').forEach(btn => {
+        btn.addEventListener('click', () => handleCardShare(btn));
+    });
+
+})();
+</script>
+
+<!-- Report modal -->
+<div id="reportModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/40" id="reportModalBackdrop"></div>
+  <div class="relative bg-white rounded-md shadow-xl w-full max-w-sm p-6 flex flex-col gap-4">
+    <div>
+      <p class="font-semibold text-woodsmoke-900">Report @<%= profileUser.username %></p>
+      <p class="text-sm text-woodsmoke-400 mt-0.5">What's the issue?</p>
+    </div>
+    <div class="flex flex-col gap-1" id="reportReasons">
+      <% [['spam','Spam or fake account'],['inappropriate','Inappropriate content'],['harassment','Harassment or hate speech'],['malicious','Malicious links or phishing'],['other','Other']].forEach(([val,label]) => { %>
+      <label class="flex items-center gap-2.5 px-3 py-2 rounded-md hover:bg-silver-50 cursor-pointer select-none">
+        <span class="relative w-4 h-4 shrink-0">
+          <input type="radio" name="reportReason" value="<%= val %>" class="peer absolute inset-0 opacity-0 cursor-pointer w-full h-full m-0">
+          <span class="absolute inset-0 rounded-full border-2 border-silver-300 peer-checked:border-orchid-500 transition-colors"></span>
+          <span class="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none">
+            <span class="w-2 h-2 rounded-full bg-orchid-500"></span>
+          </span>
+        </span>
+        <span class="text-sm text-woodsmoke-700"><%= label %></span>
+      </label>
+      <% }) %>
+    </div>
+    <textarea id="reportDetail" rows="2" maxlength="500" placeholder="Additional detail (optional)" class="w-full px-3 py-2 text-sm border border-silver-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-orchid-300 focus:border-orchid-400 transition"></textarea>
+    <p id="reportModalError" class="hidden text-sm text-red-500"></p>
+    <div class="flex gap-2">
+      <button id="reportSubmitBtn" class="flex items-center justify-center flex-1 h-9 px-5 text-sm font-semibold bg-orchid-600 text-white rounded-md hover:bg-orchid-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">Submit report</button>
+      <button id="reportCancelBtn" class="flex items-center justify-center flex-1 h-9 px-5 text-sm font-semibold border border-silver-200 text-woodsmoke-600 rounded-md hover:bg-silver-50 transition-colors">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<% if (!isOwner && user && !user.isAnonymous) { %>
+<script>
+(function () {
+  const moreBtn    = document.getElementById('profileMoreBtn');
+  const moreMenu   = document.getElementById('profileMoreMenu');
+  const blockBtn   = document.getElementById('profileBlockBtn');
+  const blockLabel = document.getElementById('profileBlockLabel');
+  const reportBtn  = document.getElementById('profileReportBtn');
+
+  const reportModal    = document.getElementById('reportModal');
+  const reportBackdrop = document.getElementById('reportModalBackdrop');
+  const reportSubmit   = document.getElementById('reportSubmitBtn');
+  const reportCancel   = document.getElementById('reportCancelBtn');
+  const reportError    = document.getElementById('reportModalError');
+
+  moreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    moreMenu.classList.toggle('hidden');
+  });
+  document.addEventListener('click', () => moreMenu.classList.add('hidden'));
+
+  // ── Report ────────────────────────────────────────────────────────────────
+  reportBtn.addEventListener('click', () => {
+    moreMenu.classList.add('hidden');
+    document.querySelectorAll('[name="reportReason"]').forEach(r => r.checked = false);
+    document.getElementById('reportDetail').value = '';
+    reportError.classList.add('hidden');
+    reportModal.classList.remove('hidden');
+  });
+
+  function closeReport() { reportModal.classList.add('hidden'); }
+  reportCancel.addEventListener('click', closeReport);
+  reportBackdrop.addEventListener('click', closeReport);
+
+  reportSubmit.addEventListener('click', async () => {
+    const reason = document.querySelector('[name="reportReason"]:checked')?.value;
+    if (!reason) {
+      reportError.textContent = 'Please select a reason.';
+      reportError.classList.remove('hidden');
+      return;
+    }
+    reportError.classList.add('hidden');
+    reportSubmit.disabled = true;
+    reportSubmit.textContent = 'Submitting…';
+    try {
+      const r = await fetch(`/api/users/${reportBtn.dataset.userid}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason, detail: document.getElementById('reportDetail').value }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Failed');
+      closeReport();
+    } catch (err) {
+      window.showToast(err.message || 'Failed to submit report', 'error');
+      reportSubmit.disabled = false;
+      reportSubmit.textContent = 'Submit report';
+    }
+  });
+
+  // ── Block ─────────────────────────────────────────────────────────────────
+  blockBtn.addEventListener('click', async () => {
+    const userId   = blockBtn.dataset.userid;
+    const username = blockBtn.dataset.username;
+    const blocking = blockBtn.dataset.blocked !== 'true';
+
+    if (blocking && !confirm(`Block @${username}? Their profile and content will be hidden from you.`)) return;
+
+    blockBtn.disabled = true;
+    try {
+      const r = await fetch(`/api/users/${userId}/block`, {
+        method: blocking ? 'POST' : 'DELETE',
+        credentials: 'include',
+      });
+      if (!r.ok) throw new Error();
+      if (blocking) {
+        window.location.href = '/explore';
+      } else {
+        blockBtn.dataset.blocked = 'false';
+        blockLabel.textContent = `Block @${username}`;
+        blockBtn.disabled = false;
+        moreMenu.classList.add('hidden');
+      }
+    } catch {
+      blockBtn.disabled = false;
+      moreMenu.classList.add('hidden');
+    }
+  });
+})();
+</script>
+<% } %>
+
+<%- include('../partials/layout-end') %>
